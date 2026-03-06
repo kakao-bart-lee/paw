@@ -1,10 +1,12 @@
 mod agents;
 mod auth;
+mod backup;
 mod channels;
 mod db;
 mod keys;
 mod media;
 mod messages;
+mod push;
 mod users;
 mod ws;
 
@@ -13,7 +15,7 @@ use axum::{
     Router,
     extract::DefaultBodyLimit,
     middleware,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch, post, put},
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -124,6 +126,28 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/v1/agents/register", post(agents::handlers::register_agent_handler))
         .route("/api/v1/agents/:agent_id", get(agents::handlers::get_agent_handler))
         .route("/api/v1/agents/:agent_id/revoke", post(agents::handlers::revoke_agent_handler))
+        .route("/api/v1/backup/initiate", post(backup::handlers::initiate_backup))
+        .route("/api/v1/backup/list", get(backup::handlers::list_backups))
+        .route("/api/v1/backup/:id/restore", post(backup::handlers::restore_backup))
+        .route("/api/v1/backup/:id", delete(backup::handlers::delete_backup))
+        .route("/api/v1/backup/settings", put(backup::handlers::update_settings))
+        .route("/api/v1/backup/settings", get(backup::handlers::get_settings))
+        .route(
+            "/api/v1/push/register",
+            post(push::handlers::register_push_token),
+        )
+        .route(
+            "/api/v1/push/register",
+            delete(push::handlers::unregister_push_token),
+        )
+        .route(
+            "/api/v1/conversations/:id/mute",
+            post(push::handlers::mute_conversation),
+        )
+        .route(
+            "/api/v1/conversations/:id/mute",
+            delete(push::handlers::unmute_conversation),
+        )
         .merge(media_upload)
         .route_layer(middleware::from_fn_with_state(
             state.clone(),

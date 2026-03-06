@@ -87,6 +87,14 @@ impl Hub {
         }
     }
 
+    pub async fn is_user_connected(&self, user_id: Uuid) -> bool {
+        let guard = self.connections.read().await;
+        guard
+            .get(&user_id)
+            .map(|senders| !senders.is_empty())
+            .unwrap_or(false)
+    }
+
     pub async fn broadcast_to_conversation(&self, user_ids: Vec<Uuid>, msg: &str) {
         for user_id in user_ids {
             self.send_to_user(user_id, msg).await;

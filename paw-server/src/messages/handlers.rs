@@ -5,6 +5,7 @@ use crate::messages::{
     },
     service::{self, GroupManagementError, Membership},
 };
+use crate::push;
 use axum::{
     Json,
     extract::{Extension, Path, Query, State},
@@ -113,7 +114,18 @@ pub async fn send_message(
     )
     .await
     {
-        Ok(created) => Json(created).into_response(),
+        Ok(created) => {
+            let db = state.db.clone();
+            let hub = state.hub.clone();
+            tokio::spawn(async move {
+                if let Err(err) =
+                    push::service::send_push_notification(&db, &hub, conv_id, user_id).await
+                {
+                    tracing::error!(%err, conversation_id = %conv_id, "push notification failed");
+                }
+            });
+            Json(created).into_response()
+        }
         Err(err) => {
             tracing::warn!(%err, conversation_id = %conv_id, sender_id = %user_id, "message insert failed, checking idempotency replay");
             match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key)

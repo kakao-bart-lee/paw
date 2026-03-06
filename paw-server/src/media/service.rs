@@ -75,4 +75,32 @@ impl MediaService {
 
         Ok(presigned.uri().to_string())
     }
+
+    pub async fn presigned_put_url(
+        &self,
+        key: &str,
+        expires_in: Duration,
+    ) -> Result<String, anyhow::Error> {
+        let config = PresigningConfig::expires_in(expires_in)?;
+
+        let presigned = self
+            .s3_client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .presigned(config)
+            .await?;
+
+        Ok(presigned.uri().to_string())
+    }
+
+    pub async fn delete_object(&self, key: &str) -> Result<(), anyhow::Error> {
+        self.s3_client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await?;
+        Ok(())
+    }
 }

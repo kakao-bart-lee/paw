@@ -390,3 +390,19 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - `AgentStreamMsg::ContentDelta` now drops oversized delta frames (`delta.len() > 4096`) to bound per-frame memory and relay overhead.
 - Introduced `Hub::send_to_user_nonblocking` and routed `send_to_conversation` through it so stream fan-out prefers drop-on-pressure semantics over accumulating slow-client backlog.
 - Added integration-test invariants `stream_concurrent_limit_is_10` and `delta_size_limit_is_4096` in `paw-server/tests/integration_test.rs` to lock expected threshold values.
+
+## [2026-03-07] T41: Broadcast Channel Decisions
+
+- Added migration `20260101000014_channels.sql` with `channels` and `channel_subscriptions`, and expanded `conversations_valid_type` to include `channel` so channel traffic reuses existing `messages` + `pg_notify` + Hub fan-out.
+- Channel creation now writes a `conversations` row (`type='channel'`) and a matching `channels` row with the same UUID, then inserts owner membership into `conversation_members` for compatibility with existing WS/member-based delivery paths.
+- Implemented `/api/v1/channels` APIs under auth middleware: create, search public channels by `q`, subscribe/unsubscribe, owner-only send, and subscriber/owner message reads.
+- Enforced send authorization at channel layer (`owner_id` only) while persisting channel messages in the existing `messages` table using `conversation_id = channel_id` and existing idempotency semantics.
+- Added non-DB integration tests for channel payload roundtrips and owner-only send policy checks to keep the binary-crate test strategy consistent.
+
+## [2026-03-07] T42: Multi-device Seq-based Sync Decisions
+
+- Extended `paw-proto` with additive WS frames: `device_sync` request (`conversations: [{ conversation_id, last_seq }]`) and `device_sync_response` (`messages: MessageReceivedMsg[]`), preserving mandatory `v:1` protocol field.
+- Implemented server-side `device_sync` handling in WS connection dispatch: membership-validated per conversation, SQL gap-fill query `messages WHERE conversation_id=$1 AND seq > $2 ORDER BY seq ASC LIMIT 100`, bundled into a single response frame.
+- Refactored single-conversation `sync` to reuse a shared `fetch_messages_after_seq(...)` mapper so `sync` and `device_sync` stay protocol-consistent for message shaping (`format`, `blocks`, `seq`, timestamps).
+- Confirmed hub fan-out remains multi-device capable (`user_id -> Vec<WsSender>`) and added a unit test verifying one `send_to_user` reaches all active sockets for the same user.
+- Added authenticated device management endpoints: `GET /api/v1/devices` (list own devices) and `DELETE /api/v1/devices/:device_id` (remove own device), with JSON error contract aligned to existing handlers.

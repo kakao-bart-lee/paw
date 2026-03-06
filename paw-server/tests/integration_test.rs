@@ -506,6 +506,104 @@ async fn health_check_returns_ok() {
     assert_eq!(resp.text().await.unwrap(), "OK");
 }
 
+// ── Backup: serde roundtrip tests ───────────────────────────────────────
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+struct InitiateBackupResponse {
+    backup_id: Uuid,
+    upload_url: String,
+    s3_key: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+struct BackupEntry {
+    id: Uuid,
+    size_bytes: i64,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+struct ListBackupsResponse {
+    backups: Vec<BackupEntry>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Clone)]
+struct BackupSettingsTest {
+    frequency: String,
+}
+
+#[test]
+fn backup_initiate_response_serde_roundtrip() {
+    let backup_id = Uuid::new_v4();
+    let user_id = Uuid::new_v4();
+    let resp = InitiateBackupResponse {
+        backup_id,
+        upload_url: "https://s3.example.com/presigned-put?sig=abc".to_string(),
+        s3_key: format!("backups/{}/{}.enc", user_id, backup_id),
+    };
+
+    let json = serde_json::to_string(&resp).unwrap();
+    let parsed: InitiateBackupResponse = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed.backup_id, backup_id);
+    assert!(parsed.upload_url.contains("presigned"));
+    assert!(parsed.s3_key.ends_with(".enc"));
+    assert_eq!(parsed, resp);
+}
+
+#[test]
+fn backup_list_response_serde_roundtrip() {
+    let now = Utc::now();
+    let entries = vec![
+        BackupEntry {
+            id: Uuid::new_v4(),
+            size_bytes: 1_048_576,
+            created_at: now,
+        },
+        BackupEntry {
+            id: Uuid::new_v4(),
+            size_bytes: 2_097_152,
+            created_at: now - Duration::days(1),
+        },
+    ];
+
+    let resp = ListBackupsResponse { backups: entries };
+    let json = serde_json::to_string(&resp).unwrap();
+    let parsed: ListBackupsResponse = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed.backups.len(), 2);
+    assert_eq!(parsed.backups[0].size_bytes, 1_048_576);
+    assert_eq!(parsed.backups[1].size_bytes, 2_097_152);
+    assert_eq!(parsed, resp);
+}
+
+#[test]
+fn backup_settings_serde_roundtrip() {
+    for frequency in &["daily", "weekly", "never"] {
+        let settings = BackupSettingsTest {
+            frequency: frequency.to_string(),
+        };
+
+        let json = serde_json::to_string(&settings).unwrap();
+        let parsed: BackupSettingsTest = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.frequency, *frequency);
+        assert_eq!(parsed, settings);
+    }
+}
+
+#[test]
+fn backup_s3_key_format_is_correct() {
+    let user_id = Uuid::new_v4();
+    let backup_id = Uuid::new_v4();
+    let s3_key = format!("backups/{}/{}.enc", user_id, backup_id);
+
+    assert!(s3_key.starts_with("backups/"));
+    assert!(s3_key.ends_with(".enc"));
+    assert!(s3_key.contains(&user_id.to_string()));
+    assert!(s3_key.contains(&backup_id.to_string()));
+}
+
 fn rand_u32() -> u32 {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
