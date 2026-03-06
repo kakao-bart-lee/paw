@@ -19,3 +19,7 @@ tower-http = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 paw-proto = { path = "../paw-proto" }
+futures-util = "0.3"
+jsonwebtoken = "9"
+rand = "0.8"
+base64 = "0.22"

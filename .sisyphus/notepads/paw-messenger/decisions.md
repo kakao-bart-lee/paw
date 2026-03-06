@@ -44,3 +44,44 @@ This replaces CRDT complexity with simple SQL: `WHERE seq > last_seq ORDER BY se
 ### Phase 2 Streaming Types are Reserved
 Types defined in Phase 1 but not used.
 This prevents breaking changes when streaming is implemented.
+
+## [2026-03-07] T5: Auth Service Decisions
+
+### OTP and Session Bootstrap
+- OTP is 6-digit random numeric code with 5-minute TTL, stored in `otp_codes` and logged via tracing for Phase 1 (no SMS integration).
+- OTP verification checks code match + expiry + unused state, then marks the OTP as used with an atomic update guard.
+- On successful OTP verification, user is upserted by `phone` and a short-lived `session` JWT is issued for one-time device registration flow.
+
+### Device Registration and Token Model
+- Device key registration decodes base64 Ed25519 public key and rejects any key not exactly 32 bytes before DB insert.
+- `devices` insert uses `platform='cli'` for current API shape (request payload did not include platform) while satisfying DB constraint.
+- Auth tokens are HS256 JWTs with token-type enforcement:
+  - `session` (15 minutes) for `/auth/register-device`
+  - `access` (7 days)
+  - `refresh` (30 days)
+
+### API and Middleware Shape
+- Added Axum auth handlers for `/auth/request-otp`, `/auth/verify-otp`, `/auth/register-device`, and `/auth/refresh`.
+- Handler responses are JSON with standardized error payload shape: `{ "error": "code", "message": "human readable" }`.
+- Added JWT middleware that validates `Authorization: Bearer <token>`, requires `access` token type, and injects `UserId` extension on success.
+
+## [2026-03-07] T7: Auth UI Decisions
+- Implemented OTP-based phone authentication flow with 3 screens: PhoneInputScreen, OtpVerifyScreen, DeviceNameScreen.
+- Used manual `copyWith` for `AuthState` since `freezed` is not available in `pubspec.yaml`.
+- Created custom `PhoneInputField` with country code dropdown and `OtpInputField` with 6 individual boxes supporting auto-advance and paste.
+- Updated `LoginScreen` to automatically redirect to `/auth/phone` using `WidgetsBinding.instance.addPostFrameCallback`.
+- Added new auth routes to `app_router.dart`.
+
+## [2026-03-07] T8: E2EE Protocol Decision
+Recommendation: Use OpenMLS (RFC 9420) for Paw Phase 2 E2EE.
+Rationale: MIT license compatibility across Apache-2.0 components, first-class group messaging via TreeKEM/MLS lifecycle, and standards-based long-term protocol direction. Phase 1 PoC validates credential/key package/group creation and member add flow in paw-crypto.
+
+## [2026-03-07] T6: WebSocket Server Decisions
+
+- Added a dedicated `ws` module split into `handler`, `connection`, `hub`, and `pg_listener` to keep upgrade/auth, per-socket loop, fan-out registry, and DB notification concerns isolated.
+- WebSocket auth uses existing access JWT verification (`auth::jwt::verify_token`) with token query param (`/ws?token=`), requiring `token_type=access` and a non-null `device_id` claim.
+- Server sends `hello_ok` immediately after successful upgrade and enforces protocol version `v=1` for all parsed client frames.
+- Heartbeat behavior is implemented as server ping every 30s with a 90s pong timeout; timeout closes with code 1000 (normal closure).
+- `Hub` stores `user_id -> Vec<UnboundedSender<Message>>` and supports register/unregister, single-user send, and multi-user fan-out.
+- PostgreSQL `LISTEN new_message` integration parses trigger payload JSON and broadcasts `message_received` frames to all online conversation members from `conversation_members`.
+- `sync` frame performs gap-fill via `messages WHERE seq > last_seq ORDER BY seq ASC`, returning `message_received` frames with `v=1`.

@@ -6,3 +6,6 @@ edition = "2021"
 # E2EE library TBD after T8 (vodozemac vs openmls evaluation)
 [dependencies]
 serde = { workspace = true }
+openmls = "0.7.1"
+openmls_rust_crypto = "0.4.4"
+openmls_basic_credential = "0.4.1"
