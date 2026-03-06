@@ -560,3 +560,24 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 ### Test Coverage (11 tests)
 - models: report serde roundtrip, missing fields rejection, block item serde, suspension roundtrip (with/without reason), suspend request serde
 - service: spam keyword matching (5 tests: match, case-insensitive, no match, empty keywords, empty content)
+
+## [2026-03-07] T52: Final Performance Benchmarking Decisions
+
+### k6 Script Design (k6/final-benchmark.js)
+- 1000 VUs distributed: 500 HTTP message send, 400 WebSocket connect+RTT, 100 media presigned URL
+- All scenarios use `ramping-vus` executor: 30s ramp-up → 60s sustain → 10s ramp-down (total ~100s)
+- Thresholds aligned to KPI targets: p95 <200ms (HTTP/WS/media), p95 <500ms (WS connect), <5% error rate, >99% WS delivery
+- Think-time randomized (0.3-0.8s HTTP, 0.5-1s media) to avoid unrealistic burst patterns
+
+### Performance Projections Methodology
+- Axum handler overhead ~1-2ms (Tokio multi-threaded runtime)
+- PostgreSQL insert + pg_notify roundtrip ~5-15ms (pool max=20)
+- S3 presigned URL generation ~0.5ms (local computation, no network call)
+- JWT HS256 validation ~0.05ms
+- Memory estimate: ~180 MB RSS at 1000 concurrent (15 MB base + 40 MB pool + 80 MB WS conns + 45 MB buffers/overhead)
+
+### E2EE Overhead Analysis
+- AES-256-GCM encrypt/decrypt: ~0.1ms per op (hardware AES-NI), adds <0.3% overhead
+- X25519 ECDH: ~0.5ms but amortized (once per ratchet step, not per message)
+- Server never decrypts — zero server-side crypto overhead for message content
+- PreKey bundle upload ~1ms one-time cost, not in hot path

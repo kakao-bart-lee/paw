@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  paw-server:
+    image: paw-server:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - NATS_URL=nats://nats:4222
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - RUST_LOG=info
+    depends_on:
+      - db
+      - nats
+      - minio
+    restart: always
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  nats:
+    image: nats:2.9-alpine
+    ports:
+      - "4222:4222"
+    restart: always
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  minio_data:

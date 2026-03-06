@@ -50,6 +50,19 @@ Acknowledge messages read up to seq.
 {"v":1,"type":"message_ack","conversation_id":"<UUID>","last_seq":42}
 ```
 
+### device_sync (Phase 3)
+Sync multiple conversations in a single request.
+```json
+{
+  "v": 1,
+  "type": "device_sync",
+  "conversations": [
+    {"conversation_id": "<UUID>", "last_seq": 42},
+    {"conversation_id": "<UUID>", "last_seq": 10}
+  ]
+}
+```
+
 ### sync
 Request messages after last_seq (gap-fill on reconnect).
 ```json
@@ -92,6 +105,28 @@ Request messages after last_seq (gap-fill on reconnect).
 ### presence_update
 ```json
 {"v":1,"type":"presence_update","user_id":"<UUID>","online":true}
+```
+
+### device_sync_response (Phase 3)
+```json
+{
+  "v": 1,
+  "type": "device_sync_response",
+  "messages": [
+    {
+      "v": 1,
+      "type": "message_received",
+      "id": "<UUID>",
+      "conversation_id": "<UUID>",
+      "sender_id": "<UUID>",
+      "content": "Hello!",
+      "format": "markdown",
+      "seq": 43,
+      "created_at": "<ISO8601>",
+      "blocks": []
+    }
+  ]
+}
 ```
 
 ## Phase 2 Streaming Types (Reserved, Not Implemented)
