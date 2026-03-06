@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/conversation_tile.dart';
 import 'chat_screen.dart';
@@ -46,6 +47,11 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
         title: const Text('\ucc44\ud305'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/search'),
+            tooltip: '\uac80\uc0c9',
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_square),
             onPressed: () {},
             tooltip: '\uc0c8 \ub300\ud654',
@@ -78,6 +84,11 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                 AppBar(
                   title: const Text('\ucc44\ud305'),
                   actions: [
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () => context.push('/search'),
+                      tooltip: '\uac80\uc0c9',
+                    ),
                     IconButton(
                       icon: const Icon(Icons.edit_square),
                       onPressed: () {},

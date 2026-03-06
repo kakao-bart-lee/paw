@@ -34,6 +34,10 @@ Future<void> setupServiceLocator() async {
     getIt.registerSingleton<ConversationsDao>(ConversationsDao(getIt<AppDatabase>()));
   }
 
+  if (!getIt.isRegistered<SearchService>()) {
+    getIt.registerSingleton<SearchService>(SearchService(getIt<AppDatabase>()));
+  }
+
   if (!getIt.isRegistered<KeyStorageService>()) {
     getIt.registerSingleton<KeyStorageService>(const KeyStorageService());
   }
