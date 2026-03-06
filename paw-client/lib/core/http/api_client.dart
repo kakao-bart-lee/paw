@@ -79,6 +79,16 @@ class ApiClient {
     return _decodeJsonObject(response);
   }
 
+  Future<void> addMember(String convId, String userId) async {
+    await _post('/conversations/$convId/members', body: {'user_id': userId});
+  }
+
+  Future<void> removeMember(String convId, String userId) async {
+    final uri = _buildUri('/conversations/$convId/members/$userId');
+    final response = await http.delete(uri, headers: _headers);
+    _throwIfError(response);
+  }
+
   // Messages
   Future<Map<String, dynamic>> sendMessage(
     String convId,

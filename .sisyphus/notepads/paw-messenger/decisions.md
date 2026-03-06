@@ -345,3 +345,8 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - `Message.created_at` is parsed from ISO8601 (`Z` normalized to `+00:00`) so incoming server timestamps become timezone-aware Python `datetime` objects.
 - Added `StreamChunk` model support for optional tool events (`tool_start` / `tool_end`) during streaming while keeping simple string-delta streaming as the default path.
 - Added unit tests that avoid network dependencies, including direct `_parse_context` validation (success + failure paths), and a lightweight `tests/conftest.py` path bootstrap so tests can run without package installation.
+
+## Agent Streaming UI
+- Used `ValueNotifier<String>` in `StreamingMessage` to allow `StreamBubble` to update its text content without rebuilding the entire `ListView`.
+- Added `StreamBubble` and `ToolIndicator` widgets to display real-time agent streaming responses.
+- Handled `StreamStartMsg`, `ContentDeltaMsg`, `ToolStartMsg`, `ToolEndMsg`, and `StreamEndMsg` in `chat_provider.dart`.

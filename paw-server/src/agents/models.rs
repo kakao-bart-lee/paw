@@ -31,6 +31,16 @@ pub struct RevokeAgentResponse {
     pub revoked: bool,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct InviteAgentRequest {
+    pub agent_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct InviteAgentResponse {
+    pub invited: bool,
+}
+
 pub const AGENT_TOKEN_PREFIX: &str = "paw_agent_";
 
 pub fn is_valid_agent_token_format(raw_token: &str) -> bool {

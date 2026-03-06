@@ -93,6 +93,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ],
         ),
+        actions: [
+          if (conversation.agents.isEmpty)
+            IconButton(
+              icon: const Icon(Icons.group),
+              onPressed: () => context.push('/group/${widget.conversationId}/info'),
+            ),
+        ],
       ),
       body: Column(
         children: [

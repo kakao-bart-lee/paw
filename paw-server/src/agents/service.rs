@@ -1,3 +1,5 @@
+use crate::db::DbPool;
+use anyhow::anyhow;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -97,4 +99,71 @@ pub async fn verify_agent_token(
     .await?;
 
     Ok(result.map(|r| r.0))
+}
+
+pub async fn invite_agent_to_conversation(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    agent_id: Uuid,
+    invited_by: Uuid,
+) -> anyhow::Result<bool> {
+    let outcome = sqlx::query_scalar::<_, i32>(
+        "WITH inserted AS (\
+            INSERT INTO conversation_agents (conversation_id, agent_id, invited_by)\
+            SELECT $1, at.id, $3\
+            FROM agent_tokens at\
+            WHERE at.id = $2 AND at.revoked_at IS NULL\
+            ON CONFLICT (conversation_id, agent_id) DO NOTHING\
+            RETURNING 1\
+        )\
+        SELECT CASE\
+            WHEN EXISTS (SELECT 1 FROM inserted) THEN 1\
+            WHEN EXISTS (SELECT 1 FROM conversation_agents WHERE conversation_id = $1 AND agent_id = $2) THEN 0\
+            ELSE -1\
+        END",
+    )
+    .bind(conversation_id)
+    .bind(agent_id)
+    .bind(invited_by)
+    .fetch_one(pool.as_ref())
+    .await?;
+
+    match outcome {
+        1 => Ok(true),
+        0 => Ok(false),
+        _ => Err(anyhow!("agent_not_found_or_revoked")),
+    }
+}
+
+pub async fn remove_agent_from_conversation(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    agent_id: Uuid,
+    requester_id: Uuid,
+) -> anyhow::Result<bool> {
+    let is_owner = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(\
+            SELECT 1 FROM conversation_members\
+            WHERE conversation_id = $1 AND user_id = $2 AND role = 'owner'\
+        )",
+    )
+    .bind(conversation_id)
+    .bind(requester_id)
+    .fetch_one(pool.as_ref())
+    .await?;
+
+    if !is_owner {
+        return Err(anyhow!("not_owner"));
+    }
+
+    let removed = sqlx::query(
+        "DELETE FROM conversation_agents WHERE conversation_id = $1 AND agent_id = $2",
+    )
+    .bind(conversation_id)
+    .bind(agent_id)
+    .execute(pool.as_ref())
+    .await?
+    .rows_affected();
+
+    Ok(removed > 0)
 }

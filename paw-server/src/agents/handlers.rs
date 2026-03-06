@@ -7,6 +7,8 @@ use axum::{
 };
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{AgentStreamMsg, PROTOCOL_VERSION, ServerMessage, StreamEndMsg};
+use serde::Serialize;
+use serde_json::{Value, json};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -14,7 +16,11 @@ use uuid::Uuid;
 
 use crate::auth::AppState;
 use crate::auth::middleware::UserId;
-use super::models::{AgentProfile, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse};
+use crate::messages::service::{Membership, check_member};
+use super::models::{
+    AgentProfile, InviteAgentRequest, InviteAgentResponse, RegisterAgentRequest,
+    RegisterAgentResponse, RevokeAgentResponse,
+};
 use super::service;
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
@@ -25,6 +31,11 @@ struct StreamRelayState {
     conversation_id: Uuid,
     started_at: Instant,
     bytes_sent: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RemoveAgentResponse {
+    pub removed: bool,
 }
 
 pub async fn register_agent_handler(
@@ -89,6 +100,107 @@ pub async fn revoke_agent_handler(
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({ "error": "agent_not_found_or_not_owner" })),
         )),
+    }
+}
+
+pub async fn invite_agent_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(conversation_id): Path<Uuid>,
+    Json(payload): Json<InviteAgentRequest>,
+) -> Result<Json<InviteAgentResponse>, (StatusCode, Json<Value>)> {
+    match check_member(&state.db, conversation_id, user_id).await {
+        Ok(Membership::Member) => {}
+        Ok(Membership::NotMember) => {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "error": "forbidden",
+                    "message": "User is not a member of this conversation"
+                })),
+            ));
+        }
+        Ok(Membership::ConversationNotFound) => {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(json!({
+                    "error": "conversation_not_found",
+                    "message": "Conversation not found"
+                })),
+            ));
+        }
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed membership check");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "membership_check_failed",
+                    "message": "Could not validate conversation membership"
+                })),
+            ));
+        }
+    }
+
+    match service::invite_agent_to_conversation(&state.db, conversation_id, payload.agent_id, user_id).await {
+        Ok(true) => Ok(Json(InviteAgentResponse { invited: true })),
+        Ok(false) => Err((
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "already_invited",
+                "message": "Agent is already invited to this conversation"
+            })),
+        )),
+        Err(err) if err.to_string() == "agent_not_found_or_revoked" => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": "agent_not_found",
+                "message": "Agent not found or revoked"
+            })),
+        )),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, agent_id = %payload.agent_id, "failed to invite agent");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "invite_failed",
+                    "message": "Failed to invite agent"
+                })),
+            ))
+        }
+    }
+}
+
+pub async fn remove_agent_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<RemoveAgentResponse>, (StatusCode, Json<Value>)> {
+    match service::remove_agent_from_conversation(&state.db, conversation_id, agent_id, user_id).await {
+        Ok(true) => Ok(Json(RemoveAgentResponse { removed: true })),
+        Ok(false) => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": "agent_not_found",
+                "message": "Agent is not in this conversation"
+            })),
+        )),
+        Err(err) if err.to_string() == "not_owner" => Err((
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "error": "forbidden",
+                "message": "Only conversation owners can remove agents"
+            })),
+        )),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, user_id = %user_id, "failed to remove agent");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "remove_failed",
+                    "message": "Failed to remove agent"
+                })),
+            ))
+        }
     }
 }
 
