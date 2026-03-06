@@ -487,3 +487,34 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Used `ProviderScope` override with `_EmptyConversationsNotifier` to avoid Korean locale initialization (`intl` DateFormat) errors in widget tests.
 - VerticalDivider presence/absence used as layout mode signal (two-panel vs single-panel).
 - 5 tests total: 3 DesktopService unit tests + 2 responsive breakpoint widget tests.
+
+## T47: Full-text Local Search — FTS5
+
+### Architecture Decisions
+
+1. **FTS5 content-sync table** — Used `content='messages_table', content_rowid='rowid'` so FTS5 mirrors the messages table automatically via triggers. No data duplication in app code.
+
+2. **Triggers over manual sync** — Three SQLite triggers (`messages_fts_ai`, `messages_fts_ad`, `messages_fts_au`) keep the FTS index in sync on INSERT/DELETE/UPDATE. This is the canonical FTS5 external-content approach and avoids any sync bugs from app-level index management.
+
+3. **Schema version bump (1→2)** — FTS5 virtual tables can't be created via Drift annotations (no `@DriftTable` for virtual tables). Raw SQL in `_createFts5Tables()` runs in both `onCreate` and `onUpgrade(from < 2)`.
+
+4. **`unicode61` tokenizer** — Handles Korean (한국어), Japanese, English correctly. ICU tokenizer would be heavier and isn't needed since `unicode61` does word-boundary detection for CJK.
+
+5. **Query sanitization** — `buildFts5Query()` splits user input on whitespace, wraps each token in double-quotes with escaped inner quotes. This prevents FTS5 syntax errors from special chars (`*`, `OR`, `NEAR`, etc.) while preserving implicit AND semantics.
+
+6. **Highlight markers `[`/`]`** — Used bracket markers instead of HTML `<b>` tags since the UI parses them with a simple regex for `RichText` spans. Avoids HTML parsing dependency.
+
+7. **`AppDatabase.forTesting()`** — Added test constructor accepting a custom `QueryExecutor` (e.g., `NativeDatabase.memory()`) for unit/integration tests without file I/O or SQLCipher setup.
+
+### Key Patterns
+- Drift `customStatement()` for DDL (virtual tables, triggers)
+- Drift `customSelect()` for FTS5 MATCH queries with `snippet()` and `highlight()` functions
+- `SearchResult.fromRow(QueryRow)` pattern for mapping raw query results
+- 300ms debounce on search input to avoid hammering FTS5 on every keystroke
+
+## [2026-03-07] T50: Performance Optimization + CDN Decisions
+
+- Centralized database pooling in `db::create_pool` with explicit SQLx `PgPoolOptions` constants (`max=20`, `min=5`, `acquire_timeout=30s`, `idle_timeout=600s`) so runtime tuning is deterministic and testable.
+- Added `20260101000018_performance_indexes.sql` with `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements to minimize lock impact during rollout while safely supporting repeated migration runs.
+- Set immutable cache policy for media URL responses via `Cache-Control: public, max-age=31536000, immutable` and locked it with a unit test to prevent accidental TTL regressions.
+- Documented CDN work as operations-only (`docs/operations/cdn-setup.md`) with Cloudflare R2, `/api/v1/media/*` cache rule guidance, and secure origin pull recommendations; no runtime CDN coupling added in code.

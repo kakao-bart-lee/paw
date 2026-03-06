@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../platform/web_service.dart';
 import '../proto/messages.dart';
 import '../sync/sync_service.dart';
 import 'reconnection_manager.dart';
@@ -148,10 +150,16 @@ class WsService {
   }
 
   Uri _buildWsUri(String rawServerUrl, String token) {
-    final base = Uri.parse(rawServerUrl);
-    final isSecure = base.scheme == 'https' || base.scheme == 'wss';
-    return base.replace(
-      scheme: isSecure ? 'wss' : 'ws',
+    final String wsUrl;
+    if (kIsWeb) {
+      wsUrl = WebService().getWebSocketUrl(rawServerUrl);
+    } else {
+      final base = Uri.parse(rawServerUrl);
+      final isSecure = base.scheme == 'https' || base.scheme == 'wss';
+      wsUrl = base.replace(scheme: isSecure ? 'wss' : 'ws').toString();
+    }
+    final wsUri = Uri.parse(wsUrl);
+    return wsUri.replace(
       path: '/ws',
       queryParameters: {'token': token},
     );

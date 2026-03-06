@@ -1,7 +1,7 @@
 use axum::{
     Extension, Json,
     extract::{Multipart, Path, State},
-    http::StatusCode,
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
 use serde_json::json;
@@ -12,6 +12,7 @@ use crate::auth::AppState;
 use crate::auth::middleware::UserId;
 
 const MAX_FILE_SIZE: usize = 50 * 1024 * 1024; // 50 MB
+pub(crate) const MEDIA_CACHE_CONTROL_HEADER_VALUE: &str = "public, max-age=31536000, immutable";
 
 const ALLOWED_CONTENT_TYPES: &[&str] = &[
     "image/jpeg",
@@ -202,6 +203,7 @@ pub async fn get_url(
             let expires_at = chrono::Utc::now() + chrono::Duration::seconds(3600);
             (
                 StatusCode::OK,
+                [(header::CACHE_CONTROL, MEDIA_CACHE_CONTROL_HEADER_VALUE)],
                 Json(json!({
                     "url": url,
                     "expires_at": expires_at,
@@ -217,5 +219,18 @@ pub async fn get_url(
                 "Failed to generate presigned URL",
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn media_cache_header_matches_cdn_immutable_policy() {
+        assert_eq!(
+            MEDIA_CACHE_CONTROL_HEADER_VALUE,
+            "public, max-age=31536000, immutable"
+        );
     }
 }
