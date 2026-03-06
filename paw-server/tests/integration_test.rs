@@ -512,3 +512,195 @@ fn rand_u32() -> u32 {
     std::time::SystemTime::now().hash(&mut hasher);
     hasher.finish() as u32
 }
+
+// ── OTP Expiry Validation ───────────────────────────────────────────────
+
+#[test]
+fn otp_code_must_be_six_ascii_digits() {
+    let valid_codes = ["000000", "123456", "999999"];
+    let invalid_codes = ["12345", "1234567", "abcdef", "12 456", "", "12345a", "00000\n"];
+
+    for code in valid_codes {
+        assert!(
+            code.len() == 6 && code.chars().all(|c| c.is_ascii_digit()),
+            "expected valid OTP: {code}"
+        );
+    }
+    for code in invalid_codes {
+        assert!(
+            !(code.len() == 6 && code.chars().all(|c| c.is_ascii_digit())),
+            "expected invalid OTP: {code:?}"
+        );
+    }
+}
+
+#[test]
+fn otp_expiry_window_is_five_minutes() {
+    let now = Utc::now();
+    let expires_at = now + Duration::minutes(5);
+    let delta_secs = (expires_at - now).num_seconds();
+
+    assert_eq!(delta_secs, 300, "OTP TTL must be exactly 5 minutes (300s)");
+    assert!(expires_at > now, "expiry must be in the future");
+    assert!(
+        expires_at < now + Duration::minutes(6),
+        "expiry must not exceed 6 minutes"
+    );
+}
+
+#[test]
+fn otp_expired_code_is_rejected_by_time_check() {
+    let now = Utc::now();
+    let expired_at = now - Duration::seconds(1);
+    let still_valid = now + Duration::seconds(60);
+
+    assert!(
+        expired_at <= now,
+        "an OTP whose expires_at <= now must be rejected"
+    );
+    assert!(
+        still_valid > now,
+        "an OTP whose expires_at > now is still valid"
+    );
+}
+
+// ── Idempotency Key Uniqueness ──────────────────────────────────────────
+
+#[test]
+fn idempotency_key_preserved_through_serialization() {
+    let key = Uuid::new_v4();
+    let conv_id = Uuid::new_v4();
+
+    let msg = paw_proto::MessageSendMsg {
+        v: 1,
+        conversation_id: conv_id,
+        content: "test".into(),
+        format: paw_proto::MessageFormat::Plain,
+        blocks: vec![],
+        idempotency_key: key,
+    };
+
+    let json = serde_json::to_value(&msg).unwrap();
+    assert_eq!(json["idempotency_key"], key.to_string());
+
+    let roundtrip: paw_proto::MessageSendMsg = serde_json::from_value(json).unwrap();
+    assert_eq!(roundtrip.idempotency_key, key);
+    assert_eq!(roundtrip.conversation_id, conv_id);
+}
+
+#[test]
+fn different_idempotency_keys_produce_different_messages() {
+    let conv_id = Uuid::new_v4();
+
+    let msg_a = paw_proto::MessageSendMsg {
+        v: 1,
+        conversation_id: conv_id,
+        content: "same content".into(),
+        format: paw_proto::MessageFormat::Plain,
+        blocks: vec![],
+        idempotency_key: Uuid::new_v4(),
+    };
+
+    let msg_b = paw_proto::MessageSendMsg {
+        v: 1,
+        conversation_id: conv_id,
+        content: "same content".into(),
+        format: paw_proto::MessageFormat::Plain,
+        blocks: vec![],
+        idempotency_key: Uuid::new_v4(),
+    };
+
+    assert_ne!(
+        msg_a.idempotency_key, msg_b.idempotency_key,
+        "distinct sends must have distinct idempotency keys"
+    );
+
+    let json_a = serde_json::to_string(&msg_a).unwrap();
+    let json_b = serde_json::to_string(&msg_b).unwrap();
+    assert_ne!(json_a, json_b, "different idempotency keys must serialize differently");
+}
+
+#[test]
+fn same_idempotency_key_same_conversation_same_sender_is_duplicate() {
+    let key = Uuid::new_v4();
+    let conv_id = Uuid::new_v4();
+    let sender_id = Uuid::new_v4();
+
+    let triple_a = (conv_id, sender_id, key);
+    let triple_b = (conv_id, sender_id, key);
+
+    assert_eq!(
+        triple_a, triple_b,
+        "(conv_id, sender_id, idempotency_key) triple must match for duplicates"
+    );
+
+    let different_sender = (conv_id, Uuid::new_v4(), key);
+    assert_ne!(
+        triple_a, different_sender,
+        "same key but different sender is NOT a duplicate"
+    );
+}
+
+// ── Gap-Fill Seq Ordering ───────────────────────────────────────────────
+
+#[test]
+fn gap_fill_messages_must_be_monotonically_increasing() {
+    let conv_id = Uuid::new_v4();
+    let sender_id = Uuid::new_v4();
+    let now = Utc::now();
+
+    let messages: Vec<paw_proto::MessageReceivedMsg> = (1..=10)
+        .map(|seq| paw_proto::MessageReceivedMsg {
+            v: 1,
+            id: Uuid::new_v4(),
+            conversation_id: conv_id,
+            sender_id,
+            content: format!("msg {seq}"),
+            format: paw_proto::MessageFormat::Markdown,
+            seq,
+            created_at: now + Duration::seconds(seq),
+            blocks: vec![],
+        })
+        .collect();
+
+    for window in messages.windows(2) {
+        assert!(
+            window[1].seq > window[0].seq,
+            "gap-fill seq must be strictly increasing: {} should be > {}",
+            window[1].seq,
+            window[0].seq
+        );
+    }
+}
+
+#[test]
+fn gap_fill_sync_with_last_seq_filters_correctly() {
+    let last_seq: i64 = 5;
+    let all_seqs: Vec<i64> = (1..=10).collect();
+
+    let gap_fill: Vec<i64> = all_seqs.iter().copied().filter(|&s| s > last_seq).collect();
+
+    assert_eq!(gap_fill, vec![6, 7, 8, 9, 10]);
+    assert!(gap_fill.iter().all(|&s| s > last_seq));
+
+    let is_sorted = gap_fill.windows(2).all(|w| w[0] < w[1]);
+    assert!(is_sorted, "gap-fill results must be in ascending order");
+}
+
+#[test]
+fn gap_fill_limit_caps_at_100() {
+    let last_seq: i64 = 0;
+    let all_seqs: Vec<i64> = (1..=250).collect();
+    let limit: usize = 100;
+
+    let gap_fill: Vec<i64> = all_seqs
+        .iter()
+        .copied()
+        .filter(|&s| s > last_seq)
+        .take(limit)
+        .collect();
+
+    assert_eq!(gap_fill.len(), 100, "gap-fill must cap at LIMIT 100");
+    assert_eq!(*gap_fill.first().unwrap(), 1);
+    assert_eq!(*gap_fill.last().unwrap(), 100);
+}

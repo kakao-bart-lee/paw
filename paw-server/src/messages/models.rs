@@ -14,13 +14,6 @@ pub struct Message {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Conversation {
-    pub id: Uuid,
-    pub name: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MessageSendResult {
     pub id: Uuid,
     pub seq: i64,
