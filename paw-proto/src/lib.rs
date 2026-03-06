@@ -160,6 +160,26 @@ pub struct StreamEndMsg {
     pub duration_ms: u64,
 }
 
+// ─── Agent Gateway ───────────────────────────────────────────────────────
+
+/// Agent Gateway: context sent to agent when a user sends a message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InboundContext {
+    pub v: u8,
+    pub message: MessageReceivedMsg,
+    pub conversation_id: Uuid,
+    pub recent_messages: Vec<MessageReceivedMsg>,
+}
+
+/// Agent → Server: agent's response message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentResponseMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub content: String,
+    pub format: String,
+}
+
 // ─── Shared Enums ────────────────────────────────────────────────────────
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]

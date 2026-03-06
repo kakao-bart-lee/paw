@@ -22,3 +22,5 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 anyhow = "1"
 thiserror = "2"
+async-nats = "0.38"
+sha2 = "0.10"

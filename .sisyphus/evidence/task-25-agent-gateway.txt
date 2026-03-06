@@ -1,0 +1,65 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.48s
+     Running unittests src/lib.rs (target/debug/deps/paw_proto-dce7ff4723f68839)
+
+running 3 tests
+test tests::test_connect_msg_has_version ... ok
+test tests::test_server_message_version_required ... ok
+test tests::test_message_send_roundtrip ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/paw_server-9fde0824c622bbc3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/integration_test.rs (target/debug/deps/integration_test-097fd8d3bc090140)
+
+running 37 tests
+test auth_full_flow_request_verify_register ... ignored, requires running paw-server and PostgreSQL
+test auth_request_otp_invalid_phone_rejected ... ignored, requires running paw-server and PostgreSQL
+test auth_request_otp_valid_phone ... ignored, requires running paw-server and PostgreSQL
+test auth_verify_otp_invalid_code_format ... ignored, requires running paw-server and PostgreSQL
+test health_check_returns_ok ... ignored, requires running paw-server
+test gap_fill_limit_caps_at_100 ... ok
+test gap_fill_sync_with_last_seq_filters_correctly ... ok
+test different_idempotency_keys_produce_different_messages ... ok
+test gap_fill_messages_must_be_monotonically_increasing ... ok
+test idempotency_key_preserved_through_serialization ... ok
+test message_idempotency_returns_same_result ... ignored, requires running paw-server with auth token
+test message_send_and_retrieve ... ignored, requires running paw-server with auth token
+test otp_code_must_be_six_ascii_digits ... ok
+test otp_expired_code_is_rejected_by_time_check ... ok
+test otp_expiry_window_is_five_minutes ... ok
+test jwt_wrong_secret_rejected ... ok
+test jwt_access_token_contains_device_id ... ok
+test jwt_expired_token_rejected ... ok
+test jwt_session_token_roundtrip ... ok
+test jwt_refresh_token_thirty_day_ttl ... ok
+test protocol_client_message_tagged_serialization ... ok
+test jwt_wrong_token_type_rejected ... ok
+test protocol_message_ack_roundtrip ... ok
+test protocol_message_received_all_fields ... ok
+test protocol_message_send_includes_v_field ... ok
+test protocol_server_hello_ok_roundtrip ... ok
+test protocol_sync_frame_roundtrip ... ok
+test protocol_typing_includes_user_id_when_present ... ok
+test protocol_typing_omits_user_id_when_none ... ok
+test same_idempotency_key_same_conversation_same_sender_is_duplicate ... ok
+test test_agent_response_msg_roundtrip ... ok
+test test_agent_token_format ... ok
+test test_inbound_context_serialization ... ok
+test ws_connect_receives_hello_ok ... ignored, requires running paw-server with auth token
+test ws_sync_gap_fill ... ignored, requires running paw-server with auth token
+test test_key_bundle_base64_roundtrip ... ok
+test test_replenish_threshold ... ok
+
+test result: ok. 28 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests paw_proto
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

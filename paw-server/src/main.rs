@@ -1,3 +1,4 @@
+mod agents;
 mod auth;
 mod db;
 mod keys;
@@ -34,11 +35,25 @@ async fn main() -> anyhow::Result<()> {
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
+
+    let nats_url = std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
+    let nats_client = match async_nats::connect(&nats_url).await {
+        Ok(client) => {
+            tracing::info!("NATS connected at {}", nats_url);
+            Some(Arc::new(client))
+        }
+        Err(e) => {
+            tracing::warn!("NATS unavailable ({}): agent gateway degraded", e);
+            None
+        }
+    };
+
     let state = AppState {
         db: db.clone(),
         jwt_secret,
         hub: hub.clone(),
         media_service,
+        nats: nats_client,
     };
 
     tokio::spawn(ws::pg_listener::start_pg_listener(db.clone(), hub));
@@ -67,6 +82,7 @@ async fn main() -> anyhow::Result<()> {
             get(keys::handlers::get_key_bundle_handler),
         )
         .route("/media/:media_id/url", get(media::handlers::get_url))
+        .route("/api/v1/agents/register", post(agents::handlers::register_agent_handler))
         .merge(media_upload)
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
@@ -80,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/register-device", post(auth::handlers::register_device))
         .route("/auth/refresh", post(auth::handlers::refresh_token))
         .route("/ws", get(ws::handler::ws_handler))
+        .route("/agent/ws", get(agents::handlers::agent_ws_handler))
         .merge(protected_routes)
         .with_state(state);
 

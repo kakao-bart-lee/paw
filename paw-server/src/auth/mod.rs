@@ -15,4 +15,5 @@ pub struct AppState {
     pub jwt_secret: String,
     pub hub: Arc<Hub>,
     pub media_service: Arc<MediaService>,
+    pub nats: Option<Arc<async_nats::Client>>,
 }

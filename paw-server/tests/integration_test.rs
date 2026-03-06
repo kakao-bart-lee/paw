@@ -717,6 +717,56 @@ fn test_key_bundle_base64_roundtrip() {
 }
 
 #[test]
+fn test_agent_token_format() {
+    let token = format!("paw_agent_{}", uuid::Uuid::new_v4());
+    assert!(token.starts_with("paw_agent_"));
+    assert!(token.len() > 10);
+}
+
+#[test]
+fn test_inbound_context_serialization() {
+    let msg = paw_proto::MessageReceivedMsg {
+        v: 1,
+        id: Uuid::new_v4(),
+        conversation_id: Uuid::new_v4(),
+        sender_id: Uuid::new_v4(),
+        content: "hello".into(),
+        format: paw_proto::MessageFormat::Markdown,
+        seq: 1,
+        created_at: Utc::now(),
+        blocks: vec![],
+    };
+
+    let ctx = paw_proto::InboundContext {
+        v: 1,
+        conversation_id: msg.conversation_id,
+        message: msg.clone(),
+        recent_messages: vec![msg],
+    };
+
+    let json = serde_json::to_value(&ctx).unwrap();
+    assert_eq!(json["v"], 1);
+    assert!(json["message"].is_object());
+    assert!(json["recent_messages"].is_array());
+}
+
+#[test]
+fn test_agent_response_msg_roundtrip() {
+    let msg = paw_proto::AgentResponseMsg {
+        v: 1,
+        conversation_id: Uuid::new_v4(),
+        content: "I can help with that!".into(),
+        format: "markdown".into(),
+    };
+
+    let json = serde_json::to_string(&msg).unwrap();
+    let parsed: paw_proto::AgentResponseMsg = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed.v, 1);
+    assert_eq!(parsed.content, "I can help with that!");
+    assert_eq!(parsed.format, "markdown");
+}
+
+#[test]
 fn test_replenish_threshold() {
     for count in 0..5u32 {
         assert!(count < 5, "should replenish at count {}", count);

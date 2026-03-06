@@ -34,6 +34,13 @@ services:
       timeout: 5s
       retries: 5
 
+  nats:
+    image: nats:2.10-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"  # monitoring
+    command: ["--jetstream"]
+
 volumes:
   postgres_data:
   minio_data:

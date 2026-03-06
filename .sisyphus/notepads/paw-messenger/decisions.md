@@ -260,3 +260,25 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - One-time prekeys are inserted idempotently (`ON CONFLICT (user_id, key_id) DO NOTHING`) so repeated uploads are safe during client retries.
 - `GET /api/v1/keys/:user_id` consumes at most one unused prekey atomically via `FOR UPDATE SKIP LOCKED` and marks it used inside the same transaction to avoid double allocation under concurrency.
 - API returns base64-encoded key material and a `replenish_prekeys` hint when remaining unused prekeys drop below 5, enabling proactive client refill behavior.
+
+## [2026-03-07] T23b: paw-ffi Crypto API Decisions
+- paw-ffi uses x25519-dalek + AES-GCM-256 + HKDF-SHA256 (simpler than full X3DH for FFI bridge)
+- Ciphertext format: nonce(12) + ephemeral_pubkey(32) + ciphertext_with_tag
+- T26 will extend this with proper X3DH key exchange protocol
+- flutter_rust_bridge annotation: `#[flutter_rust_bridge::frb(sync)]` may be added in T23c
+
+## [2026-03-07] T25: Agent Gateway Decisions
+- NATS is optional (graceful degradation when not available) — keeps CI/dev working without NATS server
+- Agent tokens format: `paw_agent_{uuid}`, stored as SHA-256 hash
+- Agent WS: /agent/ws?token={token} (different from user WS /ws?token={jwt})
+- InboundContext v:1 field mandatory (protocol contract)
+- Agent response insertion to DB deferred to T29 (full bot user system)
+- NATS subjects: agent.inbound.{agent_id} (server → agent)
+
+## [2026-03-07] T23c: flutter_rust_bridge v2 Integration Decisions
+
+- Moved `paw-ffi` public bridge surface into `src/api.rs` and re-exported from `lib.rs`; FRB codegen now targets `crate::api`.
+- Added `#[flutter_rust_bridge::frb(sync)]` to `create_account`, `encrypt`, and `decrypt` so generated Dart API is synchronous.
+- Standardized FRB config in `paw-client/flutter_rust_bridge.yaml` with `rust_root: ../paw-ffi`, `dart_output: lib/src/rust`, and Rust glue output at `paw-ffi/src/frb_generated.rs`.
+- Generated Dart bindings under `paw-client/lib/src/rust/` (`api.dart`, `frb_generated.dart`, `frb_generated.io.dart`, `frb_generated.web.dart`) and updated CI to include `paw-crypto` + `paw-ffi` in clippy/build/test package list.
+- `flutter pub get` currently fails in this repo due pre-existing `sqflite_sqlcipher ^2.2.1+1` resolution; this blocks Dart lockfile generation but does not block FRB codegen via Cargo-installed CLI.
