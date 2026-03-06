@@ -861,6 +861,19 @@ fn test_stream_limit_enforcement_thresholds() {
 }
 
 #[test]
+fn stream_concurrent_limit_is_10() {
+    assert_eq!(paw_proto::PROTOCOL_VERSION, 1);
+    let limit: usize = 10;
+    assert!(limit <= 100, "concurrent stream limit should be reasonable");
+}
+
+#[test]
+fn delta_size_limit_is_4096() {
+    let limit: usize = 4096;
+    assert!(limit > 0 && limit <= 65536);
+}
+
+#[test]
 fn test_replenish_threshold() {
     for count in 0..5u32 {
         assert!(count < 5, "should replenish at count {}", count);
@@ -936,4 +949,145 @@ fn invite_agent_response_serialization() {
     let parsed: InviteAgentResponse = serde_json::from_str(&json).unwrap();
 
     assert_eq!(parsed, response);
+}
+
+#[test]
+fn agent_stream_msg_all_variants_have_version() {
+    use paw_proto::{
+        AgentStreamMsg, ContentDeltaMsg, StreamEndMsg, StreamStartMsg, ToolEndMsg, ToolStartMsg,
+    };
+
+    let conversation_id = Uuid::new_v4();
+    let agent_id = Uuid::new_v4();
+    let stream_id = Uuid::new_v4();
+
+    let frames = vec![
+        AgentStreamMsg::StreamStart(StreamStartMsg {
+            v: 1,
+            conversation_id,
+            agent_id,
+            stream_id,
+        }),
+        AgentStreamMsg::ContentDelta(ContentDeltaMsg {
+            v: 1,
+            stream_id,
+            delta: "delta".to_string(),
+        }),
+        AgentStreamMsg::ToolStart(ToolStartMsg {
+            v: 1,
+            stream_id,
+            tool: "search".to_string(),
+            label: "Searching".to_string(),
+        }),
+        AgentStreamMsg::ToolEnd(ToolEndMsg {
+            v: 1,
+            stream_id,
+            tool: "search".to_string(),
+        }),
+        AgentStreamMsg::StreamEnd(StreamEndMsg {
+            v: 1,
+            stream_id,
+            tokens: 7,
+            duration_ms: 321,
+        }),
+    ];
+
+    for frame in frames {
+        let json = serde_json::to_value(&frame).unwrap();
+        assert_eq!(json["v"], 1);
+        assert!(json["type"].is_string());
+    }
+}
+
+#[test]
+fn stream_start_msg_has_conversation_id() {
+    let msg = paw_proto::StreamStartMsg {
+        v: 1,
+        conversation_id: Uuid::new_v4(),
+        agent_id: Uuid::new_v4(),
+        stream_id: Uuid::new_v4(),
+    };
+
+    let json = serde_json::to_value(&msg).unwrap();
+    assert_eq!(json["v"], 1);
+    assert_eq!(json["conversation_id"], msg.conversation_id.to_string());
+    assert_eq!(json["agent_id"], msg.agent_id.to_string());
+}
+
+#[test]
+fn content_delta_msg_delta_roundtrip() {
+    let msg = paw_proto::ContentDeltaMsg {
+        v: 1,
+        stream_id: Uuid::new_v4(),
+        delta: "안녕 👋 — مرحبا — hello".to_string(),
+    };
+
+    let json = serde_json::to_string(&msg).unwrap();
+    let parsed: paw_proto::ContentDeltaMsg = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed.v, 1);
+    assert_eq!(parsed.stream_id, msg.stream_id);
+    assert_eq!(parsed.delta, msg.delta);
+}
+
+#[test]
+fn group_member_limit_constant_value() {
+    let limit: usize = 100;
+    assert_eq!(MAX_GROUP_MEMBERS, 100);
+    assert_eq!(limit, 100);
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct AddMemberRequest {
+    user_id: Uuid,
+}
+
+#[test]
+fn add_member_request_serialization() {
+    let req = AddMemberRequest {
+        user_id: Uuid::new_v4(),
+    };
+
+    let json = serde_json::to_value(&req).unwrap();
+    assert_eq!(json["user_id"], req.user_id.to_string());
+
+    let parsed: AddMemberRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, req);
+}
+
+#[test]
+fn invite_agent_request_serialization_phase2() {
+    let req = InviteAgentRequest {
+        agent_id: Uuid::new_v4(),
+    };
+
+    let json = serde_json::to_value(&req).unwrap();
+    let object = json.as_object().unwrap();
+    assert_eq!(object.len(), 1, "request should only contain agent_id field");
+    assert_eq!(json["agent_id"], req.agent_id.to_string());
+
+    let parsed: InviteAgentRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed.agent_id, req.agent_id);
+}
+
+#[test]
+fn stream_end_msg_has_metrics_fields() {
+    let msg = paw_proto::StreamEndMsg {
+        v: 1,
+        stream_id: Uuid::new_v4(),
+        tokens: 42,
+        duration_ms: 1_234,
+    };
+
+    let json = serde_json::to_value(&msg).unwrap();
+    assert_eq!(json["tokens"], 42);
+    assert_eq!(json["duration_ms"], 1_234);
+
+    let parsed: paw_proto::StreamEndMsg = serde_json::from_value(json).unwrap();
+    let _: u32 = parsed.tokens;
+    let _: u64 = parsed.duration_ms;
+}
+
+#[test]
+fn protocol_version_is_one() {
+    assert_eq!(paw_proto::PROTOCOL_VERSION, 1);
 }

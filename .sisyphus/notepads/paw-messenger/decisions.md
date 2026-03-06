@@ -366,3 +366,19 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Implemented `OpenClawAdapter` as a routing shell: connect to `/agent/ws?token=...`, parse inbound contexts safely, dispatch to registered channel handlers, and emit either single-response or stream-frame replies.
 - Added `ChannelHandler` abstraction plus `SlackChannelHandler` echo stub to establish the channel adapter pattern for upcoming real integrations (T37).
 - Added parser/serializer-focused unit tests in `src/__tests__/adapter.test.ts` to validate protocol parsing, invalid JSON handling, response versioning, and stream-frame type narrowing without network I/O.
+
+## [2026-03-07] T37: OpenClaw Adapter E2EE Bridge Decisions
+
+- Added `adapters/openclaw-adapter/src/e2ee.ts` as a bridge module with stubbed `encryptContent` and `decryptContent` plus `looksLikeCiphertext` heuristic (`base64` + `length > 44`) matching client-side detection behavior.
+- Extended `AdapterOptions` with optional `e2ee?: E2eeConfig`; inbound routing now attempts decryption only when E2EE config exists and payload looks like ciphertext.
+- Outbound single-string handler responses are now passed through `encryptContent` when E2EE is configured; stream-frame flow remains unchanged in this task.
+- Added adapter tests for ciphertext detection true/false cases and `E2eeConfig` shape checks to lock the bridge contract before real crypto implementation.
+- Kept cryptography intentionally as stubs (no X25519/AES-GCM runtime implementation in adapter) to preserve the planned phased rollout boundary.
+
+## [2026-03-07] T39: Phase 2 Integration Test Expansion Decisions
+
+- Added 8 focused unit tests in `paw-server/tests/integration_test.rs` to explicitly cover Phase 2 protocol/message invariants without DB/network dependencies.
+- Stream frame coverage now includes per-variant `v:1` assertions for `AgentStreamMsg` plus dedicated checks for `StreamStartMsg` identity fields and `StreamEndMsg` metrics fields (`tokens`, `duration_ms`).
+- Added unicode-safe serde roundtrip validation for `ContentDeltaMsg.delta` to guard against encoding regressions in streaming deltas.
+- Added serialization roundtrip checks for Phase 2 request payloads (`AddMemberRequest`, `InviteAgentRequest`) and locked protocol guardrail `PROTOCOL_VERSION == 1`.
+- Full command `cargo test -p paw-server -p paw-proto -p paw-crypto -p paw-ffi` passed with `45 passed, 0 failed, 9 ignored` in `integration_test.rs` and no failures across all targeted crates.
