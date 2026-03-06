@@ -2,6 +2,11 @@ export interface PawMessage {
   v: number;
 }
 
+export interface E2eeConfig {
+  publicKey: string;
+  privateKey: string;
+}
+
 export interface MessageReceived extends PawMessage {
   type: 'message_received';
   id: string;

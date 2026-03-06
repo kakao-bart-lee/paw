@@ -1,9 +1,11 @@
 import WebSocket from 'ws';
 import { randomUUID } from 'node:crypto';
+import { decryptContent, encryptContent, looksLikeCiphertext } from './e2ee';
 import {
   AgentResponse,
   AgentResponseMsg,
   AgentStreamFrame,
+  E2eeConfig,
   InboundContext,
   MessageReceived,
 } from './types';
@@ -18,6 +20,7 @@ export interface AdapterOptions {
   channelConfig?: ChannelConfig;
   agentId?: string;
   defaultFormat?: 'plain' | 'markdown';
+  e2ee?: E2eeConfig;
 }
 
 const PROTOCOL_VERSION = 1;
@@ -54,12 +57,14 @@ export class OpenClawAdapter {
   private readonly channelConfig: ChannelConfig;
   private readonly agentId: string;
   private readonly defaultFormat: 'plain' | 'markdown';
+  private readonly e2eeConfig: E2eeConfig | null;
 
   constructor(private readonly token: string, options: AdapterOptions = {}) {
     this.serverUrl = (options.serverUrl ?? 'ws://localhost:3000').replace(/\/$/, '');
     this.channelConfig = options.channelConfig ?? {};
     this.agentId = options.agentId ?? '00000000-0000-0000-0000-000000000000';
     this.defaultFormat = options.defaultFormat ?? 'markdown';
+    this.e2eeConfig = options.e2ee ?? null;
   }
 
   registerChannel(handler: ChannelHandler): this {
@@ -97,16 +102,37 @@ export class OpenClawAdapter {
   }
 
   async routeInboundContext(ctx: InboundContext): Promise<void> {
-    const handler = this.resolveHandler(ctx);
+    let routedContext = ctx;
+    const inboundContent = ctx.message.content;
+
+    if (this.e2eeConfig && looksLikeCiphertext(inboundContent)) {
+      const decrypted = decryptContent(this.e2eeConfig.privateKey, inboundContent);
+      if (decrypted !== null) {
+        routedContext = {
+          ...ctx,
+          message: {
+            ...ctx.message,
+            content: decrypted,
+          },
+        };
+      }
+    }
+
+    const handler = this.resolveHandler(routedContext);
     if (!handler || !this.ws) {
       return;
     }
 
-    const response = await handler.handle(ctx);
+    const response = await handler.handle(routedContext);
     if (typeof response === 'string') {
+      let responseContent = response;
+      if (this.e2eeConfig) {
+        responseContent = encryptContent(this.e2eeConfig.publicKey, response);
+      }
+
       const message: AgentResponse = serializeAgentResponse(
-        ctx.conversation_id,
-        response,
+        routedContext.conversation_id,
+        responseContent,
         this.defaultFormat,
       );
       this.ws.send(JSON.stringify(message));
@@ -117,7 +143,7 @@ export class OpenClawAdapter {
     const streamStart: AgentStreamFrame = {
       type: 'stream_start',
       v: PROTOCOL_VERSION,
-      conversation_id: ctx.conversation_id,
+      conversation_id: routedContext.conversation_id,
       agent_id: this.agentId,
       stream_id: streamId,
     };
