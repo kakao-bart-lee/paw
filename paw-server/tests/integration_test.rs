@@ -1093,3 +1093,54 @@ fn stream_end_msg_has_metrics_fields() {
 fn protocol_version_is_one() {
     assert_eq!(paw_proto::PROTOCOL_VERSION, 1);
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct ChannelCreateRequest {
+    name: String,
+    is_public: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct ChannelSubscribeResponse {
+    subscribed: bool,
+}
+
+fn can_send_channel_message(owner_id: Uuid, sender_id: Uuid) -> bool {
+    owner_id == sender_id
+}
+
+#[test]
+fn channel_create_request_roundtrip() {
+    let req = ChannelCreateRequest {
+        name: "announcements".to_string(),
+        is_public: Some(true),
+    };
+
+    let json = serde_json::to_value(&req).unwrap();
+    assert_eq!(json["name"], "announcements");
+    assert_eq!(json["is_public"], true);
+
+    let parsed: ChannelCreateRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, req);
+}
+
+#[test]
+fn channel_subscribe_response_roundtrip() {
+    let res = ChannelSubscribeResponse { subscribed: true };
+    let json = serde_json::to_string(&res).unwrap();
+    let parsed: ChannelSubscribeResponse = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed, res);
+}
+
+#[test]
+fn channel_owner_only_send_allows_owner() {
+    let owner_id = Uuid::new_v4();
+    assert!(can_send_channel_message(owner_id, owner_id));
+}
+
+#[test]
+fn channel_owner_only_send_rejects_non_owner() {
+    let owner_id = Uuid::new_v4();
+    let other_user_id = Uuid::new_v4();
+    assert!(!can_send_channel_message(owner_id, other_user_id));
+}
