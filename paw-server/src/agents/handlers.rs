@@ -18,8 +18,10 @@ use crate::auth::AppState;
 use crate::auth::middleware::UserId;
 use crate::messages::service::{Membership, check_member};
 use super::models::{
-    AgentProfile, InviteAgentRequest, InviteAgentResponse, RegisterAgentRequest,
-    RegisterAgentResponse, RevokeAgentResponse,
+    AgentProfile, InstallAgentResponse, InstalledAgentsResponse, InviteAgentRequest,
+    InviteAgentResponse, MarketplaceSearchQuery, MarketplaceSearchResponse, PublishAgentRequest,
+    PublishAgentResponse, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
+    UninstallAgentResponse,
 };
 use super::service;
 
@@ -201,6 +203,162 @@ pub async fn remove_agent_handler(
                     "error": "remove_failed",
                     "message": "Failed to remove agent"
                 })),
+            ))
+        }
+    }
+}
+
+pub async fn marketplace_search_handler(
+    State(state): State<AppState>,
+    Query(params): Query<MarketplaceSearchQuery>,
+) -> Result<Json<MarketplaceSearchResponse>, (StatusCode, Json<Value>)> {
+    let agents = service::search_marketplace_agents(
+        state.db.as_ref(),
+        params.q.as_deref(),
+        params.category.as_deref(),
+        &params.sort,
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("marketplace search failed: {e}");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "search_failed", "message": "Failed to search marketplace" })),
+        )
+    })?;
+
+    let count = agents.len();
+    Ok(Json(MarketplaceSearchResponse { agents, count }))
+}
+
+pub async fn marketplace_agent_detail_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<Value>)> {
+    let detail = service::get_marketplace_agent_detail(state.db.as_ref(), agent_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("marketplace agent detail failed: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "internal_error", "message": "Failed to get agent detail" })),
+            )
+        })?;
+
+    match detail {
+        Some(d) => Ok(Json(serde_json::to_value(d).unwrap())),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" })),
+        )),
+    }
+}
+
+pub async fn install_agent_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<InstallAgentResponse>, (StatusCode, Json<Value>)> {
+    match service::install_agent(state.db.as_ref(), user_id, agent_id).await {
+        Ok(true) => Ok(Json(InstallAgentResponse {
+            installed: true,
+            agent_id,
+        })),
+        Ok(false) => Err((
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "already_installed", "message": "Agent is already installed" })),
+        )),
+        Err(err) if err.to_string() == "agent_not_found" => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" })),
+        )),
+        Err(err) => {
+            tracing::error!("install agent failed: {err}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "install_failed", "message": "Failed to install agent" })),
+            ))
+        }
+    }
+}
+
+pub async fn uninstall_agent_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<UninstallAgentResponse>, (StatusCode, Json<Value>)> {
+    match service::uninstall_agent(state.db.as_ref(), user_id, agent_id).await {
+        Ok(true) => Ok(Json(UninstallAgentResponse {
+            uninstalled: true,
+            agent_id,
+        })),
+        Ok(false) => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "not_installed", "message": "Agent is not installed" })),
+        )),
+        Err(err) => {
+            tracing::error!("uninstall agent failed: {err}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "uninstall_failed", "message": "Failed to uninstall agent" })),
+            ))
+        }
+    }
+}
+
+pub async fn list_installed_agents_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+) -> Result<Json<InstalledAgentsResponse>, (StatusCode, Json<Value>)> {
+    let agents = service::list_installed_agents(state.db.as_ref(), user_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("list installed agents failed: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "internal_error", "message": "Failed to list installed agents" })),
+            )
+        })?;
+
+    Ok(Json(InstalledAgentsResponse { agents }))
+}
+
+pub async fn publish_agent_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+    Json(req): Json<PublishAgentRequest>,
+) -> Result<Json<PublishAgentResponse>, (StatusCode, Json<Value>)> {
+    if let Err(msg) = req.manifest.validate() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "invalid_manifest", "message": msg })),
+        ));
+    }
+
+    match service::publish_agent(
+        state.db.as_ref(),
+        agent_id,
+        user_id,
+        &req.manifest,
+        req.category.as_deref(),
+        req.tags.as_deref(),
+    )
+    .await
+    {
+        Ok(true) => Ok(Json(PublishAgentResponse {
+            published: true,
+            agent_id,
+        })),
+        Ok(false) => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "agent_not_found_or_not_owner", "message": "Agent not found or you are not the owner" })),
+        )),
+        Err(err) => {
+            tracing::error!("publish agent failed: {err}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "publish_failed", "message": "Failed to publish agent" })),
             ))
         }
     }

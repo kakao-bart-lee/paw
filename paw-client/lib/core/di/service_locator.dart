@@ -6,6 +6,7 @@ import '../db/app_database.dart';
 import '../db/daos/conversations_dao.dart';
 import '../db/daos/messages_dao.dart';
 import '../http/api_client.dart';
+import '../search/search_service.dart';
 import '../sync/sync_service.dart';
 import '../ws/reconnection_manager.dart';
 import '../ws/ws_service.dart';

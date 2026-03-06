@@ -5,10 +5,12 @@ import '../models/conversation.dart';
 
 class ConversationTile extends StatelessWidget {
   final Conversation conversation;
+  final VoidCallback? onTap;
 
   const ConversationTile({
     super.key,
     required this.conversation,
+    this.onTap,
   });
 
   String _formatTimestamp(DateTime time) {
@@ -24,7 +26,7 @@ class ConversationTile extends StatelessWidget {
     final theme = Theme.of(context);
     
     return ListTile(
-      onTap: () {
+      onTap: onTap ?? () {
         // Navigate to chat screen
         context.push('/chat/${conversation.id}');
       },

@@ -9,6 +9,7 @@ import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/screens/key_verification_screen.dart';
 import '../../features/chat/screens/group_info_screen.dart';
 import '../../features/chat/screens/create_group_screen.dart';
+import '../../features/chat/screens/search_screen.dart';
 import '../../features/agent/screens/agent_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/profile/screens/my_profile_screen.dart';
@@ -37,6 +38,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DeviceNameScreen(),
       ),
       
+      // Search route (outside shell — no bottom nav)
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
+      ),
+
       // Profile routes (outside shell — no bottom nav)
       GoRoute(
         path: '/group/:id/info',

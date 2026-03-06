@@ -406,3 +406,24 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Refactored single-conversation `sync` to reuse a shared `fetch_messages_after_seq(...)` mapper so `sync` and `device_sync` stay protocol-consistent for message shaping (`format`, `blocks`, `seq`, timestamps).
 - Confirmed hub fan-out remains multi-device capable (`user_id -> Vec<WsSender>`) and added a unit test verifying one `send_to_user` reaches all active sockets for the same user.
 - Added authenticated device management endpoints: `GET /api/v1/devices` (list own devices) and `DELETE /api/v1/devices/:device_id` (remove own device), with JSON error contract aligned to existing handlers.
+
+## [2026-03-07] T44: Encrypted Cloud Backup Decisions
+
+- Migration `20260101000016_backups.sql` creates two tables: `backups` (id, user_id FK, s3_key, size_bytes, created_at, expires_at) and `backup_settings` (user_id PK FK, frequency CHECK daily/weekly/never, updated_at). Server stores metadata only — never plaintext backup content.
+- Added `presigned_put_url` and `delete_object` methods to `MediaService`, reusing the existing S3 client and bucket. Backup S3 key format: `backups/{user_id}/{backup_id}.enc`.
+- Backup module (`paw-server/src/backup/`) follows existing media module pattern: mod.rs, models.rs, service.rs, handlers.rs. Service functions are plain async fns taking `&DbPool` and `&MediaService`.
+- Six REST endpoints registered under `/api/v1/backup/`: `POST /initiate` (presigned PUT URL + DB record), `GET /list`, `POST /:id/restore` (presigned GET URL), `DELETE /:id` (S3 object + DB record), `PUT /settings`, `GET /settings`. All behind auth middleware.
+- `BackupFrequency` enum uses `#[serde(rename_all = "lowercase")]` for JSON ↔ DB column compatibility. Settings use UPSERT (`INSERT ON CONFLICT DO UPDATE`) for idempotent updates.
+- 4 serde roundtrip tests added: initiate response, list response, settings (all 3 frequencies), and S3 key format validation. All 53 non-ignored tests pass.
+
+## [2026-03-07] T43: Push Notifications + E2EE Decisions
+
+- Migration `20260101000015_push_tokens.sql` creates `push_tokens` (id UUID PK, user_id FK, device_id FK UNIQUE, platform CHECK fcm/apns, token, created_at) and `conversation_mutes` (user_id + conversation_id composite PK, muted_until nullable for permanent mute).
+- Push token registration uses `ON CONFLICT (device_id) DO UPDATE` upsert so device token rotation replaces the old token atomically without requiring explicit unregister.
+- `send_push_notification` is a stub-only implementation: logs `[PUSH] would send to {platform}: {payload}` per offline user token. No real FCM/APNs SDK dependency added.
+- Push payload is E2EE-compatible: `{"type":"new_message","conversation_id":"...","sender_id":"..."}` — strictly no message content. Security doc comments on `PushPayload` struct and `send_push_notification` fn enforce this invariant.
+- Offline detection uses `Hub::is_user_connected(user_id)` which reads the WS connections map; users with zero active sockets are considered offline and eligible for push.
+- Push is triggered from `messages/handlers.rs::send_message` via fire-and-forget `tokio::spawn` after successful message insert, keeping the HTTP response latency unaffected by push fan-out.
+- Mute logic: `conversation_mutes.muted_until IS NULL` = permanent mute, non-null = time-bounded. `is_conversation_muted` filters out expired mutes (`muted_until > NOW()`). Muted conversations skip push delivery.
+- Four REST endpoints: `POST/DELETE /api/v1/push/register` (device token), `POST/DELETE /api/v1/conversations/:id/mute`. All behind auth middleware with `DeviceId` extraction for push registration.
+- 3 serde tests: push token request roundtrip (both FCM and APNs), mute request roundtrip (duration + forever variants), E2EE payload shape verification (asserts no content/body/text fields, exactly 3 fields). All 56 non-ignored tests pass.
