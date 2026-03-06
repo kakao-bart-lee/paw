@@ -1242,3 +1242,117 @@ fn channel_owner_only_send_rejects_non_owner() {
     let other_user_id = Uuid::new_v4();
     assert!(!can_send_channel_message(owner_id, other_user_id));
 }
+
+// ── Push Notification: model serde + E2EE payload ──────────────────────
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum PushPlatform {
+    Fcm,
+    Apns,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct RegisterPushTokenRequest {
+    platform: PushPlatform,
+    token: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct MuteConversationRequest {
+    #[serde(default)]
+    duration_minutes: Option<i64>,
+    #[serde(default)]
+    forever: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct PushPayload {
+    #[serde(rename = "type")]
+    payload_type: String,
+    conversation_id: Uuid,
+    sender_id: Uuid,
+}
+
+#[test]
+fn push_token_register_request_serde_roundtrip() {
+    let req = RegisterPushTokenRequest {
+        platform: PushPlatform::Fcm,
+        token: "fcm_token_abc123".to_string(),
+    };
+
+    let json = serde_json::to_value(&req).unwrap();
+    assert_eq!(json["platform"], "fcm");
+    assert_eq!(json["token"], "fcm_token_abc123");
+
+    let parsed: RegisterPushTokenRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, req);
+
+    let apns_req = RegisterPushTokenRequest {
+        platform: PushPlatform::Apns,
+        token: "apns_device_token_xyz".to_string(),
+    };
+    let json = serde_json::to_value(&apns_req).unwrap();
+    assert_eq!(json["platform"], "apns");
+    let parsed: RegisterPushTokenRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, apns_req);
+}
+
+#[test]
+fn mute_conversation_request_serde_roundtrip() {
+    let duration_req = MuteConversationRequest {
+        duration_minutes: Some(480),
+        forever: None,
+    };
+    let json = serde_json::to_value(&duration_req).unwrap();
+    assert_eq!(json["duration_minutes"], 480);
+    let parsed: MuteConversationRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, duration_req);
+
+    let forever_req = MuteConversationRequest {
+        duration_minutes: None,
+        forever: Some(true),
+    };
+    let json = serde_json::to_value(&forever_req).unwrap();
+    assert_eq!(json["forever"], true);
+    let parsed: MuteConversationRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, forever_req);
+}
+
+#[test]
+fn e2ee_push_payload_has_no_content_field() {
+    let payload = PushPayload {
+        payload_type: "new_message".to_string(),
+        conversation_id: Uuid::new_v4(),
+        sender_id: Uuid::new_v4(),
+    };
+
+    let json = serde_json::to_value(&payload).unwrap();
+    let obj = json.as_object().unwrap();
+
+    assert_eq!(json["type"], "new_message");
+    assert!(json["conversation_id"].is_string());
+    assert!(json["sender_id"].is_string());
+
+    assert!(
+        !obj.contains_key("content"),
+        "E2EE push payload must NOT contain message content"
+    );
+    assert!(
+        !obj.contains_key("body"),
+        "E2EE push payload must NOT contain message body"
+    );
+    assert!(
+        !obj.contains_key("text"),
+        "E2EE push payload must NOT contain message text"
+    );
+
+    assert_eq!(
+        obj.len(),
+        3,
+        "push payload should only have type, conversation_id, sender_id"
+    );
+
+    let roundtrip: PushPayload = serde_json::from_value(json).unwrap();
+    assert_eq!(roundtrip, payload);
+}
