@@ -427,3 +427,43 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Mute logic: `conversation_mutes.muted_until IS NULL` = permanent mute, non-null = time-bounded. `is_conversation_muted` filters out expired mutes (`muted_until > NOW()`). Muted conversations skip push delivery.
 - Four REST endpoints: `POST/DELETE /api/v1/push/register` (device token), `POST/DELETE /api/v1/conversations/:id/mute`. All behind auth middleware with `DeviceId` extraction for push registration.
 - 3 serde tests: push token request roundtrip (both FCM and APNs), mute request roundtrip (duration + forever variants), E2EE payload shape verification (asserts no content/body/text fields, exactly 3 fields). All 56 non-ignored tests pass.
+
+## T45: Agent Marketplace — Registry + Discovery
+
+**Date**: 2026-03-07
+
+### Decisions
+- Extended existing `agent_tokens` table rather than creating a separate `marketplace_agents` table. Rationale: agents are already identified by `agent_tokens.id`, adding marketplace fields as columns avoids JOIN overhead and maintains a single source of truth.
+- `user_installed_agents` uses composite PK `(user_id, agent_id)` — no surrogate key needed, ON CONFLICT DO NOTHING handles idempotent installs.
+- `install_count` is maintained via application-level increment/decrement on install/uninstall rather than a materialized count. Acceptable at this scale; can move to a trigger or async counter later.
+- Marketplace search uses ILIKE for text matching. For production scale, should migrate to `tsvector`/`tsquery` full-text search or a dedicated search index.
+- Sort parameter validated server-side with match fallback to `install_count DESC` (popular) as default.
+- Manifest validation is lightweight (non-empty name/version/description). No semver enforcement yet — kept simple per task spec.
+- Publish endpoint (`PUT /agents/:id/publish`) is owner-only via `owner_user_id` check in the UPDATE WHERE clause. No separate authorization middleware needed.
+
+### Patterns observed
+- Handler error shape: `(StatusCode, Json<Value>)` tuple — consistent with all other handlers
+- Service layer uses `PgPool` directly (not `DbPool`) for marketplace functions since they don't need the `Arc` wrapper
+- `sqlx::FromRow` derive works cleanly with `TEXT[]` -> `Vec<String>` and `JSONB` -> `Option<Value>`
+
+## T46: TypeScript Agent SDK (`@paw/sdk`)
+
+**API Design Decisions:**
+- Mirrored Python SDK API but adapted for TypeScript idioms: `onMessage(handler)` instead of `@on_message` decorator
+- Handler signature is `(ctx, streaming) => Promise<string | void>` — streaming context is passed as second argument (not returned like Python's `StreamingResponse`)
+- `StreamingContext` is an interface in types.ts, implemented by `StreamingContextImpl` in streaming.ts — allows mock injection in tests
+- Used `WsSend` interface abstraction for WebSocket testability (mock `{ send }` object)
+- `PawAgent.parseContext()` and `PawAgent.parseMessage()` are static for unit testing without live WS
+- All outgoing WS frames include `v: 1` via `PROTOCOL_VERSION` constant
+- TypeScript target ES2020 (not ES2022 like openclaw-adapter) per task spec
+
+**Patterns:**
+- Package structure follows openclaw-adapter: `@paw/` scope, CommonJS module, strict TypeScript, jest + ts-jest
+- `jest.config.js` with `preset: 'ts-jest'` is required — without it, jest defaults to babel-jest which can't parse TypeScript `!` non-null assertions
+- Tests use `@jest/globals` imports (not global jest) matching openclaw-adapter pattern
+- `node_modules/` excluded from git via existing .gitignore
+
+**Protocol alignment:**
+- Streaming frames: `stream_start` → `content_delta`* → `stream_end` (matches Python SDK + lib.rs)
+- Tool frames: `tool_start` / `tool_end` with `tool` + `label` fields
+- `stream_start` includes `agent_id: "00000000-..."` placeholder (matches Python SDK)

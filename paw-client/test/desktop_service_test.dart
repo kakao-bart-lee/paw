@@ -1,9 +1,12 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paw_client/core/platform/desktop_service.dart';
 import 'package:paw_client/features/chat/screens/conversations_screen.dart';
+import 'package:paw_client/features/chat/providers/chat_provider.dart';
+import 'package:paw_client/features/chat/models/conversation.dart';
 
 void main() {
   group('DesktopService', () {
@@ -14,61 +17,72 @@ void main() {
     });
 
     test('isDesktop returns correct value for current platform', () {
-      // Tests run on the host machine, so the result depends on the OS.
       final expected = !kIsWeb &&
           (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
       expect(service.isDesktop, expected);
     });
 
     test('setupSystemTray executes without error', () {
-      // Should not throw regardless of platform.
       expect(() => service.setupSystemTray(), returnsNormally);
     });
 
     test('registerKeyboardShortcuts executes without error', () {
-      // Should not throw regardless of platform.
       expect(() => service.registerKeyboardShortcuts(), returnsNormally);
     });
   });
 
   group('Responsive breakpoint', () {
+    /// Build [ConversationsScreen] in a test-safe widget tree.
+    ///
+    /// The real provider loads mock conversations whose tiles use
+    /// [DateFormat] with a Korean locale that isn't initialised in
+    /// tests.  We override the provider with an empty list so we can
+    /// test layout logic without triggering locale errors.
+    Widget buildTestWidget() {
+      return ProviderScope(
+        overrides: [
+          conversationsNotifierProvider.overrideWith(
+            () => _EmptyConversationsNotifier(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: ConversationsScreen(),
+        ),
+      );
+    }
+
     testWidgets('shows single-panel layout on narrow screens',
         (WidgetTester tester) async {
-      // Simulate a narrow (mobile) viewport – 375 px wide.
       tester.view.physicalSize = const Size(375, 812);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: ConversationsScreen(),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget());
       await tester.pump();
 
-      // On narrow screens there should be NO VerticalDivider (single panel).
+      // Single panel → no VerticalDivider.
       expect(find.byType(VerticalDivider), findsNothing);
     });
 
     testWidgets('shows two-panel layout on wide screens',
         (WidgetTester tester) async {
-      // Simulate a wide (desktop) viewport – 1200 px wide.
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: ConversationsScreen(),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget());
       await tester.pump();
 
-      // On wide screens the VerticalDivider separating the two panels
-      // should be present.
+      // Two-panel → VerticalDivider present.
       expect(find.byType(VerticalDivider), findsOneWidget);
     });
   });
+}
+
+/// A trivial [ConversationsNotifier] that always returns an empty list.
+class _EmptyConversationsNotifier extends ConversationsNotifier {
+  @override
+  List<Conversation> build() => [];
 }
