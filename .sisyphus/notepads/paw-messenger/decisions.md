@@ -467,3 +467,23 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Streaming frames: `stream_start` → `content_delta`* → `stream_end` (matches Python SDK + lib.rs)
 - Tool frames: `tool_start` / `tool_end` with `tool` + `label` fields
 - `stream_start` includes `agent_id: "00000000-..."` placeholder (matches Python SDK)
+
+## [2026-03-07] T48: Desktop Platform QA Decisions
+
+### DesktopService Pattern
+- Used `dart:io` Platform checks guarded by `!kIsWeb` to handle Flutter web compilation. No new packages added.
+- System tray and keyboard shortcuts are stubs (`debugPrint`) — no `tray_manager` or `hotkey_manager` dependency; real implementations deferred to Phase 3.
+
+### Responsive Layout Architecture
+- ConversationsScreen uses `LayoutBuilder` with `constraints.maxWidth > 768` breakpoint.
+- Desktop two-panel: 280px fixed left panel (conversation list) + flexible right panel (ChatScreen or placeholder).
+- `_selectedConversationId` state drives right panel content; null shows "대화를 선택하세요" placeholder.
+- Added optional `onTap` callback to `ConversationTile` so desktop layout can override default `context.push()` navigation.
+
+### Pre-existing Issues Fixed
+- `CardTheme` → `CardThemeData` rename in `app_theme.dart` (Flutter SDK deprecation). This blocked test compilation for the entire project.
+
+### Test Strategy
+- Used `ProviderScope` override with `_EmptyConversationsNotifier` to avoid Korean locale initialization (`intl` DateFormat) errors in widget tests.
+- VerticalDivider presence/absence used as layout mode signal (two-panel vs single-panel).
+- 5 tests total: 3 DesktopService unit tests + 2 responsive breakpoint widget tests.

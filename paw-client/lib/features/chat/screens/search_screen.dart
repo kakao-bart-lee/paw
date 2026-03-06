@@ -134,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(
               Icons.search,
               size: 64,
-              color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
@@ -156,7 +156,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(
               Icons.search_off,
               size: 64,
-              color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
@@ -198,7 +198,7 @@ class _SearchResultTile extends StatelessWidget {
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: colorScheme.primary.withOpacity(0.15),
+        backgroundColor: colorScheme.primary.withValues(alpha: 0.15),
         child: Icon(Icons.message, color: colorScheme.primary, size: 20),
       ),
       title: _buildHighlightedText(
