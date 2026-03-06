@@ -81,6 +81,14 @@ async fn main() -> anyhow::Result<()> {
             delete(messages::handlers::remove_member_handler),
         )
         .route(
+            "/conversations/:id/agents",
+            post(agents::handlers::invite_agent_handler),
+        )
+        .route(
+            "/conversations/:id/agents/:agent_id",
+            delete(agents::handlers::remove_agent_handler),
+        )
+        .route(
             "/conversations/:conv_id/messages",
             post(messages::handlers::send_message),
         )

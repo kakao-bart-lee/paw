@@ -350,3 +350,11 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Used `ValueNotifier<String>` in `StreamingMessage` to allow `StreamBubble` to update its text content without rebuilding the entire `ListView`.
 - Added `StreamBubble` and `ToolIndicator` widgets to display real-time agent streaming responses.
 - Handled `StreamStartMsg`, `ContentDeltaMsg`, `ToolStartMsg`, `ToolEndMsg`, and `StreamEndMsg` in `chat_provider.dart`.
+
+## [2026-03-07] T34: Conversation Agent Invite/Remove Decisions
+
+- Added `conversation_agents` join table (`conversation_id`, `agent_id`, `invited_by`, `invited_at`) with composite PK and conversation index to support many-to-many agent membership per conversation.
+- Invitation flow requires conversation membership via existing `messages::service::check_member`; handler returns `409 already_invited` when `(conversation_id, agent_id)` already exists.
+- Invitation insert is constrained to active agents only (`agent_tokens.revoked_at IS NULL`) and returns a typed error when agent is missing/revoked.
+- Agent removal is owner-gated (`conversation_members.role = 'owner'`) and deletes from `conversation_agents`; handler maps unauthorized to `403` and missing mapping to `404`.
+- Added protected REST routes: `POST /conversations/:id/agents` and `DELETE /conversations/:id/agents/:agent_id`, plus serde roundtrip tests for invite request/response in `integration_test.rs`.

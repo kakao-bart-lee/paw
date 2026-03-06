@@ -894,6 +894,16 @@ struct GroupNameUpdateRequest {
     name: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct InviteAgentRequest {
+    agent_id: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct InviteAgentResponse {
+    invited: bool,
+}
+
 #[test]
 fn group_name_update_request_serialization() {
     let request = GroupNameUpdateRequest {
@@ -904,4 +914,26 @@ fn group_name_update_request_serialization() {
     let parsed: GroupNameUpdateRequest = serde_json::from_str(&json).unwrap();
 
     assert_eq!(parsed, request);
+}
+
+#[test]
+fn invite_agent_request_serialization() {
+    let request = InviteAgentRequest {
+        agent_id: Uuid::new_v4(),
+    };
+
+    let json = serde_json::to_string(&request).unwrap();
+    let parsed: InviteAgentRequest = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed, request);
+}
+
+#[test]
+fn invite_agent_response_serialization() {
+    let response = InviteAgentResponse { invited: true };
+
+    let json = serde_json::to_string(&response).unwrap();
+    let parsed: InviteAgentResponse = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed, response);
 }
