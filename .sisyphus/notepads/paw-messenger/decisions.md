@@ -532,3 +532,31 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 
 ### Test Coverage
 - 7 tests in `web_service_test.dart`: isWeb detection, http→ws, https→wss, ws passthrough, wss passthrough, path+query preservation, serviceWorker stub.
+
+## T51: Moderation Tools — Spam Filter + Reports
+
+### Admin Check Approach
+- Added `is_admin BOOLEAN DEFAULT false` to users table via ALTER TABLE in migration 19
+- Admin check via `service::is_admin()` queries the column directly — simplest possible approach
+- No separate admin middleware; each admin handler calls `is_admin()` inline
+
+### Spam Filter Design
+- Keyword matching only (no ML) — `content_matches_keywords()` is a pure function for testability
+- `check_spam()` loads all keywords from DB each call — acceptable for small keyword sets
+- Case-insensitive substring match via `to_ascii_lowercase()`
+- Spam check hooked into `send_message` handler AFTER membership check, BEFORE idempotency lookup
+- Returns 422 with `{"error":"spam_detected","message":"Message contains prohibited content"}`
+
+### Module Structure
+- `paw-server/src/moderation/` follows existing module pattern (mod.rs, models.rs, service.rs, handlers.rs)
+- `UserBlock` and `UserSuspension` models have `#[allow(dead_code)]` since sqlx::FromRow constructs them at runtime
+- Error helper is local to handlers.rs (same pattern as messages/handlers.rs)
+
+### Route Registration
+- Moderation routes registered in protected_routes block alongside existing `/api/v1/` routes
+- Admin routes under `/api/v1/admin/` prefix
+- Block routes on `/api/v1/users/:id/block` (POST/DELETE)
+
+### Test Coverage (11 tests)
+- models: report serde roundtrip, missing fields rejection, block item serde, suspension roundtrip (with/without reason), suspend request serde
+- service: spam keyword matching (5 tests: match, case-insensitive, no match, empty keywords, empty content)
