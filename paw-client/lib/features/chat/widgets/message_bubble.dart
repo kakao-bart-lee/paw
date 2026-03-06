@@ -5,6 +5,7 @@ import '../../../core/widgets/markdown_message.dart';
 import '../models/message.dart';
 import 'read_receipt_indicator.dart';
 import 'media_message.dart';
+import 'tool_indicator.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
@@ -67,31 +68,51 @@ class MessageBubble extends StatelessWidget {
               if (isMe) _buildTimestamp(theme),
               if (isMe) const SizedBox(width: 8),
               Flexible(
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.75,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: borderRadius,
-                  ),
-                  child: message.mediaId != null
-                      ? MediaMessage(
-                          mediaId: message.mediaId!,
-                          contentType: message.mediaType ?? 'application/octet-stream',
-                          fileName: message.mediaFileName,
-                          sizeBytes: message.mediaSizeBytes,
-                          isMe: isMe,
-                        )
-                      : message.format == MessageFormat.markdown
-                          ? MarkdownMessage(content: message.content, isMe: isMe)
-                          : Text(
-                              message.content,
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: isMe ? Colors.white : theme.colorScheme.onSurface,
-                              ),
-                            ),
+                child: Column(
+                  crossAxisAlignment: alignment,
+                  children: [
+                    if (isAgent && message.toolCalls.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: message.toolCalls
+                              .map((tc) => ToolIndicator(
+                                    toolName: tc.tool,
+                                    label: tc.label,
+                                    isComplete: true,
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.75,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: bubbleColor,
+                        borderRadius: borderRadius,
+                      ),
+                      child: message.mediaId != null
+                          ? MediaMessage(
+                              mediaId: message.mediaId!,
+                              contentType: message.mediaType ?? 'application/octet-stream',
+                              fileName: message.mediaFileName,
+                              sizeBytes: message.mediaSizeBytes,
+                              isMe: isMe,
+                            )
+                          : message.format == MessageFormat.markdown
+                              ? MarkdownMessage(content: message.content, isMe: isMe)
+                              : Text(
+                                  message.content,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                    ),
+                  ],
                 ),
               ),
               if (!isMe) const SizedBox(width: 8),

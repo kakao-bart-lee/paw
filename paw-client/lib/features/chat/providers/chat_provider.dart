@@ -14,6 +14,12 @@ import 'package:flutter/foundation.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 
+class ToolRecord {
+  final String tool;
+  final String label;
+  ToolRecord({required this.tool, required this.label});
+}
+
 class StreamingMessage {
   final String streamId;
   final String conversationId;
@@ -23,6 +29,7 @@ class StreamingMessage {
   String? currentTool;
   String? currentToolLabel;
   bool toolComplete;
+  final List<ToolRecord> toolHistory = [];
 
   StreamingMessage({
     required this.streamId,
@@ -334,6 +341,12 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
   }
 
   void addMessageFromWs(MessageReceivedMsg msg) {
+    final convs = ref.read(conversationsNotifierProvider);
+    final conversation = convs.where((c) => c.id == msg.conversationId).firstOrNull;
+    final hasAgents = conversation?.agents.isNotEmpty ?? false;
+    // TODO: Better heuristic for identifying agent messages vs other users
+    final isAgent = hasAgents && msg.senderId != 'me';
+
     final localMessage = Message(
       id: msg.id,
       conversationId: msg.conversationId,
@@ -343,7 +356,7 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
       seq: msg.seq,
       createdAt: msg.createdAt,
       isMe: false,
-      isAgent: false,
+      isAgent: isAgent,
     );
 
     addMessage(localMessage);
@@ -374,6 +387,7 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
       stream.currentTool = msg.tool;
       stream.currentToolLabel = msg.label;
       stream.toolComplete = false;
+      stream.toolHistory.add(ToolRecord(tool: msg.tool, label: msg.label));
       ref.notifyListeners();
     }
   }
@@ -391,6 +405,10 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
     if (stream != null) {
       stream.isComplete = true;
       
+      final toolCalls = stream.toolHistory
+          .map((t) => ToolCallRecord(tool: t.tool, label: t.label))
+          .toList();
+
       // Convert to regular message
       final finalMessage = Message(
         id: msg.streamId,
@@ -402,6 +420,7 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
         createdAt: DateTime.now(),
         isMe: false,
         isAgent: true,
+        toolCalls: toolCalls,
       );
       
       _activeStreams.remove(msg.streamId);
@@ -534,6 +553,12 @@ extension on Message {
       createdAt: createdAt,
       isMe: isMe ?? this.isMe,
       isAgent: isAgent ?? this.isAgent,
+      toolCalls: toolCalls,
+      mediaId: mediaId,
+      mediaUrl: mediaUrl,
+      mediaType: mediaType,
+      mediaFileName: mediaFileName,
+      mediaSizeBytes: mediaSizeBytes,
     );
   }
 }

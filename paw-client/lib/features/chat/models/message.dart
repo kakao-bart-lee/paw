@@ -1,5 +1,14 @@
+import 'package:flutter/foundation.dart';
+
 enum MessageFormat { markdown, plain }
 enum MessageSender { me, other, agent }
+
+@immutable
+class ToolCallRecord {
+  final String tool;
+  final String label;
+  const ToolCallRecord({required this.tool, required this.label});
+}
 
 class Message {
   final String id;
@@ -11,6 +20,7 @@ class Message {
   final DateTime createdAt;
   final bool isMe;
   final bool isAgent;
+  final List<ToolCallRecord> toolCalls;
   
   final String? mediaId;
   final String? mediaUrl;
@@ -28,6 +38,7 @@ class Message {
     required this.createdAt,
     required this.isMe,
     required this.isAgent,
+    this.toolCalls = const [],
     this.mediaId,
     this.mediaUrl,
     this.mediaType,
