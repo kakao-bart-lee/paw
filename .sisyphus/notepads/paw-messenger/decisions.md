@@ -518,3 +518,17 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Added `20260101000018_performance_indexes.sql` with `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements to minimize lock impact during rollout while safely supporting repeated migration runs.
 - Set immutable cache policy for media URL responses via `Cache-Control: public, max-age=31536000, immutable` and locked it with a unit test to prevent accidental TTL regressions.
 - Documented CDN work as operations-only (`docs/operations/cdn-setup.md`) with Cloudflare R2, `/api/v1/media/*` cache rule guidance, and secure origin pull recommendations; no runtime CDN coupling added in code.
+
+## T49: Web Platform QA + Optimization (2026-03-07)
+
+### Decisions
+- **WebService follows DesktopService pattern**: Created `web_service.dart` in `lib/core/platform/` mirroring the existing `desktop_service.dart` pattern (uses `kIsWeb` from flutter/foundation, stub methods).
+- **WebService.getWebSocketUrl() is pure URL conversion**: Handles http→ws, https→wss, and preserves existing ws/wss schemes. Default fallback is `ws://` for unknown schemes.
+- **ws_service.dart uses conditional delegation**: On web (`kIsWeb`), delegates URL conversion to `WebService().getWebSocketUrl()`. On native, retains the original inline logic. This avoids breaking existing mobile/desktop behavior.
+- **PWA manifest includes maskable icons**: Added both standard and maskable icon entries (192x192, 512x512) for Android adaptive icon support.
+- **index.html title updated**: Changed from "paw_client" to "Paw" for consistency with manifest name.
+- **Service worker is stub only**: `supportsServiceWorker()` returns `kIsWeb` — no real navigator.serviceWorker check. Real implementation deferred.
+- **Flutter binary at non-standard path**: `~/develop/flutter/bin/flutter` — not in PATH. Future tasks need full path.
+
+### Test Coverage
+- 7 tests in `web_service_test.dart`: isWeb detection, http→ws, https→wss, ws passthrough, wss passthrough, path+query preservation, serviceWorker stub.

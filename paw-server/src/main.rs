@@ -6,6 +6,7 @@ mod db;
 mod keys;
 mod media;
 mod messages;
+mod moderation;
 mod push;
 mod users;
 mod ws;
@@ -138,6 +139,31 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/v1/backup/:id", delete(backup::handlers::delete_backup))
         .route("/api/v1/backup/settings", put(backup::handlers::update_settings))
         .route("/api/v1/backup/settings", get(backup::handlers::get_settings))
+        .route("/api/v1/reports", post(moderation::handlers::create_report))
+        .route(
+            "/api/v1/users/:id/block",
+            post(moderation::handlers::block_user),
+        )
+        .route(
+            "/api/v1/users/:id/block",
+            delete(moderation::handlers::unblock_user),
+        )
+        .route(
+            "/api/v1/users/blocked",
+            get(moderation::handlers::list_blocked_users),
+        )
+        .route(
+            "/api/v1/admin/users/:id/suspend",
+            post(moderation::handlers::suspend_user),
+        )
+        .route(
+            "/api/v1/admin/users/:id/suspend",
+            delete(moderation::handlers::unsuspend_user),
+        )
+        .route(
+            "/api/v1/admin/reports",
+            get(moderation::handlers::list_pending_reports),
+        )
         .route(
             "/api/v1/push/register",
             post(push::handlers::register_push_token),

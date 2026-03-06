@@ -5,6 +5,7 @@ use crate::messages::{
     },
     service::{self, GroupManagementError, Membership},
 };
+use crate::moderation;
 use crate::push;
 use axum::{
     Json,
@@ -88,6 +89,15 @@ pub async fn send_message(
     match ensure_membership(&state, conv_id, user_id).await {
         Ok(()) => {}
         Err(resp) => return resp,
+    }
+
+    if moderation::service::check_spam(&payload.content, &state.db).await {
+        return error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "spam_detected",
+            "Message contains prohibited content",
+        )
+        .into_response();
     }
 
     match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key).await {
