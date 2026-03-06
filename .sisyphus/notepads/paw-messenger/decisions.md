@@ -282,3 +282,28 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Standardized FRB config in `paw-client/flutter_rust_bridge.yaml` with `rust_root: ../paw-ffi`, `dart_output: lib/src/rust`, and Rust glue output at `paw-ffi/src/frb_generated.rs`.
 - Generated Dart bindings under `paw-client/lib/src/rust/` (`api.dart`, `frb_generated.dart`, `frb_generated.io.dart`, `frb_generated.web.dart`) and updated CI to include `paw-crypto` + `paw-ffi` in clippy/build/test package list.
 - `flutter pub get` currently fails in this repo due pre-existing `sqflite_sqlcipher ^2.2.1+1` resolution; this blocks Dart lockfile generation but does not block FRB codegen via Cargo-installed CLI.
+
+## [2026-03-07] T27: E2EE UI Decisions
+- E2ee banner shows above message list, below AppBar
+- Safety numbers are deterministic hash of conversation_id (placeholder for T26 real fingerprints)
+- 🔒 AppBar icon tap → /chat/:id/verify route
+- Agent consent banner: amber color scheme, "에이전트 관리" → /settings stub
+- Conversation.isE2ee field added as bool (default false)
+
+## [2026-03-07] T29: Agent Auth API Decisions
+
+### Endpoints Added
+- `GET /api/v1/agents/:agent_id` — public agent profile (name, description, avatar_url, created_at). Returns 404 for revoked agents.
+- `POST /api/v1/agents/:agent_id/revoke` — JWT-protected, only token owner can revoke. Sets `revoked_at` timestamp; does not hard-delete.
+
+### Schema Changes (migration 011)
+- Added `avatar_url TEXT` and `revoked_at TIMESTAMPTZ` to `agent_tokens` table.
+- Revoked tokens are soft-deleted: `verify_agent_token` and `get_agent_profile` both filter `WHERE revoked_at IS NULL`.
+
+### Token Format Validation
+- `is_valid_agent_token_format()` validates `paw_agent_{uuid-v4}` pattern, used as early-reject in `verify_agent_token` to skip DB round-trip on malformed tokens.
+- 6 unit tests cover: valid format, missing prefix, wrong prefix, non-UUID suffix, empty string, and round-trip with `generate_agent_token()`.
+
+### Registration
+- `RegisterAgentRequest` now accepts `avatar_url: Option<String>`.
+- INSERT updated to bind `avatar_url` as 5th parameter.

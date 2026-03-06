@@ -103,6 +103,8 @@ final _mockConversations = [
     unreadCount: 0,
     updatedAt: DateTime.now().subtract(const Duration(minutes: 6)),
     lastMessage: _mockMessagesData['conv_1']!.last,
+    isE2ee: false,
+    agents: ['Paw Assistant'],
   ),
   Conversation(
     id: 'conv_2',
@@ -110,6 +112,7 @@ final _mockConversations = [
     unreadCount: 1,
     updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
     lastMessage: _mockMessagesData['conv_2']!.last,
+    isE2ee: true,
   ),
   Conversation(
     id: 'conv_3',
@@ -117,6 +120,7 @@ final _mockConversations = [
     unreadCount: 0,
     updatedAt: DateTime.now().subtract(const Duration(days: 1)),
     lastMessage: _mockMessagesData['conv_3']!.last,
+    isE2ee: false,
   ),
 ];
 
@@ -184,6 +188,8 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
       unreadCount: msg.isMe ? conv.unreadCount : conv.unreadCount + 1,
       updatedAt: msg.createdAt,
       lastMessage: msg,
+      isE2ee: conv.isE2ee,
+      agents: conv.agents,
     );
 
     final next = [...state];
@@ -203,6 +209,8 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
       lastMessage: lastMessage is Map<String, dynamic>
           ? _messageFromJson(lastMessage)
           : null,
+      isE2ee: json['is_e2ee'] == true,
+      agents: (json['agents'] as List?)?.map((e) => e.toString()).toList() ?? const [],
     );
   }
 }

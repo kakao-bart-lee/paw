@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/chat_provider.dart';
 import '../providers/typing_provider.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
 import '../widgets/typing_indicator.dart';
+import '../widgets/e2ee_banner.dart';
+import '../widgets/agent_consent_banner.dart';
+import '../models/conversation.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -48,12 +52,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Reverse the list for ListView.builder with reverse: true
     final reversedMessages = messages.reversed.toList();
 
+    final conversations = ref.watch(conversationsNotifierProvider);
+    final conversation = conversations.firstWhere(
+      (c) => c.id == widget.conversationId,
+      orElse: () => Conversation(
+        id: widget.conversationId,
+        name: '대화',
+        unreadCount: 0,
+        updatedAt: DateTime.now(),
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('대화'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(conversation.name),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                context.push('/chat/${widget.conversationId}/verify');
+              },
+              child: Icon(
+                conversation.isE2ee ? Icons.lock : Icons.lock_open,
+                size: 16,
+                color: conversation.isE2ee ? const Color(0xFF4CAF50) : Colors.grey,
+              ),
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
+          if (conversation.agents.isNotEmpty)
+            AgentConsentBanner(agentNames: conversation.agents)
+          else if (conversation.isE2ee)
+            const E2eeBanner(type: E2eeBannerType.active)
+          else
+            E2eeBanner(
+              type: E2eeBannerType.available,
+              onActivate: () {
+                // Stub for activating E2EE
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('E2EE 활성화 요청됨')),
+                );
+              },
+            ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,

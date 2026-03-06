@@ -7,6 +7,7 @@ import '../../features/auth/screens/otp_verify_screen.dart';
 import '../../features/auth/screens/device_name_screen.dart';
 import '../../features/chat/screens/conversations_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
+import '../../features/chat/screens/key_verification_screen.dart';
 import '../../features/agent/screens/agent_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/profile/screens/my_profile_screen.dart';
@@ -59,6 +60,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: ':conversationId',
                 builder: (context, state) => ChatScreen(
                   conversationId: state.pathParameters['conversationId']!,
+                ),
+              ),
+              GoRoute(
+                path: ':id/verify',
+                builder: (context, state) => KeyVerificationScreen(
+                  conversationId: state.pathParameters['id']!,
                 ),
               ),
             ],

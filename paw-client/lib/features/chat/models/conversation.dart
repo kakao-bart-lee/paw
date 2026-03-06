@@ -7,6 +7,8 @@ class Conversation {
   final Message? lastMessage;
   final int unreadCount;
   final DateTime updatedAt;
+  final bool isE2ee;
+  final List<String> agents;
   
   const Conversation({
     required this.id,
@@ -15,5 +17,7 @@ class Conversation {
     this.lastMessage,
     required this.unreadCount,
     required this.updatedAt,
+    this.isE2ee = false,
+    this.agents = const [],
   });
 }
