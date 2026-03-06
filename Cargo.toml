@@ -3,6 +3,7 @@ members = [
     "paw-server",
     "paw-proto",
     "paw-crypto",
+    "paw-ffi",
 ]
 resolver = "2"
 
