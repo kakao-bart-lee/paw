@@ -244,3 +244,11 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 
 ### Test Architecture Constraint
 - Binary crate pattern continues from T20: integration tests can only exercise `paw_proto` types and replicated business logic. DB-dependent tests remain `#[ignore]`.
+
+## [2026-03-07] T22: Dogfooding Decisions
+
+- Created a dedicated `docs/dogfooding/` documentation set so Phase 1 dogfooding can run as a repeatable process independent of code changes.
+- Runbook uses explicit local startup commands (`docker-compose up -d`, `~/.cargo/bin/cargo run -p paw-server`) and fixed local port assumptions (3000/5432/9000/9001) to reduce setup ambiguity.
+- Bug intake is standardized with severity taxonomy `P0-P4` to align triage urgency across crash/data-loss/functional/UX/cosmetic classes.
+- Feedback tracker is pre-seeded with currently known UX/setup limitations (profile send-message stub, media picker stub, Drift stub codegen dependency, Flutter availability friction, and paw-crypto openmls confusion risk).
+- Retrospective template includes explicit Phase 2 readiness gates for OpenMLS E2EE, Agent Gateway contracts, and OpenClaw adapter integration before kickoff.
