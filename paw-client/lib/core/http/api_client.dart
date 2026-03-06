@@ -143,6 +143,20 @@ class ApiClient {
     return _decodeJsonObject(response);
   }
 
+  Future<void> uploadKeyBundle(Map<String, dynamic> bundle) async {
+    await _post('/api/v1/keys/bundle', body: bundle);
+  }
+
+  Future<Map<String, dynamic>?> getKeyBundle(String userId) async {
+    try {
+      final response = await _get('/api/v1/keys/$userId');
+      return _decodeJsonObject(response);
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   Future<http.Response> _get(
     String path, {
     Map<String, String>? queryParameters,
@@ -185,7 +199,7 @@ class ApiClient {
     final base = Uri.parse(baseUrl);
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return base.replace(
-      path: '${base.path}${normalizedPath}'.replaceAll('//', '/'),
+      path: '${base.path}$normalizedPath'.replaceAll('//', '/'),
       queryParameters: queryParameters,
     );
   }

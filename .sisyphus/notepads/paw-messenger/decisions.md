@@ -307,3 +307,10 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 ### Registration
 - `RegisterAgentRequest` now accepts `avatar_url: Option<String>`.
 - INSERT updated to bind `avatar_url` as 5th parameter.
+
+## [2026-03-07] T26a/T26b: Flutter E2EE Client Decisions
+
+- Added `E2eeService` (`lib/core/crypto/e2ee_service.dart`) as a thin resilience wrapper over FRB bindings (`createAccount`, `encrypt`, `decrypt`) with nullable returns and `isE2eeAvailable` fallback state when FRB init/bridge calls fail.
+- Mapped FRB account output to client-facing keys as `{ identityKey, x25519PubKey }`, where `x25519PubKey` is populated from FRB `signedPrekey` to match current paw-ffi naming.
+- Added `KeyStorageService` (`lib/core/crypto/key_storage_service.dart`) backed by `flutter_secure_storage`, storing three key slots (`e2ee_identity_key`, `e2ee_x25519_priv_key`, `e2ee_x25519_pub_key`) using base64 encoding for binary-safe persistence.
+- Extended `ApiClient` with key-bundle endpoints: `uploadKeyBundle` (`POST /api/v1/keys/bundle`) and `getKeyBundle` (`GET /api/v1/keys/:user_id`) with explicit 404→`null` handling for missing bundles.
