@@ -10,6 +10,8 @@ class ApiClient {
 
   void setToken(String token) => _accessToken = token;
 
+  String? get accessToken => _accessToken;
+
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',

@@ -12,6 +12,12 @@ class Message {
   final bool isMe;
   final bool isAgent;
   
+  final String? mediaId;
+  final String? mediaUrl;
+  final String? mediaType;
+  final String? mediaFileName;
+  final int? mediaSizeBytes;
+  
   const Message({
     required this.id,
     required this.conversationId,
@@ -22,5 +28,10 @@ class Message {
     required this.createdAt,
     required this.isMe,
     required this.isAgent,
+    this.mediaId,
+    this.mediaUrl,
+    this.mediaType,
+    this.mediaFileName,
+    this.mediaSizeBytes,
   });
 }

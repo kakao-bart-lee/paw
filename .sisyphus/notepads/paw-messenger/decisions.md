@@ -164,3 +164,34 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - `TypingIndicator`: animated 3-dot bounce with `AnimatedBuilder` + `SingleTickerProviderStateMixin`. Shows generic "상대방이 입력 중..." — Phase 2 will resolve actual user names.
 - `TypingNotifier`: `@riverpod` codegen pattern matching existing `chat_provider.dart`. Tracks `Map<conversationId, Set<userId>>` with 5s auto-expire timer to handle missed `typing_stop` frames.
 - `.g.dart` codegen files need `flutter pub run build_runner build` before compilation (same as T14 pattern).
+
+## [2026-03-07] T17: Media UI Decisions
+- Added `mediaId`, `mediaUrl`, `mediaType`, `mediaFileName`, and `mediaSizeBytes` to `Message` model.
+- Created `MediaUploadService` using `http.MultipartRequest` for file uploads and `http.get` for presigned URLs.
+- Modified `ApiClient` to expose `accessToken` for use in `MediaUploadService`.
+- Created `MediaPicker` as a bottom sheet with stubbed actions for Phase 1 (shows SnackBar).
+- Created `MediaMessage` widget to render image thumbnails (240x240) and file attachments (icon + name + size).
+- Updated `MessageInput` to use `MediaPicker` via the attachment icon.
+- Updated `MessageBubble` to conditionally render `MediaMessage` if `mediaId` is present.
+
+## [2026-03-07] T18: Offline Gap-fill Decisions
+
+- Added `ReconnectionManager` to centralize retry behavior with exponential delays `1s, 2s, 4s, 8s, 16s, 30s`, capped at 30s and hard-limited to 10 attempts.
+- `WsService` now delegates reconnect scheduling to `ReconnectionManager` and resets retry state only on successful `hello_ok` (`onConnected()`), not merely on socket open.
+- Added `SyncService` as the gap-fill orchestrator:
+  - `syncAllConversations()` loads all local conversations, computes each conversation’s `lastSeq` from `MessagesDao`, and emits `sync` frames through `WsService`.
+  - `persistMessage(MessageReceivedMsg)` upserts message rows and advances `ConversationsDao.lastSeq`.
+- Wired DI registrations for `AppDatabase`, `MessagesDao`, `ConversationsDao`, `ReconnectionManager`, `WsService`, and `SyncService`; `WsService` receives `SyncService` via setter to avoid constructor circular dependency.
+- Hardened server `ClientMessage::Sync` handling in `connection.rs`:
+  - membership is validated via `messages::service::check_member(...)` before querying messages,
+  - query is bounded with `LIMIT 100`,
+  - responses continue as ordered `message_received` frames with `v:1`.
+
+## [2026-03-07] T19: User Profile UI Decisions
+- AvatarWidget uses deterministic color from name hash (codeUnits sum % 6), 6 preset colors
+- ProfileNotifier uses StateNotifier<ProfileState> pattern consistent with existing auth_provider.dart
+- MyProfileScreen: inline dialog for name edit (no separate route), logout delegates to authNotifierProvider then context.go('/login')
+- UserProfileScreen: uses ApiClient.searchUser() directly (no dedicated provider needed for read-only view)
+- '메시지 보내기' button is a stub showing SnackBar '준비 중입니다' — full implementation deferred to Wave 2
+- Profile routes are top-level (outside ShellRoute) so they show without bottom nav bar
+- T19 was refused twice by subagents due to multi-task format detection; orchestrator wrote files directly

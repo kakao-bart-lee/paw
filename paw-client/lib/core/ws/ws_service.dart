@@ -4,28 +4,34 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../proto/messages.dart';
+import '../sync/sync_service.dart';
+import 'reconnection_manager.dart';
 
 class WsService {
   final String serverUrl;
+  final ReconnectionManager _reconnectionManager;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
-  Timer? _reconnectTimer;
+  SyncService? _syncService;
 
   bool _connected = false;
   bool _manualDisconnect = false;
   String? _accessToken;
-
-  int _reconnectAttempts = 0;
-  static const int _maxReconnectAttempts = 5;
-  static const Duration _reconnectDelay = Duration(seconds: 2);
 
   final _messageController = StreamController<ServerMessage>.broadcast();
   Stream<ServerMessage> get messages => _messageController.stream;
 
   bool get isConnected => _connected;
 
-  WsService({required this.serverUrl});
+  WsService({
+    required this.serverUrl,
+    required ReconnectionManager reconnectionManager,
+  }) : _reconnectionManager = reconnectionManager;
+
+  void setSyncService(SyncService syncService) {
+    _syncService = syncService;
+  }
 
   Future<void> connect(String serverUrl, String accessToken) async {
     _accessToken = accessToken;
@@ -33,12 +39,11 @@ class WsService {
 
     await _subscription?.cancel();
     await _channel?.sink.close();
-    _reconnectTimer?.cancel();
+    _reconnectionManager.dispose();
 
     final uri = _buildWsUri(serverUrl, accessToken);
     _channel = WebSocketChannel.connect(uri);
     _connected = true;
-    _reconnectAttempts = 0;
 
     _subscription = _channel!.stream.listen(
       _onMessage,
@@ -64,6 +69,11 @@ class WsService {
       final json = jsonDecode(data as String) as Map<String, dynamic>;
       final msg = parseServerMessage(json);
       _messageController.add(msg);
+
+      if (msg is HelloOkMsg) {
+        _reconnectionManager.onConnected();
+        unawaited(_syncService?.syncAllConversations());
+      }
     } catch (error, stackTrace) {
       _messageController.addError(error, stackTrace);
     }
@@ -81,7 +91,7 @@ class WsService {
   }
 
   void _scheduleReconnect() {
-    if (_manualDisconnect || _reconnectAttempts >= _maxReconnectAttempts) {
+    if (_manualDisconnect) {
       return;
     }
 
@@ -90,14 +100,9 @@ class WsService {
       return;
     }
 
-    _reconnectAttempts += 1;
-    _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(
-      _reconnectDelay * _reconnectAttempts,
-      () {
-        connect(serverUrl, token);
-      },
-    );
+    _reconnectionManager.scheduleReconnect(() async {
+      await connect(serverUrl, token);
+    });
   }
 
   void send(Map<String, dynamic> message) {
@@ -129,7 +134,7 @@ class WsService {
 
   Future<void> disconnect() async {
     _manualDisconnect = true;
-    _reconnectTimer?.cancel();
+    _reconnectionManager.dispose();
     await _subscription?.cancel();
     await _channel?.sink.close();
     _subscription = null;

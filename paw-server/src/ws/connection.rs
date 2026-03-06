@@ -1,4 +1,5 @@
 use crate::auth::AppState;
+use crate::messages::service::{self, Membership};
 use crate::ws::hub::WsSender;
 use axum::extract::ws::{CloseFrame, Message, WebSocket, close_code};
 use chrono::{DateTime, Utc};
@@ -166,11 +167,34 @@ async fn handle_client_message(
         }
         ClientMessage::Sync(sync) => {
             require_v(sync.v)?;
+            match service::check_member(&state.db, sync.conversation_id, user_id).await? {
+                Membership::Member => {}
+                Membership::NotMember => {
+                    let _ = send_protocol_error(
+                        outbound_tx,
+                        "forbidden",
+                        "User is not a member of this conversation".to_owned(),
+                    )
+                    .await;
+                    return Ok(());
+                }
+                Membership::ConversationNotFound => {
+                    let _ = send_protocol_error(
+                        outbound_tx,
+                        "not_found",
+                        "Conversation not found".to_owned(),
+                    )
+                    .await;
+                    return Ok(());
+                }
+            }
+
             let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
                 "SELECT id, conversation_id, sender_id, content, format, seq, created_at, blocks \
                  FROM messages \
                  WHERE conversation_id = $1 AND seq > $2 \
-                 ORDER BY seq ASC",
+                 ORDER BY seq ASC \
+                 LIMIT 100",
             )
             .bind(sync.conversation_id)
             .bind(sync.last_seq)

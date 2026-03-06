@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'media_picker.dart';
 
 class MessageInput extends StatefulWidget {
   final ValueChanged<String> onSend;
@@ -59,10 +60,17 @@ class _MessageInputState extends State<MessageInput> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.attach_file),
             color: theme.colorScheme.onSurfaceVariant,
-            onPressed: null, // Disabled for Phase 1
-            tooltip: '첨부파일 (준비 중)',
+            onPressed: () => MediaPicker.show(
+              context,
+              onFilePicked: (path, contentType) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('미디어 선택 기능은 곧 추가됩니다')),
+                );
+              },
+            ),
+            tooltip: '첨부파일',
           ),
           Expanded(
             child: TextField(

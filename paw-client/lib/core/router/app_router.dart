@@ -9,6 +9,8 @@ import '../../features/chat/screens/conversations_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/agent/screens/agent_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/profile/screens/my_profile_screen.dart';
+import '../../features/profile/screens/user_profile_screen.dart';
 import '../shell/main_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -33,6 +35,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DeviceNameScreen(),
       ),
       
+      // Profile routes (outside shell — no bottom nav)
+      GoRoute(
+        path: '/profile/me',
+        builder: (context, state) => const MyProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/:userId',
+        builder: (context, state) => UserProfileScreen(
+          userId: state.pathParameters['userId']!,
+        ),
+      ),
+
       // Main shell with bottom navigation
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),

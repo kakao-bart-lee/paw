@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/markdown_message.dart';
 import '../models/message.dart';
 import 'read_receipt_indicator.dart';
+import 'media_message.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
@@ -75,14 +76,22 @@ class MessageBubble extends StatelessWidget {
                     color: bubbleColor,
                     borderRadius: borderRadius,
                   ),
-                  child: message.format == MessageFormat.markdown
-                      ? MarkdownMessage(content: message.content, isMe: isMe)
-                      : Text(
-                          message.content,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: isMe ? Colors.white : theme.colorScheme.onSurface,
-                          ),
-                        ),
+                  child: message.mediaId != null
+                      ? MediaMessage(
+                          mediaId: message.mediaId!,
+                          contentType: message.mediaType ?? 'application/octet-stream',
+                          fileName: message.mediaFileName,
+                          sizeBytes: message.mediaSizeBytes,
+                          isMe: isMe,
+                        )
+                      : message.format == MessageFormat.markdown
+                          ? MarkdownMessage(content: message.content, isMe: isMe)
+                          : Text(
+                              message.content,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                              ),
+                            ),
                 ),
               ),
               if (!isMe) const SizedBox(width: 8),
