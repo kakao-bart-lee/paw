@@ -13,8 +13,10 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sqlx::Row;
 use uuid::Uuid;
 
 type ApiResult<T> = Result<Json<T>, (StatusCode, Json<Value>)>;
@@ -127,6 +129,19 @@ pub async fn send_message(
         Ok(created) => {
             let db = state.db.clone();
             let hub = state.hub.clone();
+            let notify_state = state.clone();
+            let created_message = MessageReceivedMsg {
+                v: PROTOCOL_VERSION,
+                id: created.id,
+                conversation_id: conv_id,
+                sender_id: user_id,
+                content: payload.content.trim().to_owned(),
+                format: to_message_format(&format),
+                seq: created.seq,
+                created_at: created.created_at,
+                blocks: Vec::new(),
+            };
+
             tokio::spawn(async move {
                 if let Err(err) =
                     push::service::send_push_notification(&db, &hub, conv_id, user_id).await
@@ -134,6 +149,13 @@ pub async fn send_message(
                     tracing::error!(%err, conversation_id = %conv_id, "push notification failed");
                 }
             });
+
+            tokio::spawn(async move {
+                if let Err(err) = notify_agents_of_message(notify_state, created_message).await {
+                    tracing::error!(%err, conversation_id = %conv_id, "agent inbound notification failed");
+                }
+            });
+
             Json(created).into_response()
         }
         Err(err) => {
@@ -150,6 +172,84 @@ pub async fn send_message(
                 .into_response(),
             }
         }
+    }
+}
+
+async fn notify_agents_of_message(state: AppState, message: MessageReceivedMsg) -> anyhow::Result<()> {
+    let Some(nats) = state.nats.clone() else {
+        return Ok(());
+    };
+
+    let agent_ids = sqlx::query_scalar::<_, Uuid>(
+        "SELECT agent_id FROM conversation_agents WHERE conversation_id = $1",
+    )
+    .bind(message.conversation_id)
+    .fetch_all(state.db.as_ref())
+    .await?;
+
+    if agent_ids.is_empty() {
+        return Ok(());
+    }
+
+    let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
+        "SELECT id, conversation_id, sender_id, content, format, seq, created_at, blocks\
+         FROM messages\
+         WHERE conversation_id = $1\
+         ORDER BY seq DESC\
+         LIMIT 10",
+    )
+    .bind(message.conversation_id)
+    .fetch_all(state.db.as_ref())
+    .await?;
+
+    let mut recent_messages = Vec::with_capacity(rows.len());
+    for row in rows {
+        recent_messages.push(message_received_from_row(&row)?);
+    }
+    recent_messages.reverse();
+
+    let conversation_id = message.conversation_id;
+    let inbound = InboundContext {
+        v: PROTOCOL_VERSION,
+        message,
+        conversation_id,
+        recent_messages,
+    };
+    let payload = serde_json::to_vec(&inbound)?;
+
+    for agent_id in agent_ids {
+        let subject = format!("agent.inbound.{agent_id}");
+        nats.publish(subject, payload.clone().into()).await?;
+    }
+
+    Ok(())
+}
+
+fn message_received_from_row(row: &sqlx::postgres::PgRow) -> Result<MessageReceivedMsg, sqlx::Error> {
+    let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
+    let blocks_raw: Option<serde_json::Value> = row.try_get::<Option<serde_json::Value>, _>("blocks")?;
+    let blocks = match blocks_raw {
+        Some(serde_json::Value::Array(values)) => values,
+        _ => Vec::new(),
+    };
+
+    Ok(MessageReceivedMsg {
+        v: PROTOCOL_VERSION,
+        id: row.try_get("id")?,
+        conversation_id: row.try_get("conversation_id")?,
+        sender_id: row.try_get("sender_id")?,
+        content: row.try_get("content")?,
+        format: to_message_format(&format_raw.unwrap_or_else(|| "markdown".to_owned())),
+        seq: row.try_get("seq")?,
+        created_at: row.try_get("created_at")?,
+        blocks,
+    })
+}
+
+fn to_message_format(raw: &str) -> MessageFormat {
+    match raw.to_ascii_lowercase().as_str() {
+        "plain" => MessageFormat::Plain,
+        _ => MessageFormat::Markdown,
     }
 }
 
