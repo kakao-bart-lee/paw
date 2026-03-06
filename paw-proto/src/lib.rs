@@ -66,6 +66,9 @@ pub struct MessageSendMsg {
 pub struct TypingMsg {
     pub v: u8,
     pub conversation_id: Uuid,
+    /// Injected by server before fan-out; absent in client→server direction.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

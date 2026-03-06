@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/markdown_message.dart';
 import '../models/message.dart';
+import 'read_receipt_indicator.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
@@ -73,18 +75,25 @@ class MessageBubble extends StatelessWidget {
                     color: bubbleColor,
                     borderRadius: borderRadius,
                   ),
-                  child: Text(
-                    message.content,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: message.format == MessageFormat.markdown
+                      ? MarkdownMessage(content: message.content, isMe: isMe)
+                      : Text(
+                          message.content,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: isMe ? Colors.white : theme.colorScheme.onSurface,
+                          ),
+                        ),
                 ),
               ),
               if (!isMe) const SizedBox(width: 8),
               if (!isMe) _buildTimestamp(theme),
             ],
           ),
+          if (isMe)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: ReadReceiptIndicator(status: ReadReceiptStatus.sent),
+            ),
         ],
       ),
     );

@@ -1,12 +1,20 @@
 import 'package:get_it/get_it.dart';
 
+import '../http/api_client.dart';
+import '../ws/ws_service.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
-  // Phase 1: Register services as they are implemented
-  // Services will be registered here in subsequent tasks:
-  // - T5: AuthService (OTP + Ed25519)
-  // - T6: WebSocketService
-  // - T9: MessageRepository
-  // - T14: LocalDatabase (Drift + SQLCipher)
+  // Config
+  const serverUrl =
+      String.fromEnvironment('SERVER_URL', defaultValue: 'http://localhost:3000');
+
+  if (!getIt.isRegistered<ApiClient>()) {
+    getIt.registerSingleton<ApiClient>(ApiClient(baseUrl: serverUrl));
+  }
+
+  if (!getIt.isRegistered<WsService>()) {
+    getIt.registerSingleton<WsService>(WsService(serverUrl: serverUrl));
+  }
 }

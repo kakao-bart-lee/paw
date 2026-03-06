@@ -131,17 +131,27 @@ async fn handle_client_message(
                 "message_send received; persistence is handled by HTTP flow"
             );
         }
-        ClientMessage::TypingStart(typing) => {
+        ClientMessage::TypingStart(mut typing) => {
             require_v(typing.v)?;
-            let members = conversation_members(state, typing.conversation_id).await?;
+            typing.user_id = Some(user_id);
+            let others: Vec<Uuid> = conversation_members(state, typing.conversation_id)
+                .await?
+                .into_iter()
+                .filter(|&m| m != user_id)
+                .collect();
             let payload = serde_json::to_string(&ServerMessage::TypingStart(typing))?;
-            state.hub.broadcast_to_conversation(members, &payload).await;
+            state.hub.broadcast_to_conversation(others, &payload).await;
         }
-        ClientMessage::TypingStop(typing) => {
+        ClientMessage::TypingStop(mut typing) => {
             require_v(typing.v)?;
-            let members = conversation_members(state, typing.conversation_id).await?;
+            typing.user_id = Some(user_id);
+            let others: Vec<Uuid> = conversation_members(state, typing.conversation_id)
+                .await?
+                .into_iter()
+                .filter(|&m| m != user_id)
+                .collect();
             let payload = serde_json::to_string(&ServerMessage::TypingStop(typing))?;
-            state.hub.broadcast_to_conversation(members, &payload).await;
+            state.hub.broadcast_to_conversation(others, &payload).await;
         }
         ClientMessage::MessageAck(ack) => {
             require_v(ack.v)?;

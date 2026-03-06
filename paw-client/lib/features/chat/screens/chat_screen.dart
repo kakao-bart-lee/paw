@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import '../models/message.dart';
 import '../providers/chat_provider.dart';
+import '../providers/typing_provider.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
+import '../widgets/typing_indicator.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -33,24 +33,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  void _handleSend(String text) {
-    final messages = ref.read(messagesNotifierProvider(widget.conversationId));
-    final seq = messages.isNotEmpty ? messages.last.seq + 1 : 1;
-    
-    final newMessage = Message(
-      id: const Uuid().v4(),
-      conversationId: widget.conversationId,
-      senderId: 'me',
-      content: text,
-      format: MessageFormat.plain,
-      seq: seq,
-      createdAt: DateTime.now(),
-      isMe: true,
-      isAgent: false,
-    );
+  Future<void> _handleSend(String text) async {
+    await ref
+        .read(messagesNotifierProvider(widget.conversationId).notifier)
+        .sendMessage(text);
 
-    ref.read(messagesNotifierProvider(widget.conversationId).notifier).addMessage(newMessage);
-    
     // Scroll to bottom after a short delay to allow the list to update
     Future.delayed(const Duration(milliseconds: 50), _scrollToBottom);
   }
@@ -78,6 +65,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 return MessageBubble(message: message);
               },
             ),
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final typing = ref.watch(typingNotifierProvider);
+              final typingInConv = typing[widget.conversationId] ?? {};
+              if (typingInConv.isEmpty) return const SizedBox.shrink();
+              return const TypingIndicator(userName: '상대방');
+            },
           ),
           MessageInput(
             onSend: _handleSend,
