@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/crypto/e2ee_service.dart';
+import '../../../core/crypto/key_storage_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/http/api_client.dart';
 import '../../../core/proto/messages.dart';
@@ -305,6 +308,36 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
   }
 
   Future<void> sendMessage(String content) async {
+    String contentToSend = content;
+    Conversation? conversation;
+    for (final conv in ref.read(conversationsNotifierProvider)) {
+      if (conv.id == _conversationId) {
+        conversation = conv;
+        break;
+      }
+    }
+
+    if (conversation?.isE2ee == true) {
+      final e2eeService =
+          getIt.isRegistered<E2eeService>() ? getIt<E2eeService>() : null;
+      final keyStorage = getIt.isRegistered<KeyStorageService>()
+          ? getIt<KeyStorageService>()
+          : null;
+
+      if (e2eeService != null && keyStorage != null) {
+        final keys = await keyStorage.loadKeys();
+        if (keys == null) {
+          developer.log(
+            'E2EE enabled for $_conversationId, but no local keys; sending plaintext until key exchange is wired.',
+          );
+        } else {
+          developer.log(
+            'E2EE enabled for $_conversationId with local keys present; recipient key lookup deferred, sending plaintext placeholder.',
+          );
+        }
+      }
+    }
+
     final optimistic = Message(
       id: const Uuid().v4(),
       conversationId: _conversationId,
@@ -327,7 +360,7 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
     try {
       final serverMessage = await apiClient.sendMessage(
         _conversationId,
-        content,
+        contentToSend,
         const Uuid().v4(),
       );
 

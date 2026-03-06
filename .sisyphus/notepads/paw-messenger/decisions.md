@@ -321,3 +321,10 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Agent WebSocket handler now accepts `AppState` in `handle_agent_socket` so streaming relay can resolve conversation members from `conversation_members` and fan out frames through Hub in real time.
 - Stream limits are enforced server-side per `stream_id` using in-memory tracking: max duration `300s` and max relayed bytes `1_048_576`; on limit breach, stream state is dropped and a terminal `stream_end` frame is broadcast.
 - Added Hub `send_to_conversation(conversation_id, user_ids, msg)` as a thin wrapper over existing broadcast path to keep relay call sites explicit for conversation-scoped delivery.
+
+## [2026-03-07] T26c: Flutter E2EE Wiring Decisions
+
+- Initialized flutter_rust_bridge at app startup (`RustLib.init()`) before DI setup so FRB-backed crypto calls are safe once services resolve.
+- Registered `KeyStorageService` and `E2eeService` in GetIt as guarded singletons (`isRegistered` checks) to match existing DI patterns and allow graceful availability checks.
+- Wired `MessagesNotifier.sendMessage()` to detect E2EE conversations and touch E2EE services/keys, but intentionally keep plaintext send behavior as a placeholder until recipient key bundle lookup/X3DH session setup is implemented (T32 scope).
+- Updated `WsMessageHandler` to perform best-effort decrypt for incoming `message_received` frames when payload looks like base64 ciphertext (`len > 44` + base64 regex) and local key material exists; on any failure it falls back to original content.

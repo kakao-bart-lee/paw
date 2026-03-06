@@ -1,5 +1,7 @@
 import 'package:get_it/get_it.dart';
 
+import '../crypto/e2ee_service.dart';
+import '../crypto/key_storage_service.dart';
 import '../db/app_database.dart';
 import '../db/daos/conversations_dao.dart';
 import '../db/daos/messages_dao.dart';
@@ -29,6 +31,14 @@ Future<void> setupServiceLocator() async {
 
   if (!getIt.isRegistered<ConversationsDao>()) {
     getIt.registerSingleton<ConversationsDao>(ConversationsDao(getIt<AppDatabase>()));
+  }
+
+  if (!getIt.isRegistered<KeyStorageService>()) {
+    getIt.registerSingleton<KeyStorageService>(const KeyStorageService());
+  }
+
+  if (!getIt.isRegistered<E2eeService>()) {
+    getIt.registerSingleton<E2eeService>(E2eeService());
   }
 
   if (!getIt.isRegistered<ReconnectionManager>()) {
