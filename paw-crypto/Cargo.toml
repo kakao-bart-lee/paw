@@ -1,0 +1,8 @@
+[package]
+name = "paw-crypto"
+version = "0.1.0"
+edition = "2021"
+
+# E2EE library TBD after T8 (vodozemac vs openmls evaluation)
+[dependencies]
+serde = { workspace = true }

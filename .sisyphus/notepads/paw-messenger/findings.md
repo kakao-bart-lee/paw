@@ -1,0 +1,1 @@
+- Created Flutter app scaffold for Paw messenger at /Users/bclaw/workspace/paw/paw-client/ with dark mode default, 3-tab navigation, and cross-platform support.
