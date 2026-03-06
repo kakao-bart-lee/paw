@@ -6,13 +6,26 @@ use axum::{
     Extension,
 };
 use futures_util::{SinkExt, StreamExt};
+use paw_proto::{AgentStreamMsg, PROTOCOL_VERSION, ServerMessage, StreamEndMsg};
+use sqlx::Row;
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use crate::auth::AppState;
 use crate::auth::middleware::UserId;
 use super::models::{AgentProfile, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse};
 use super::service;
+
+const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
+const MAX_STREAM_BYTES: usize = 1_048_576;
+
+#[derive(Clone, Copy)]
+struct StreamRelayState {
+    conversation_id: Uuid,
+    started_at: Instant,
+    bytes_sent: usize,
+}
 
 pub async fn register_agent_handler(
     State(state): State<AppState>,
@@ -117,13 +130,15 @@ pub async fn agent_ws_handler(
         }
     };
 
-    ws.on_upgrade(move |socket| handle_agent_socket(socket, agent_id, nats))
+    let state_for_socket = state.clone();
+    ws.on_upgrade(move |socket| handle_agent_socket(socket, agent_id, nats, state_for_socket))
 }
 
 async fn handle_agent_socket(
     socket: axum::extract::ws::WebSocket,
     agent_id: uuid::Uuid,
     nats: std::sync::Arc<async_nats::Client>,
+    state: AppState,
 ) {
     use axum::extract::ws::Message;
 
@@ -160,19 +175,35 @@ async fn handle_agent_socket(
     };
 
     let ws_to_server = async {
+        let mut stream_states: HashMap<Uuid, StreamRelayState> = HashMap::new();
+
         while let Some(Ok(msg)) = ws_rx.next().await {
             match msg {
                 Message::Text(text) => {
-                    match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
-                        Ok(agent_msg) => {
-                            tracing::info!(
-                                "agent {agent_id} response for conv {}: {} bytes",
-                                agent_msg.conversation_id,
-                                agent_msg.content.len()
-                            );
+                    match serde_json::from_str::<AgentStreamMsg>(&text) {
+                        Ok(stream_msg) => {
+                            if let Err(e) = relay_agent_stream_message(
+                                &state,
+                                agent_id,
+                                &mut stream_states,
+                                stream_msg,
+                            )
+                            .await
+                            {
+                                tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
+                            }
                         }
-                        Err(e) => {
-                            tracing::warn!("invalid agent message from {agent_id}: {e}");
+                        Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
+                            Ok(agent_msg) => {
+                                tracing::info!(
+                                    "agent {agent_id} response for conv {}: {} bytes",
+                                    agent_msg.conversation_id,
+                                    agent_msg.content.len()
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!("invalid agent message from {agent_id}: {e}");
+                            }
                         }
                     }
                 }
@@ -188,4 +219,161 @@ async fn handle_agent_socket(
     }
 
     tracing::info!("agent {agent_id} disconnected");
+}
+
+async fn relay_agent_stream_message(
+    state: &AppState,
+    agent_id: Uuid,
+    stream_states: &mut HashMap<Uuid, StreamRelayState>,
+    stream_msg: AgentStreamMsg,
+) -> anyhow::Result<()> {
+    match stream_msg {
+        AgentStreamMsg::StreamStart(msg) => {
+            require_v(msg.v)?;
+            if msg.agent_id != agent_id {
+                anyhow::bail!("agent_id mismatch for stream {}", msg.stream_id);
+            }
+
+            let payload = serde_json::to_string(&ServerMessage::StreamStart(msg.clone()))?;
+            let bytes = payload.len();
+            if bytes > MAX_STREAM_BYTES {
+                anyhow::bail!("stream start frame exceeds max bytes: {}", bytes);
+            }
+
+            stream_states.insert(
+                msg.stream_id,
+                StreamRelayState {
+                    conversation_id: msg.conversation_id,
+                    started_at: Instant::now(),
+                    bytes_sent: bytes,
+                },
+            );
+
+            let user_ids = conversation_members(state, msg.conversation_id).await?;
+            state
+                .hub
+                .send_to_conversation(msg.conversation_id, user_ids, &payload)
+                .await;
+        }
+        AgentStreamMsg::ContentDelta(msg) => {
+            require_v(msg.v)?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::ContentDelta(msg),
+                false,
+            )
+            .await?;
+        }
+        AgentStreamMsg::ToolStart(msg) => {
+            require_v(msg.v)?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::ToolStart(msg),
+                false,
+            )
+            .await?;
+        }
+        AgentStreamMsg::ToolEnd(msg) => {
+            require_v(msg.v)?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::ToolEnd(msg),
+                false,
+            )
+            .await?;
+        }
+        AgentStreamMsg::StreamEnd(msg) => {
+            require_v(msg.v)?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::StreamEnd(msg),
+                true,
+            )
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn relay_stream_frame(
+    state: &AppState,
+    stream_states: &mut HashMap<Uuid, StreamRelayState>,
+    stream_id: Uuid,
+    frame: ServerMessage,
+    finalize: bool,
+) -> anyhow::Result<()> {
+    let payload = serde_json::to_string(&frame)?;
+    let payload_len = payload.len();
+    let now = Instant::now();
+
+    let Some(current) = stream_states.get(&stream_id).copied() else {
+        tracing::warn!("dropping frame for unknown stream {stream_id}");
+        return Ok(());
+    };
+
+    let elapsed = now.duration_since(current.started_at);
+    if elapsed > MAX_STREAM_DURATION || current.bytes_sent.saturating_add(payload_len) > MAX_STREAM_BYTES {
+        stream_states.remove(&stream_id);
+
+        let end_payload = serde_json::to_string(&ServerMessage::StreamEnd(StreamEndMsg {
+            v: PROTOCOL_VERSION,
+            stream_id,
+            tokens: 0,
+            duration_ms: elapsed.as_millis().min(u64::MAX as u128) as u64,
+        }))?;
+        let user_ids = conversation_members(state, current.conversation_id).await?;
+        state
+            .hub
+            .send_to_conversation(current.conversation_id, user_ids, &end_payload)
+            .await;
+        return Ok(());
+    }
+
+    if let Some(entry) = stream_states.get_mut(&stream_id) {
+        entry.bytes_sent = entry.bytes_sent.saturating_add(payload_len);
+    }
+
+    let user_ids = conversation_members(state, current.conversation_id).await?;
+    state
+        .hub
+        .send_to_conversation(current.conversation_id, user_ids, &payload)
+        .await;
+
+    if finalize {
+        stream_states.remove(&stream_id);
+    }
+
+    Ok(())
+}
+
+fn require_v(v: u8) -> anyhow::Result<()> {
+    if v == PROTOCOL_VERSION {
+        Ok(())
+    } else {
+        anyhow::bail!("unsupported protocol version: {v}")
+    }
+}
+
+async fn conversation_members(state: &AppState, conversation_id: Uuid) -> anyhow::Result<Vec<Uuid>> {
+    let rows: Vec<sqlx::postgres::PgRow> =
+        sqlx::query("SELECT user_id FROM conversation_members WHERE conversation_id = $1")
+            .bind(conversation_id)
+            .fetch_all(state.db.as_ref())
+            .await?;
+
+    let mut users = Vec::with_capacity(rows.len());
+    for row in rows {
+        users.push(row.try_get::<Uuid, _>("user_id")?);
+    }
+
+    Ok(users)
 }

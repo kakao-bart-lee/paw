@@ -314,3 +314,10 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Mapped FRB account output to client-facing keys as `{ identityKey, x25519PubKey }`, where `x25519PubKey` is populated from FRB `signedPrekey` to match current paw-ffi naming.
 - Added `KeyStorageService` (`lib/core/crypto/key_storage_service.dart`) backed by `flutter_secure_storage`, storing three key slots (`e2ee_identity_key`, `e2ee_x25519_priv_key`, `e2ee_x25519_pub_key`) using base64 encoding for binary-safe persistence.
 - Extended `ApiClient` with key-bundle endpoints: `uploadKeyBundle` (`POST /api/v1/keys/bundle`) and `getKeyBundle` (`GET /api/v1/keys/:user_id`) with explicit 404→`null` handling for missing bundles.
+
+## [2026-03-07] T28b: Agent Streaming Relay Decisions
+
+- Added `paw_proto::AgentStreamMsg` as the dedicated agent→server streaming envelope while reusing existing frame structs (`StreamStartMsg`, `ContentDeltaMsg`, `ToolStartMsg`, `ToolEndMsg`, `StreamEndMsg`) so no wire-shape duplication was introduced.
+- Agent WebSocket handler now accepts `AppState` in `handle_agent_socket` so streaming relay can resolve conversation members from `conversation_members` and fan out frames through Hub in real time.
+- Stream limits are enforced server-side per `stream_id` using in-memory tracking: max duration `300s` and max relayed bytes `1_048_576`; on limit breach, stream state is dropped and a terminal `stream_end` frame is broadcast.
+- Added Hub `send_to_conversation(conversation_id, user_ids, msg)` as a thin wrapper over existing broadcast path to keep relay call sites explicit for conversation-scoped delivery.

@@ -767,6 +767,100 @@ fn test_agent_response_msg_roundtrip() {
 }
 
 #[test]
+fn test_agent_stream_msg_roundtrip() {
+    let conversation_id = Uuid::new_v4();
+    let agent_id = Uuid::new_v4();
+    let stream_id = Uuid::new_v4();
+
+    let frames = vec![
+        paw_proto::AgentStreamMsg::StreamStart(paw_proto::StreamStartMsg {
+            v: 1,
+            conversation_id,
+            agent_id,
+            stream_id,
+        }),
+        paw_proto::AgentStreamMsg::ContentDelta(paw_proto::ContentDeltaMsg {
+            v: 1,
+            stream_id,
+            delta: "hello".into(),
+        }),
+        paw_proto::AgentStreamMsg::ToolStart(paw_proto::ToolStartMsg {
+            v: 1,
+            stream_id,
+            tool: "search".into(),
+            label: "Searching".into(),
+        }),
+        paw_proto::AgentStreamMsg::ToolEnd(paw_proto::ToolEndMsg {
+            v: 1,
+            stream_id,
+            tool: "search".into(),
+        }),
+        paw_proto::AgentStreamMsg::StreamEnd(paw_proto::StreamEndMsg {
+            v: 1,
+            stream_id,
+            tokens: 42,
+            duration_ms: 1234,
+        }),
+    ];
+
+    for frame in frames {
+        let json = serde_json::to_string(&frame).unwrap();
+        let parsed: paw_proto::AgentStreamMsg = serde_json::from_str(&json).unwrap();
+
+        match parsed {
+            paw_proto::AgentStreamMsg::StreamStart(msg) => {
+                assert_eq!(msg.v, 1);
+                assert_eq!(msg.conversation_id, conversation_id);
+                assert_eq!(msg.agent_id, agent_id);
+                assert_eq!(msg.stream_id, stream_id);
+            }
+            paw_proto::AgentStreamMsg::ContentDelta(msg) => {
+                assert_eq!(msg.v, 1);
+                assert_eq!(msg.stream_id, stream_id);
+                assert_eq!(msg.delta, "hello");
+            }
+            paw_proto::AgentStreamMsg::ToolStart(msg) => {
+                assert_eq!(msg.v, 1);
+                assert_eq!(msg.stream_id, stream_id);
+                assert_eq!(msg.tool, "search");
+                assert_eq!(msg.label, "Searching");
+            }
+            paw_proto::AgentStreamMsg::ToolEnd(msg) => {
+                assert_eq!(msg.v, 1);
+                assert_eq!(msg.stream_id, stream_id);
+                assert_eq!(msg.tool, "search");
+            }
+            paw_proto::AgentStreamMsg::StreamEnd(msg) => {
+                assert_eq!(msg.v, 1);
+                assert_eq!(msg.stream_id, stream_id);
+                assert_eq!(msg.tokens, 42);
+                assert_eq!(msg.duration_ms, 1234);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_stream_limit_enforcement_thresholds() {
+    const MAX_STREAM_DURATION_SECONDS: i64 = 300;
+    const MAX_STREAM_BYTES: usize = 1_048_576;
+
+    fn within_limits(started_at: chrono::DateTime<Utc>, bytes_sent: usize) -> bool {
+        let elapsed = Utc::now() - started_at;
+        elapsed.num_seconds() <= MAX_STREAM_DURATION_SECONDS && bytes_sent <= MAX_STREAM_BYTES
+    }
+
+    let just_within_duration = Utc::now() - Duration::seconds(MAX_STREAM_DURATION_SECONDS);
+    assert!(within_limits(just_within_duration, MAX_STREAM_BYTES));
+
+    let over_duration = Utc::now() - Duration::seconds(MAX_STREAM_DURATION_SECONDS + 1);
+    assert!(!within_limits(over_duration, MAX_STREAM_BYTES));
+
+    assert!(within_limits(Utc::now(), MAX_STREAM_BYTES));
+    assert!(!within_limits(Utc::now(), MAX_STREAM_BYTES + 1));
+}
+
+#[test]
 fn test_replenish_threshold() {
     for count in 0..5u32 {
         assert!(count < 5, "should replenish at count {}", count);

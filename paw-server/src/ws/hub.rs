@@ -48,4 +48,8 @@ impl Hub {
             self.send_to_user(user_id, msg).await;
         }
     }
+
+    pub async fn send_to_conversation(&self, _conversation_id: Uuid, user_ids: Vec<Uuid>, msg: &str) {
+        self.broadcast_to_conversation(user_ids, msg).await;
+    }
 }

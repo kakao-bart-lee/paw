@@ -180,6 +180,16 @@ pub struct AgentResponseMsg {
     pub format: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AgentStreamMsg {
+    StreamStart(StreamStartMsg),
+    ContentDelta(ContentDeltaMsg),
+    ToolStart(ToolStartMsg),
+    ToolEnd(ToolEndMsg),
+    StreamEnd(StreamEndMsg),
+}
+
 // ─── Shared Enums ────────────────────────────────────────────────────────
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
