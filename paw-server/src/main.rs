@@ -12,7 +12,7 @@ use axum::{
     Router,
     extract::DefaultBodyLimit,
     middleware,
-    routing::{get, post},
+    routing::{delete, get, patch, post},
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -68,6 +68,18 @@ async fn main() -> anyhow::Result<()> {
         .route("/users/:user_id", get(users::handlers::get_user))
         .route("/conversations", get(messages::handlers::list_conversations))
         .route("/conversations", post(messages::handlers::create_conversation))
+        .route(
+            "/conversations/:id",
+            patch(messages::handlers::update_group_name_handler),
+        )
+        .route(
+            "/conversations/:id/members",
+            post(messages::handlers::add_member_handler),
+        )
+        .route(
+            "/conversations/:id/members/:user_id",
+            delete(messages::handlers::remove_member_handler),
+        )
         .route(
             "/conversations/:conv_id/messages",
             post(messages::handlers::send_message),

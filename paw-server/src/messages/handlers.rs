@@ -1,7 +1,9 @@
 use crate::auth::{AppState, middleware::UserId};
 use crate::messages::{
-    models::{ConversationListItem, Message},
-    service::{self, Membership},
+    models::{
+        AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse, UpdateGroupNameRequest,
+    },
+    service::{self, GroupManagementError, Membership},
 };
 use axum::{
     Json,
@@ -49,6 +51,16 @@ pub struct ListConversationsResponse {
 pub struct CreateConversationResponse {
     pub id: Uuid,
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AddMemberResponse {
+    pub added: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UpdateGroupNameResponse {
+    pub updated: bool,
 }
 
 pub async fn send_message(
@@ -177,11 +189,11 @@ pub async fn create_conversation(
     Extension(UserId(user_id)): Extension<UserId>,
     Json(payload): Json<CreateConversationRequest>,
 ) -> Response {
-    if payload.member_ids.len() > 100 {
+    if payload.member_ids.len() + 1 > service::MAX_GROUP_MEMBERS {
         return error(
             StatusCode::BAD_REQUEST,
             "too_many_members",
-            "A conversation can have at most 100 members",
+            "A conversation can have at most 100 members (including creator)",
         )
         .into_response();
     }
@@ -207,6 +219,41 @@ pub async fn create_conversation(
     };
 
     (StatusCode::CREATED, Json(response)).into_response()
+}
+
+pub async fn add_member_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(conversation_id): Path<Uuid>,
+    Json(payload): Json<AddMemberRequest>,
+) -> Response {
+    match service::add_member(&state.db, conversation_id, user_id, payload.user_id).await {
+        Ok(added) => Json(AddMemberResponse { added }).into_response(),
+        Err(err) => group_management_error_to_response(err).into_response(),
+    }
+}
+
+pub async fn remove_member_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
+) -> Response {
+    match service::remove_member(&state.db, conversation_id, user_id, target_user_id).await {
+        Ok(removed) => Json(RemoveMemberResponse { removed }).into_response(),
+        Err(err) => group_management_error_to_response(err).into_response(),
+    }
+}
+
+pub async fn update_group_name_handler(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(conversation_id): Path<Uuid>,
+    Json(payload): Json<UpdateGroupNameRequest>,
+) -> Response {
+    match service::update_group_name(&state.db, conversation_id, user_id, &payload.name).await {
+        Ok(updated) => Json(UpdateGroupNameResponse { updated }).into_response(),
+        Err(err) => group_management_error_to_response(err).into_response(),
+    }
 }
 
 async fn ensure_membership(state: &AppState, conv_id: Uuid, user_id: Uuid) -> Result<(), Response> {
@@ -244,4 +291,38 @@ fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Val
             "message": message,
         })),
     )
+}
+
+fn group_management_error_to_response(err: GroupManagementError) -> (StatusCode, Json<Value>) {
+    match err {
+        GroupManagementError::ConversationNotFound => error(
+            StatusCode::NOT_FOUND,
+            "conversation_not_found",
+            "Conversation not found",
+        ),
+        GroupManagementError::NotAuthorized => {
+            error(StatusCode::FORBIDDEN, "forbidden", "Not authorized for this action")
+        }
+        GroupManagementError::TooManyMembers => error(
+            StatusCode::CONFLICT,
+            "too_many_members",
+            "Conversation reached maximum member limit",
+        ),
+        GroupManagementError::AlreadyMember => error(
+            StatusCode::CONFLICT,
+            "already_member",
+            "User is already a member of this conversation",
+        ),
+        GroupManagementError::MemberNotFound => {
+            error(StatusCode::NOT_FOUND, "member_not_found", "Conversation member not found")
+        }
+        GroupManagementError::CannotRemoveLastOwner => error(
+            StatusCode::FORBIDDEN,
+            "cannot_remove_last_owner",
+            "Cannot remove the last owner from conversation",
+        ),
+        GroupManagementError::InvalidGroupName => {
+            error(StatusCode::BAD_REQUEST, "invalid_group_name", "Group name is required")
+        }
+    }
 }

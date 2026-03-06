@@ -2,16 +2,29 @@ use crate::db::DbPool;
 use crate::messages::models::{
     ConversationCreateResult, ConversationListItem, Message, MessageSendResult,
 };
-use anyhow::Context;
+use anyhow::{Context, anyhow};
 use sqlx::{Postgres, Transaction};
 use std::collections::HashSet;
 use uuid::Uuid;
+
+pub const MAX_GROUP_MEMBERS: usize = 100;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Membership {
     Member,
     NotMember,
     ConversationNotFound,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroupManagementError {
+    ConversationNotFound,
+    NotAuthorized,
+    TooManyMembers,
+    AlreadyMember,
+    MemberNotFound,
+    CannotRemoveLastOwner,
+    InvalidGroupName,
 }
 
 pub async fn check_member(
@@ -183,6 +196,10 @@ pub async fn create_conversation(
     .await
     .context("insert conversation")?;
 
+    if all_members.len() > MAX_GROUP_MEMBERS {
+        return Err(anyhow!("too_many_members"));
+    }
+
     insert_members(&mut tx, created.id, creator_id, &all_members).await?;
 
     tx.commit().await.context("commit conversation transaction")?;
@@ -216,4 +233,180 @@ async fn insert_members(
     }
 
     Ok(())
+}
+
+pub async fn add_member(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    requester_id: Uuid,
+    new_user_id: Uuid,
+) -> Result<bool, GroupManagementError> {
+    let requester_role = get_role(pool, conversation_id, requester_id)
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    match requester_role.as_deref() {
+        Some("owner") | Some("admin") => {}
+        Some(_) | None => return Err(GroupManagementError::NotAuthorized),
+    }
+
+    let conv_row = sqlx::query_as::<_, (i32, i64)>(
+        "SELECT c.max_members, COUNT(cm.user_id)::BIGINT
+         FROM conversations c
+         LEFT JOIN conversation_members cm ON cm.conversation_id = c.id
+         WHERE c.id = $1
+         GROUP BY c.max_members",
+    )
+    .bind(conversation_id)
+    .fetch_optional(pool.as_ref())
+    .await
+    .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    let Some((max_members, current_count)) = conv_row else {
+        return Err(GroupManagementError::ConversationNotFound);
+    };
+
+    if current_count >= i64::from(max_members) {
+        return Err(GroupManagementError::TooManyMembers);
+    }
+
+    let inserted = sqlx::query(
+        "INSERT INTO conversation_members (conversation_id, user_id, role)
+         VALUES ($1, $2, 'member')
+         ON CONFLICT (conversation_id, user_id) DO NOTHING",
+    )
+    .bind(conversation_id)
+    .bind(new_user_id)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|_| GroupManagementError::ConversationNotFound)?
+    .rows_affected();
+
+    if inserted == 0 {
+        return Err(GroupManagementError::AlreadyMember);
+    }
+
+    Ok(true)
+}
+
+pub async fn remove_member(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    requester_id: Uuid,
+    target_user_id: Uuid,
+) -> Result<bool, GroupManagementError> {
+    let requester_role = get_role(pool, conversation_id, requester_id)
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    if requester_id != target_user_id && requester_role.as_deref() != Some("owner") {
+        return Err(GroupManagementError::NotAuthorized);
+    }
+
+    let target_role = get_role(pool, conversation_id, target_user_id)
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    let Some(target_role) = target_role else {
+        return Err(GroupManagementError::MemberNotFound);
+    };
+
+    if target_role == "owner" {
+        let owner_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*)::BIGINT
+             FROM conversation_members
+             WHERE conversation_id = $1 AND role = 'owner'",
+        )
+        .bind(conversation_id)
+        .fetch_one(pool.as_ref())
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+        if owner_count <= 1 {
+            return Err(GroupManagementError::CannotRemoveLastOwner);
+        }
+    }
+
+    let removed = sqlx::query(
+        "DELETE FROM conversation_members
+         WHERE conversation_id = $1 AND user_id = $2",
+    )
+    .bind(conversation_id)
+    .bind(target_user_id)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|_| GroupManagementError::ConversationNotFound)?
+    .rows_affected();
+
+    if removed == 0 {
+        return Err(GroupManagementError::MemberNotFound);
+    }
+
+    Ok(true)
+}
+
+pub async fn update_group_name(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    requester_id: Uuid,
+    name: &str,
+) -> Result<bool, GroupManagementError> {
+    let requester_role = get_role(pool, conversation_id, requester_id)
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    match requester_role.as_deref() {
+        Some("owner") | Some("admin") => {}
+        Some(_) | None => return Err(GroupManagementError::NotAuthorized),
+    }
+
+    let normalized = name.trim();
+    if normalized.is_empty() {
+        return Err(GroupManagementError::InvalidGroupName);
+    }
+
+    let updated = sqlx::query(
+        "UPDATE conversations
+         SET title = $2
+         WHERE id = $1 AND type = 'group'",
+    )
+    .bind(conversation_id)
+    .bind(normalized)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|_| GroupManagementError::ConversationNotFound)?
+    .rows_affected();
+
+    if updated == 0 {
+        return Err(GroupManagementError::ConversationNotFound);
+    }
+
+    Ok(true)
+}
+
+async fn get_role(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    user_id: Uuid,
+) -> anyhow::Result<Option<String>> {
+    let conversation_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM conversations WHERE id = $1)",
+    )
+    .bind(conversation_id)
+    .fetch_one(pool.as_ref())
+    .await
+    .context("check conversation exists")?;
+
+    if !conversation_exists {
+        return Err(anyhow!("conversation_not_found"));
+    }
+
+    sqlx::query_scalar::<_, String>(
+        "SELECT role FROM conversation_members WHERE conversation_id = $1 AND user_id = $2",
+    )
+    .bind(conversation_id)
+    .bind(user_id)
+    .fetch_optional(pool.as_ref())
+    .await
+    .context("load member role")
 }

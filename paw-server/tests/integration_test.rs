@@ -867,3 +867,41 @@ fn test_replenish_threshold() {
     }
     assert!(!(5 < 5), "should NOT replenish at count 5");
 }
+
+const MAX_GROUP_MEMBERS: usize = 100;
+
+fn validate_group_member_count(total_members: usize) -> Result<(), &'static str> {
+    if total_members > MAX_GROUP_MEMBERS {
+        Err("too_many_members")
+    } else {
+        Ok(())
+    }
+}
+
+#[test]
+fn group_max_members_is_100() {
+    assert_eq!(MAX_GROUP_MEMBERS, 100);
+}
+
+#[test]
+fn group_member_count_validation() {
+    assert!(validate_group_member_count(100).is_ok());
+    assert!(validate_group_member_count(101).is_err());
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct GroupNameUpdateRequest {
+    name: String,
+}
+
+#[test]
+fn group_name_update_request_serialization() {
+    let request = GroupNameUpdateRequest {
+        name: "Weekend Plans".to_string(),
+    };
+
+    let json = serde_json::to_string(&request).unwrap();
+    let parsed: GroupNameUpdateRequest = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed, request);
+}

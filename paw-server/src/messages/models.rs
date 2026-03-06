@@ -33,3 +33,18 @@ pub struct ConversationCreateResult {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddMemberRequest {
+    pub user_id: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RemoveMemberResponse {
+    pub removed: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateGroupNameRequest {
+    pub name: String,
+}

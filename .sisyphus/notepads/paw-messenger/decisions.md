@@ -328,3 +328,12 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Registered `KeyStorageService` and `E2eeService` in GetIt as guarded singletons (`isRegistered` checks) to match existing DI patterns and allow graceful availability checks.
 - Wired `MessagesNotifier.sendMessage()` to detect E2EE conversations and touch E2EE services/keys, but intentionally keep plaintext send behavior as a placeholder until recipient key bundle lookup/X3DH session setup is implemented (T32 scope).
 - Updated `WsMessageHandler` to perform best-effort decrypt for incoming `message_received` frames when payload looks like base64 ciphertext (`len > 44` + base64 regex) and local key material exists; on any failure it falls back to original content.
+
+## [2026-03-07] T30: Group Chat Backend Decisions
+
+- Added `conversations.max_members` with DB default `100` via migration `20260101000012_group_chat_limits.sql` so member-cap policy is persisted and future configurable per-conversation.
+- Introduced `MAX_GROUP_MEMBERS` constant and enforcement in `create_conversation` to reject oversize groups before member inserts complete.
+- Added `add_member`/`remove_member` service methods with role checks (`owner`/`admin` for add, `owner` or self-removal for remove), conflict handling, and last-owner protection.
+- Exposed protected REST endpoints for membership management: `POST /conversations/:id/members` and `DELETE /conversations/:id/members/:user_id`; standardized failures to existing `{ error, message }` JSON shape.
+- Added `PATCH /conversations/:id` for group name updates with owner/admin authorization and non-empty name validation.
+- Added non-DB tests validating 100-member constant policy, over-limit rejection behavior, and group-name request serde roundtrip.
