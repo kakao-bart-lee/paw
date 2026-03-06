@@ -1,6 +1,7 @@
 mod agents;
 mod auth;
 mod db;
+mod devices;
 mod keys;
 mod media;
 mod messages;
@@ -100,6 +101,11 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/api/v1/keys/:user_id",
             get(keys::handlers::get_key_bundle_handler),
+        )
+        .route("/api/v1/devices", get(devices::handlers::list_devices))
+        .route(
+            "/api/v1/devices/:device_id",
+            delete(devices::handlers::delete_device),
         )
         .route("/media/:media_id/url", get(media::handlers::get_url))
         .route("/api/v1/agents/register", post(agents::handlers::register_agent_handler))

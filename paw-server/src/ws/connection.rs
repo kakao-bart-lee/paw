@@ -5,8 +5,8 @@ use axum::extract::ws::{CloseFrame, Message, WebSocket, close_code};
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{
-    ClientMessage, HelloErrorMsg, HelloOkMsg, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION,
-    ServerMessage,
+    ClientMessage, DeviceSyncResponse, HelloErrorMsg, HelloOkMsg, MessageFormat,
+    MessageReceivedMsg, PROTOCOL_VERSION, ServerMessage,
 };
 use sqlx::Row;
 use std::time::{Duration, Instant};
@@ -189,56 +189,103 @@ async fn handle_client_message(
                 }
             }
 
-            let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
-                "SELECT id, conversation_id, sender_id, content, format, seq, created_at, blocks \
-                 FROM messages \
-                 WHERE conversation_id = $1 AND seq > $2 \
-                 ORDER BY seq ASC \
-                 LIMIT 100",
-            )
-            .bind(sync.conversation_id)
-            .bind(sync.last_seq)
-            .fetch_all(state.db.as_ref())
-            .await?;
-
-            for row in rows {
-                let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
-                let format = match format_raw
-                    .unwrap_or_else(|| "markdown".to_owned())
-                    .to_ascii_lowercase()
-                    .as_str()
-                {
-                    "plain" => MessageFormat::Plain,
-                    _ => MessageFormat::Markdown,
-                };
-
-                let blocks: Option<serde_json::Value> = row.try_get::<Option<serde_json::Value>, _>("blocks")?;
-                let blocks = match blocks {
-                    Some(serde_json::Value::Array(values)) => values,
-                    _ => Vec::new(),
-                };
-
-                let server_frame = ServerMessage::MessageReceived(MessageReceivedMsg {
-                    v: PROTOCOL_VERSION,
-                    id: row.try_get("id")?,
-                    conversation_id: row.try_get("conversation_id")?,
-                    sender_id: row.try_get("sender_id")?,
-                    content: row.try_get("content")?,
-                    format,
-                    seq: row.try_get("seq")?,
-                    created_at: row.try_get("created_at")?,
-                    blocks,
-                });
-
-                let payload = serde_json::to_string(&server_frame)?;
+            let messages = fetch_messages_after_seq(state, sync.conversation_id, sync.last_seq).await?;
+            for message in messages {
+                let payload = serde_json::to_string(&ServerMessage::MessageReceived(message))?;
                 if outbound_tx.send(Message::Text(payload.into())).is_err() {
                     break;
                 }
             }
         }
+        ClientMessage::DeviceSync(request) => {
+            require_v(request.v)?;
+
+            let mut messages = Vec::new();
+            for conversation in request.conversations {
+                match service::check_member(&state.db, conversation.conversation_id, user_id).await? {
+                    Membership::Member => {
+                        let mut missing = fetch_messages_after_seq(
+                            state,
+                            conversation.conversation_id,
+                            conversation.last_seq,
+                        )
+                        .await?;
+                        messages.append(&mut missing);
+                    }
+                    Membership::NotMember | Membership::ConversationNotFound => {
+                        tracing::warn!(
+                            user_id = %user_id,
+                            conversation_id = %conversation.conversation_id,
+                            "skipping unauthorized conversation in device_sync"
+                        );
+                    }
+                }
+            }
+
+            messages.sort_by_key(|message| (message.conversation_id, message.seq));
+
+            let payload = serde_json::to_string(&ServerMessage::DeviceSyncResponse(
+                DeviceSyncResponse {
+                    v: PROTOCOL_VERSION,
+                    messages,
+                },
+            ))?;
+            let _ = outbound_tx.send(Message::Text(payload.into()));
+        }
     }
 
     Ok(())
+}
+
+async fn fetch_messages_after_seq(
+    state: &AppState,
+    conversation_id: Uuid,
+    last_seq: i64,
+) -> anyhow::Result<Vec<MessageReceivedMsg>> {
+    let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
+        "SELECT id, conversation_id, sender_id, content, format, seq, created_at, blocks \
+         FROM messages \
+         WHERE conversation_id = $1 AND seq > $2 \
+         ORDER BY seq ASC \
+         LIMIT 100",
+    )
+    .bind(conversation_id)
+    .bind(last_seq)
+    .fetch_all(state.db.as_ref())
+    .await?;
+
+    let mut messages = Vec::with_capacity(rows.len());
+    for row in rows {
+        let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
+        let format = match format_raw
+            .unwrap_or_else(|| "markdown".to_owned())
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "plain" => MessageFormat::Plain,
+            _ => MessageFormat::Markdown,
+        };
+
+        let blocks: Option<serde_json::Value> = row.try_get::<Option<serde_json::Value>, _>("blocks")?;
+        let blocks = match blocks {
+            Some(serde_json::Value::Array(values)) => values,
+            _ => Vec::new(),
+        };
+
+        messages.push(MessageReceivedMsg {
+            v: PROTOCOL_VERSION,
+            id: row.try_get("id")?,
+            conversation_id: row.try_get("conversation_id")?,
+            sender_id: row.try_get("sender_id")?,
+            content: row.try_get("content")?,
+            format,
+            seq: row.try_get("seq")?,
+            created_at: row.try_get("created_at")?,
+            blocks,
+        });
+    }
+
+    Ok(messages)
 }
 
 fn require_v(v: u8) -> anyhow::Result<()> {

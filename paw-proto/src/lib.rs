@@ -25,6 +25,7 @@ pub enum ClientMessage {
     TypingStop(TypingMsg),
     MessageAck(MessageAckMsg),
     Sync(SyncMsg),
+    DeviceSync(DeviceSyncRequest),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +34,7 @@ pub enum ServerMessage {
     HelloOk(HelloOkMsg),
     HelloError(HelloErrorMsg),
     MessageReceived(MessageReceivedMsg),
+    DeviceSyncResponse(DeviceSyncResponse),
     TypingStart(TypingMsg),
     TypingStop(TypingMsg),
     PresenceUpdate(PresenceUpdateMsg),
@@ -85,6 +87,18 @@ pub struct SyncMsg {
     pub last_seq: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConvSyncState {
+    pub conversation_id: Uuid,
+    pub last_seq: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceSyncRequest {
+    pub v: u8,
+    pub conversations: Vec<ConvSyncState>,
+}
+
 // ─── Server Messages ──────────────────────────────────────────────────────
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HelloOkMsg {
@@ -112,6 +126,12 @@ pub struct MessageReceivedMsg {
     pub created_at: DateTime<Utc>,
     #[serde(default)]
     pub blocks: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceSyncResponse {
+    pub v: u8,
+    pub messages: Vec<MessageReceivedMsg>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -231,5 +251,32 @@ mod tests {
         // Without v field - should fail (v is required)
         let result: Result<HelloOkMsg, _> = serde_json::from_str(json);
         assert!(result.is_err(), "Messages without v field must be rejected");
+    }
+
+    #[test]
+    fn test_device_sync_request_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let msg = ClientMessage::DeviceSync(DeviceSyncRequest {
+            v: PROTOCOL_VERSION,
+            conversations: vec![ConvSyncState {
+                conversation_id,
+                last_seq: 17,
+            }],
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "device_sync");
+        assert_eq!(json["v"], PROTOCOL_VERSION);
+
+        let parsed: ClientMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ClientMessage::DeviceSync(request) => {
+                assert_eq!(request.v, PROTOCOL_VERSION);
+                assert_eq!(request.conversations.len(), 1);
+                assert_eq!(request.conversations[0].conversation_id, conversation_id);
+                assert_eq!(request.conversations[0].last_seq, 17);
+            }
+            _ => panic!("expected DeviceSync variant"),
+        }
     }
 }
