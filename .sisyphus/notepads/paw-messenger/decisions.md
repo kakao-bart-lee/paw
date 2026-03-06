@@ -358,3 +358,11 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Invitation insert is constrained to active agents only (`agent_tokens.revoked_at IS NULL`) and returns a typed error when agent is missing/revoked.
 - Agent removal is owner-gated (`conversation_members.role = 'owner'`) and deletes from `conversation_agents`; handler maps unauthorized to `403` and missing mapping to `404`.
 - Added protected REST routes: `POST /conversations/:id/agents` and `DELETE /conversations/:id/agents/:agent_id`, plus serde roundtrip tests for invite request/response in `integration_test.rs`.
+
+## [2026-03-07] T36: OpenClaw Adapter Scaffold Decisions
+
+- Created a standalone TypeScript scaffold package at `adapters/openclaw-adapter/` with strict TS config and a minimal build/test script surface, intentionally without runtime dependency installation.
+- Mirrored Paw protocol contracts into `src/types.ts` with mandatory `v` fields and explicit stream-frame discriminated unions (`stream_start`, `content_delta`, `tool_start`, `tool_end`, `stream_end`).
+- Implemented `OpenClawAdapter` as a routing shell: connect to `/agent/ws?token=...`, parse inbound contexts safely, dispatch to registered channel handlers, and emit either single-response or stream-frame replies.
+- Added `ChannelHandler` abstraction plus `SlackChannelHandler` echo stub to establish the channel adapter pattern for upcoming real integrations (T37).
+- Added parser/serializer-focused unit tests in `src/__tests__/adapter.test.ts` to validate protocol parsing, invalid JSON handling, response versioning, and stream-frame type narrowing without network I/O.
