@@ -14,6 +14,9 @@ use super::{AppState, jwt};
 #[derive(Clone, Copy, Debug)]
 pub struct UserId(pub Uuid);
 
+#[derive(Clone, Copy, Debug)]
+pub struct DeviceId(pub Option<Uuid>);
+
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut request: Request<Body>,
@@ -37,6 +40,7 @@ pub async fn auth_middleware(
     };
 
     request.extensions_mut().insert(UserId(claims.sub));
+    request.extensions_mut().insert(DeviceId(claims.device_id));
 
     next.run(request).await
 }

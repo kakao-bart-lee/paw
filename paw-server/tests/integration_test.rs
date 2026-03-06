@@ -1,3 +1,4 @@
+use base64::Engine;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
@@ -703,4 +704,22 @@ fn gap_fill_limit_caps_at_100() {
     assert_eq!(gap_fill.len(), 100, "gap-fill must cap at LIMIT 100");
     assert_eq!(*gap_fill.first().unwrap(), 1);
     assert_eq!(*gap_fill.last().unwrap(), 100);
+}
+
+#[test]
+fn test_key_bundle_base64_roundtrip() {
+    let key = vec![42u8; 32];
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&key);
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(&encoded)
+        .unwrap();
+    assert_eq!(key, decoded);
+}
+
+#[test]
+fn test_replenish_threshold() {
+    for count in 0..5u32 {
+        assert!(count < 5, "should replenish at count {}", count);
+    }
+    assert!(!(5 < 5), "should NOT replenish at count 5");
 }

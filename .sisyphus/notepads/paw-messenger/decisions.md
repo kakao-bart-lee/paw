@@ -252,3 +252,11 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Bug intake is standardized with severity taxonomy `P0-P4` to align triage urgency across crash/data-loss/functional/UX/cosmetic classes.
 - Feedback tracker is pre-seeded with currently known UX/setup limitations (profile send-message stub, media picker stub, Drift stub codegen dependency, Flutter availability friction, and paw-crypto openmls confusion risk).
 - Retrospective template includes explicit Phase 2 readiness gates for OpenMLS E2EE, Agent Gateway contracts, and OpenClaw adapter integration before kickoff.
+
+## [2026-03-07] T24: Prekey Bundle Decisions
+
+- Added dedicated Phase 2 E2EE key bootstrap schema with `prekey_bundles` and `one_time_prekeys`, keeping prekey material server-stored as raw bytes and versioning through timestamped migrations.
+- `prekey_bundles` uses `(user_id, device_id)` uniqueness with upsert semantics so each device can rotate identity/signed prekeys without creating duplicate logical bundles.
+- One-time prekeys are inserted idempotently (`ON CONFLICT (user_id, key_id) DO NOTHING`) so repeated uploads are safe during client retries.
+- `GET /api/v1/keys/:user_id` consumes at most one unused prekey atomically via `FOR UPDATE SKIP LOCKED` and marks it used inside the same transaction to avoid double allocation under concurrency.
+- API returns base64-encoded key material and a `replenish_prekeys` hint when remaining unused prekeys drop below 5, enabling proactive client refill behavior.

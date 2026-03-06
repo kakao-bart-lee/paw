@@ -1,5 +1,6 @@
 mod auth;
 mod db;
+mod keys;
 mod media;
 mod messages;
 mod users;
@@ -59,6 +60,11 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/conversations/:conv_id/messages",
             get(messages::handlers::get_messages),
+        )
+        .route("/api/v1/keys/upload", post(keys::handlers::upload_keys_handler))
+        .route(
+            "/api/v1/keys/:user_id",
+            get(keys::handlers::get_key_bundle_handler),
         )
         .route("/media/:media_id/url", get(media::handlers::get_url))
         .merge(media_upload)
