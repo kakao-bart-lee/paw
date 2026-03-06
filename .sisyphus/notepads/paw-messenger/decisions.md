@@ -337,3 +337,11 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Exposed protected REST endpoints for membership management: `POST /conversations/:id/members` and `DELETE /conversations/:id/members/:user_id`; standardized failures to existing `{ error, message }` JSON shape.
 - Added `PATCH /conversations/:id` for group name updates with owner/admin authorization and non-empty name validation.
 - Added non-DB tests validating 100-member constant policy, over-limit rejection behavior, and group-name request serde roundtrip.
+
+## [2026-03-07] T32: Python Agent SDK Decisions
+
+- Added a standalone Python package at `agents/paw-agent-sdk` with `pyproject.toml` and Python 3.11+ constraints so agent developers can install/use it independently from Rust workspace tooling.
+- Implemented a minimal async `PawAgent` API aligned to gateway contracts: connects to `/agent/ws?token=...`, parses `InboundContext`, sends `AgentResponseMsg` (simple text), and emits streaming frames (`stream_start`/`content_delta`/`stream_end`) with mandatory `v:1` fields.
+- `Message.created_at` is parsed from ISO8601 (`Z` normalized to `+00:00`) so incoming server timestamps become timezone-aware Python `datetime` objects.
+- Added `StreamChunk` model support for optional tool events (`tool_start` / `tool_end`) during streaming while keeping simple string-delta streaming as the default path.
+- Added unit tests that avoid network dependencies, including direct `_parse_context` validation (success + failure paths), and a lightweight `tests/conftest.py` path bootstrap so tests can run without package installation.
