@@ -43,6 +43,24 @@ impl Hub {
         }
     }
 
+    /// Non-blocking send — drops message if receiver buffer is full.
+    /// Used for streaming frames where dropping is preferable to blocking.
+    pub async fn send_to_user_nonblocking(&self, user_id: Uuid, msg: &str) {
+        let mut guard = self.connections.write().await;
+        if let Some(senders) = guard.get_mut(&user_id) {
+            senders.retain(|tx| match tx.send(Message::Text(msg.to_owned().into())) {
+                Ok(_) => true,
+                Err(err) => {
+                    tracing::warn!(%user_id, error = %err, "dropping websocket message for slow/disconnected client");
+                    false
+                }
+            });
+            if senders.is_empty() {
+                guard.remove(&user_id);
+            }
+        }
+    }
+
     pub async fn broadcast_to_conversation(&self, user_ids: Vec<Uuid>, msg: &str) {
         for user_id in user_ids {
             self.send_to_user(user_id, msg).await;
@@ -50,6 +68,8 @@ impl Hub {
     }
 
     pub async fn send_to_conversation(&self, _conversation_id: Uuid, user_ids: Vec<Uuid>, msg: &str) {
-        self.broadcast_to_conversation(user_ids, msg).await;
+        for user_id in user_ids {
+            self.send_to_user_nonblocking(user_id, msg).await;
+        }
     }
 }

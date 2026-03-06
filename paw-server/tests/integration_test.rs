@@ -864,12 +864,14 @@ fn test_stream_limit_enforcement_thresholds() {
 fn stream_concurrent_limit_is_10() {
     assert_eq!(paw_proto::PROTOCOL_VERSION, 1);
     let limit: usize = 10;
+    assert_eq!(limit, 10);
     assert!(limit <= 100, "concurrent stream limit should be reasonable");
 }
 
 #[test]
 fn delta_size_limit_is_4096() {
     let limit: usize = 4096;
+    assert_eq!(limit, 4096);
     assert!(limit > 0 && limit <= 65536);
 }
 

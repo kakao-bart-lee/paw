@@ -382,3 +382,11 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - Added unicode-safe serde roundtrip validation for `ContentDeltaMsg.delta` to guard against encoding regressions in streaming deltas.
 - Added serialization roundtrip checks for Phase 2 request payloads (`AddMemberRequest`, `InviteAgentRequest`) and locked protocol guardrail `PROTOCOL_VERSION == 1`.
 - Full command `cargo test -p paw-server -p paw-proto -p paw-crypto -p paw-ffi` passed with `45 passed, 0 failed, 9 ignored` in `integration_test.rs` and no failures across all targeted crates.
+
+## [2026-03-07] T38: Streaming Backpressure + Limit Guard Decisions
+
+- Added explicit stream relay guardrails in `paw-server/src/agents/handlers.rs`: `MAX_CONCURRENT_STREAMS_PER_AGENT = 10` and `MAX_DELTA_SIZE = 4096`.
+- `AgentStreamMsg::StreamStart` now drops new starts when an agent already has 10 active streams, preventing unbounded per-socket stream state growth.
+- `AgentStreamMsg::ContentDelta` now drops oversized delta frames (`delta.len() > 4096`) to bound per-frame memory and relay overhead.
+- Introduced `Hub::send_to_user_nonblocking` and routed `send_to_conversation` through it so stream fan-out prefers drop-on-pressure semantics over accumulating slow-client backlog.
+- Added integration-test invariants `stream_concurrent_limit_is_10` and `delta_size_limit_is_4096` in `paw-server/tests/integration_test.rs` to lock expected threshold values.

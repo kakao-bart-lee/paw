@@ -25,6 +25,8 @@ use super::service;
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
 const MAX_STREAM_BYTES: usize = 1_048_576;
+pub const MAX_CONCURRENT_STREAMS_PER_AGENT: usize = 10;
+pub const MAX_DELTA_SIZE: usize = 4096;
 
 #[derive(Clone, Copy)]
 struct StreamRelayState {
@@ -346,6 +348,11 @@ async fn relay_agent_stream_message(
                 anyhow::bail!("agent_id mismatch for stream {}", msg.stream_id);
             }
 
+            if stream_states.len() >= MAX_CONCURRENT_STREAMS_PER_AGENT {
+                tracing::warn!("agent {agent_id} exceeded max concurrent streams");
+                return Ok(());
+            }
+
             let payload = serde_json::to_string(&ServerMessage::StreamStart(msg.clone()))?;
             let bytes = payload.len();
             if bytes > MAX_STREAM_BYTES {
@@ -369,6 +376,10 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ContentDelta(msg) => {
             require_v(msg.v)?;
+            if msg.delta.len() > MAX_DELTA_SIZE {
+                tracing::warn!("content_delta from {agent_id} exceeds MAX_DELTA_SIZE, dropping");
+                return Ok(());
+            }
             relay_stream_frame(
                 state,
                 stream_states,
