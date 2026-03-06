@@ -195,3 +195,33 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - '메시지 보내기' button is a stub showing SnackBar '준비 중입니다' — full implementation deferred to Wave 2
 - Profile routes are top-level (outside ShellRoute) so they show without bottom nav bar
 - T19 was refused twice by subagents due to multi-task format detection; orchestrator wrote files directly
+
+## [2026-03-07] T20: Benchmarking Decisions
+
+### Test Strategy: Binary Crate Integration Testing
+- `paw-server` is a binary crate (main.rs, no lib.rs), so integration tests in `tests/` cannot import internal modules.
+- Solved by: (1) replicating JWT logic using `jsonwebtoken` crate directly for compilable tests, (2) using `paw-proto` crate for protocol frame validation, (3) `reqwest`/`tokio-tungstenite` for HTTP/WS tests marked `#[ignore]`.
+- 14 tests compile and pass without a server; 9 integration tests require running server + DB.
+
+### JWT Expiry Leeway
+- `jsonwebtoken` crate has a default 60-second leeway for `exp` validation (handles clock skew).
+- Test for expired tokens uses `Duration::seconds(-120)` to exceed the leeway. Using `-10s` falsely passes validation.
+
+### k6 Load Test Design
+- WS test: 100 VUs × 10 messages = 1,000 total messages over 60s. 500ms stagger between messages per VU to avoid burst overload.
+- HTTP test: 3 staggered scenarios (auth 20 VUs, conversations 30 VUs, messages 50 VUs) with 5s offsets to simulate realistic mixed traffic.
+- Thresholds: p95 <200ms for HTTP/WS RTT, p95 <500ms for WS connect, <5% HTTP error rate, >99% WS delivery.
+
+### Performance Targets Rationale
+- p95 <200ms: Standard real-time messaging perception threshold.
+- Cold start <2000ms: Acceptable for container-based deployments with Rust's fast startup.
+- RSS <512MB at 100 WS connections: Fits 1 GB container with headroom for spikes.
+
+### Dev-Dependencies Added to paw-server/Cargo.toml
+- `reqwest` (0.12, json feature): HTTP client for integration tests
+- `tokio-tungstenite` (0.24): WebSocket client for gap-fill/connection tests
+- `futures-util` (0.3): Stream handling in WS tests
+- All existing workspace deps re-declared as dev-deps for test accessibility
+
+### Pre-existing Issues
+- `paw-crypto` has a compilation error in `mls.rs:107` (`MlsMessageOut` missing `is_some()`). Not related to T20; `cargo test --workspace` fails but `cargo test -p paw-server -p paw-proto` succeeds.
