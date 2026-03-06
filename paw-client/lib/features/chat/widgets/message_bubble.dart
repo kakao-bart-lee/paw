@@ -112,6 +112,73 @@ class MessageBubble extends StatelessWidget {
                                   ),
                                 ),
                     ),
+                    if (isAgent && message.blocks.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: alignment,
+                            children: message.blocks.map((block) {
+                              if (block is CardBlock) {
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (block.imageUrl != null)
+                                        Image.network(
+                                          block.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: 150,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              const SizedBox(height: 150, child: Center(child: Icon(Icons.error))),
+                                        ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              block.title,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                            ),
+                                            if (block.description != null) ...[
+                                              const SizedBox(height: 4),
+                                              Text(block.description!),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              } else if (block is ActionButtonsBlock) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: block.buttons.map((btn) {
+                                      return OutlinedButton(
+                                        onPressed: () {
+                                          // Action URL handling would go here
+                                        },
+                                        child: Text(btn.label),
+                                      );
+                                    }).toList(),
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            }).toList(),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
