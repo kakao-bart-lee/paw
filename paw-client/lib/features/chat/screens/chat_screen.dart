@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/chat_provider.dart';
 import '../providers/typing_provider.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/stream_bubble.dart';
 import '../widgets/message_input.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/e2ee_banner.dart';
@@ -49,8 +50,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(messagesNotifierProvider(widget.conversationId));
-    // Reverse the list for ListView.builder with reverse: true
+    final activeStreams = ref.watch(messagesNotifierProvider(widget.conversationId).notifier).activeStreams;
+    
+    // Sort by sequence/time? Active streams are always at the bottom.
+    // Since we reverse the list, active streams should be at the beginning of the reversed list.
     final reversedMessages = messages.reversed.toList();
+    final activeStreamsList = activeStreams.values
+        .where((s) => s.conversationId == widget.conversationId)
+        .toList()
+        .reversed
+        .toList();
+    
+    final itemCount = reversedMessages.length + activeStreamsList.length;
 
     final conversations = ref.watch(conversationsNotifierProvider);
     final conversation = conversations.firstWhere(
@@ -104,9 +115,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               controller: _scrollController,
               reverse: true,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              itemCount: reversedMessages.length,
+              itemCount: itemCount,
               itemBuilder: (context, index) {
-                final message = reversedMessages[index];
+                if (index < activeStreamsList.length) {
+                  final stream = activeStreamsList[index];
+                  return StreamBubble(
+                    streamId: stream.streamId,
+                    contentNotifier: stream.contentNotifier,
+                    isComplete: stream.isComplete,
+                    toolName: stream.currentTool,
+                    toolLabel: stream.currentToolLabel,
+                    toolComplete: stream.toolComplete,
+                  );
+                }
+                
+                final messageIndex = index - activeStreamsList.length;
+                final message = reversedMessages[messageIndex];
                 return MessageBubble(message: message);
               },
             ),

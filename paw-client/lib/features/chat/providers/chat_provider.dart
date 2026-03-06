@@ -10,8 +10,38 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/http/api_client.dart';
 import '../../../core/proto/messages.dart';
 import '../../../core/ws/ws_service.dart';
+import 'package:flutter/foundation.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
+
+class StreamingMessage {
+  final String streamId;
+  final String conversationId;
+  final String agentId;
+  final ValueNotifier<String> contentNotifier;
+  bool isComplete;
+  String? currentTool;
+  String? currentToolLabel;
+  bool toolComplete;
+
+  StreamingMessage({
+    required this.streamId,
+    required this.conversationId,
+    required this.agentId,
+    String initialContent = '',
+    this.isComplete = false,
+    this.currentTool,
+    this.currentToolLabel,
+    this.toolComplete = false,
+  }) : contentNotifier = ValueNotifier(initialContent);
+  
+  String get content => contentNotifier.value;
+  set content(String value) => contentNotifier.value = value;
+  
+  void dispose() {
+    contentNotifier.dispose();
+  }
+}
 
 final _mockMessagesData = <String, List<Message>>{
   'conv_1': [
@@ -226,6 +256,9 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
 
   StreamSubscription<ServerMessage>? _wsSubscription;
   late final String _conversationId;
+  final Map<String, StreamingMessage> _activeStreams = {};
+
+  Map<String, StreamingMessage> get activeStreams => _activeStreams;
 
   @override
   List<Message> build(String conversationId) {
@@ -244,6 +277,16 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
     _wsSubscription = wsService.messages.listen((msg) {
       if (msg is MessageReceivedMsg && msg.conversationId == conversationId) {
         addMessageFromWs(msg);
+      } else if (msg is StreamStartMsg) {
+        handleStreamStart(msg);
+      } else if (msg is ContentDeltaMsg) {
+        handleContentDelta(msg);
+      } else if (msg is ToolStartMsg) {
+        handleToolStart(msg);
+      } else if (msg is ToolEndMsg) {
+        handleToolEnd(msg);
+      } else if (msg is StreamEndMsg) {
+        handleStreamEnd(msg);
       }
     });
 
@@ -305,6 +348,66 @@ class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
 
     addMessage(localMessage);
     _wsService?.sendAck(msg.conversationId, msg.seq);
+  }
+
+  void handleStreamStart(StreamStartMsg msg) {
+    if (msg.conversationId != _conversationId) return;
+    _activeStreams[msg.streamId] = StreamingMessage(
+      streamId: msg.streamId,
+      conversationId: msg.conversationId,
+      agentId: msg.agentId,
+    );
+    ref.notifyListeners();
+  }
+
+  void handleContentDelta(ContentDeltaMsg msg) {
+    final stream = _activeStreams[msg.streamId];
+    if (stream != null) {
+      stream.content += msg.delta;
+      // Do not call ref.notifyListeners() here to avoid rebuilding the whole list
+    }
+  }
+
+  void handleToolStart(ToolStartMsg msg) {
+    final stream = _activeStreams[msg.streamId];
+    if (stream != null) {
+      stream.currentTool = msg.tool;
+      stream.currentToolLabel = msg.label;
+      stream.toolComplete = false;
+      ref.notifyListeners();
+    }
+  }
+
+  void handleToolEnd(ToolEndMsg msg) {
+    final stream = _activeStreams[msg.streamId];
+    if (stream != null && stream.currentTool == msg.tool) {
+      stream.toolComplete = true;
+      ref.notifyListeners();
+    }
+  }
+
+  void handleStreamEnd(StreamEndMsg msg) {
+    final stream = _activeStreams[msg.streamId];
+    if (stream != null) {
+      stream.isComplete = true;
+      
+      // Convert to regular message
+      final finalMessage = Message(
+        id: msg.streamId,
+        conversationId: stream.conversationId,
+        senderId: stream.agentId,
+        content: stream.content,
+        format: MessageFormat.markdown,
+        seq: state.isEmpty ? 1 : state.last.seq + 1,
+        createdAt: DateTime.now(),
+        isMe: false,
+        isAgent: true,
+      );
+      
+      _activeStreams.remove(msg.streamId);
+      stream.dispose();
+      addMessage(finalMessage);
+    }
   }
 
   Future<void> sendMessage(String content) async {

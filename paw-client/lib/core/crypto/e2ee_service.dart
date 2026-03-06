@@ -2,13 +2,20 @@ import 'dart:typed_data';
 
 import '../../src/rust/api.dart' as rust_api;
 
+/// Local representation of E2EE account keys returned from paw-ffi.
+/// signedPrekey = X25519 public key (share with server)
+/// signedPrekeySecret = X25519 private key (keep local, never upload)
 class AccountKeys {
   final Uint8List identityKey;
+  final Uint8List identitySecret;
   final Uint8List x25519PubKey;
+  final Uint8List x25519PrivKey;
 
   const AccountKeys({
     required this.identityKey,
+    required this.identitySecret,
     required this.x25519PubKey,
+    required this.x25519PrivKey,
   });
 }
 
@@ -23,7 +30,9 @@ class E2eeService {
       _isE2eeAvailable = true;
       return AccountKeys(
         identityKey: keys.identityKey,
+        identitySecret: keys.identitySecret,
         x25519PubKey: keys.signedPrekey,
+        x25519PrivKey: keys.signedPrekeySecret,
       );
     } catch (_) {
       _isE2eeAvailable = false;

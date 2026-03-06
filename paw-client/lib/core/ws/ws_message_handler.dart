@@ -19,6 +19,11 @@ class WsMessageHandler {
   final void Function(PresenceUpdateMsg msg)? onPresence;
   final void Function(HelloOkMsg msg)? onHelloOk;
   final HelloErrorCallback? onHelloError;
+  final void Function(StreamStartMsg msg)? onStreamStart;
+  final void Function(ContentDeltaMsg msg)? onContentDelta;
+  final void Function(ToolStartMsg msg)? onToolStart;
+  final void Function(ToolEndMsg msg)? onToolEnd;
+  final void Function(StreamEndMsg msg)? onStreamEnd;
 
   StreamSubscription<ServerMessage>? _subscription;
 
@@ -29,6 +34,11 @@ class WsMessageHandler {
     this.onPresence,
     this.onHelloOk,
     this.onHelloError,
+    this.onStreamStart,
+    this.onContentDelta,
+    this.onToolStart,
+    this.onToolEnd,
+    this.onStreamEnd,
   });
 
   void start() {
@@ -52,11 +62,16 @@ class WsMessageHandler {
         onHelloOk?.call(helloOk);
       case HelloErrorMsg helloError:
         onHelloError?.call(helloError);
-      case StreamStartMsg _:
-      case ContentDeltaMsg _:
-      case ToolStartMsg _:
-      case ToolEndMsg _:
-      case StreamEndMsg _:
+      case StreamStartMsg streamStart:
+        onStreamStart?.call(streamStart);
+      case ContentDeltaMsg contentDelta:
+        onContentDelta?.call(contentDelta);
+      case ToolStartMsg toolStart:
+        onToolStart?.call(toolStart);
+      case ToolEndMsg toolEnd:
+        onToolEnd?.call(toolEnd);
+      case StreamEndMsg streamEnd:
+        onStreamEnd?.call(streamEnd);
       case UnknownMsg _:
         // Reserved/unhandled for now.
         break;
