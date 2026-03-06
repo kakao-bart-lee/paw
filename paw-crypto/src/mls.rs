@@ -104,7 +104,7 @@ mod tests {
             )
             .expect("add bob to group");
 
-        assert!(welcome.is_some(), "expected welcome for new member");
+        let _ = &welcome; // welcome (MlsMessageOut) is always present for new member
 
         group
             .merge_pending_commit(&provider)
