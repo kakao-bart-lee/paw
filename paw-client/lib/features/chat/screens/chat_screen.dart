@@ -104,7 +104,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           if (conversation.agents.isNotEmpty)
-            AgentConsentBanner(agentNames: conversation.agents)
+            AgentConsentBanner(
+              agentNames: conversation.agents,
+              conversationId: widget.conversationId,
+            )
           else if (conversation.isE2ee)
             const E2eeBanner(type: E2eeBannerType.active)
           else
