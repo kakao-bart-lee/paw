@@ -39,14 +39,14 @@ jobs:
       - name: Check format
         run: cargo fmt --all -- --check
       
-      - name: Clippy (paw-server + paw-proto)
-        run: cargo clippy -p paw-server -p paw-proto -- -D warnings
+      - name: Clippy (paw-server + paw-proto + paw-crypto + paw-ffi)
+        run: cargo clippy -p paw-server -p paw-proto -p paw-crypto -p paw-ffi -- -D warnings
       
-      - name: Build (paw-server + paw-proto)
-        run: cargo build -p paw-server -p paw-proto --release
+      - name: Build (paw-server + paw-proto + paw-crypto + paw-ffi)
+        run: cargo build -p paw-server -p paw-proto -p paw-crypto -p paw-ffi --release
       
-      - name: Test (paw-server + paw-proto)
-        run: cargo test -p paw-server -p paw-proto --no-fail-fast
+      - name: Test (paw-server + paw-proto + paw-crypto + paw-ffi)
+        run: cargo test -p paw-server -p paw-proto -p paw-crypto -p paw-ffi --no-fail-fast
         env:
           DATABASE_URL: postgresql://paw:paw_dev_password@localhost:5432/paw_dev
 

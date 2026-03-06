@@ -1,0 +1,11 @@
+flutter_rust_bridge v2.9.0 codegen integration evidence
+
+Command:
+PATH="$HOME/develop/flutter/bin:$PATH" ~/.cargo/bin/flutter_rust_bridge_codegen generate
+
+Output:
+[2026-03-06T18:13:36.417Z INFO ...] Has .fvmrc but no fvm binary installation, thus skip using fvm.
+[2026-03-06T18:13:37.100Z WARN ...] command=cd "/Users/bclaw/workspace/paw/paw-ffi" && RUSTFLAGS="--cfg frb_expand" "cargo" "expand" "--lib" "--theme=none" "--ugly" ... error: no such command: `expand`
+[2026-03-06T18:13:37.100Z INFO ...] Cargo expand is not installed. Automatically install and re-run.
+[2026-03-06T18:14:18.803Z WARN ...] Skip checking presence of flutter_rust_bridge in dependencies at "/Users/bclaw/workspace/paw/paw-client" since pubspec.lock does not exist. Please check manually.
+Done!
