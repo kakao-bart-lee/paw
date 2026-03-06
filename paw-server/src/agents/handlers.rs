@@ -1,16 +1,17 @@
 use axum::{
     Json,
-    extract::{Query, State, WebSocketUpgrade},
+    extract::{Path, Query, State, WebSocketUpgrade},
     http::StatusCode,
     response::{IntoResponse, Response},
     Extension,
 };
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::auth::AppState;
 use crate::auth::middleware::UserId;
-use super::models::{RegisterAgentRequest, RegisterAgentResponse};
+use super::models::{AgentProfile, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse};
 use super::service;
 
 pub async fn register_agent_handler(
@@ -29,6 +30,53 @@ pub async fn register_agent_handler(
         })?;
 
     Ok(Json(resp))
+}
+
+pub async fn get_agent_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<AgentProfile>, (StatusCode, Json<serde_json::Value>)> {
+    let profile = service::get_agent_profile(&state.db, agent_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("failed to fetch agent profile: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "internal_error" })),
+            )
+        })?;
+
+    match profile {
+        Some(p) => Ok(Json(p)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "agent_not_found" })),
+        )),
+    }
+}
+
+pub async fn revoke_agent_handler(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<RevokeAgentResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let result = service::revoke_agent_token(&state.db, agent_id, user_id.0)
+        .await
+        .map_err(|e| {
+            tracing::error!("failed to revoke agent token: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "internal_error" })),
+            )
+        })?;
+
+    match result {
+        Some(r) => Ok(Json(r)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "agent_not_found_or_not_owner" })),
+        )),
+    }
 }
 
 pub async fn agent_ws_handler(
@@ -122,7 +170,6 @@ async fn handle_agent_socket(
                                 agent_msg.conversation_id,
                                 agent_msg.content.len()
                             );
-                            // T29: insert into messages table via bot user system
                         }
                         Err(e) => {
                             tracing::warn!("invalid agent message from {agent_id}: {e}");

@@ -83,6 +83,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .route("/media/:media_id/url", get(media::handlers::get_url))
         .route("/api/v1/agents/register", post(agents::handlers::register_agent_handler))
+        .route("/api/v1/agents/:agent_id", get(agents::handlers::get_agent_handler))
+        .route("/api/v1/agents/:agent_id/revoke", post(agents::handlers::revoke_agent_handler))
         .merge(media_upload)
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
