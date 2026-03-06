@@ -1,0 +1,247 @@
+use crate::auth::{AppState, middleware::UserId};
+use crate::messages::{
+    models::{ConversationListItem, Message},
+    service::{self, Membership},
+};
+use axum::{
+    Json,
+    extract::{Extension, Path, Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+use uuid::Uuid;
+
+type ApiResult<T> = Result<Json<T>, (StatusCode, Json<Value>)>;
+
+#[derive(Debug, Deserialize)]
+pub struct SendMessageRequest {
+    pub content: String,
+    pub format: String,
+    pub idempotency_key: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetMessagesQuery {
+    pub after_seq: Option<i64>,
+    pub limit: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateConversationRequest {
+    pub member_ids: Vec<Uuid>,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GetMessagesResponse {
+    pub messages: Vec<Message>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ListConversationsResponse {
+    pub conversations: Vec<ConversationListItem>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateConversationResponse {
+    pub id: Uuid,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+pub async fn send_message(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(conv_id): Path<Uuid>,
+    Json(payload): Json<SendMessageRequest>,
+) -> Response {
+    if payload.content.trim().is_empty() {
+        return error(StatusCode::BAD_REQUEST, "invalid_content", "Message content is required")
+            .into_response();
+    }
+
+    let format = payload.format.to_ascii_lowercase();
+    if format != "markdown" && format != "plain" {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_format",
+            "format must be markdown or plain",
+        )
+        .into_response();
+    }
+
+    match ensure_membership(&state, conv_id, user_id).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key).await {
+        Ok(Some(existing)) => return Json(existing).into_response(),
+        Ok(None) => {}
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conv_id, sender_id = %user_id, "failed idempotency lookup");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_lookup_failed",
+                "Could not send message",
+            )
+            .into_response();
+        }
+    }
+
+    match service::send_message(
+        &state.db,
+        conv_id,
+        user_id,
+        payload.content.trim(),
+        &format,
+        payload.idempotency_key,
+    )
+    .await
+    {
+        Ok(created) => Json(created).into_response(),
+        Err(err) => {
+            tracing::warn!(%err, conversation_id = %conv_id, sender_id = %user_id, "message insert failed, checking idempotency replay");
+            match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key)
+                .await
+            {
+                Ok(Some(existing)) => Json(existing).into_response(),
+                _ => error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "message_send_failed",
+                    "Could not send message",
+                )
+                .into_response(),
+            }
+        }
+    }
+}
+
+pub async fn get_messages(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(conv_id): Path<Uuid>,
+    Query(query): Query<GetMessagesQuery>,
+) -> Response {
+    match ensure_membership(&state, conv_id, user_id).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    let after_seq = query.after_seq.unwrap_or(0);
+    let limit = query.limit.unwrap_or(50).clamp(1, 50);
+
+    let mut messages = match service::get_messages(&state.db, conv_id, after_seq, limit + 1).await {
+        Ok(rows) => rows,
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conv_id, "failed to fetch messages");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_history_failed",
+                "Could not fetch message history",
+            )
+            .into_response();
+        }
+    };
+
+    let has_more = messages.len() as i64 > limit;
+    if has_more {
+        messages.truncate(limit as usize);
+    }
+
+    Json(GetMessagesResponse { messages, has_more }).into_response()
+}
+
+pub async fn list_conversations(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+) -> ApiResult<ListConversationsResponse> {
+    let conversations = service::list_conversations(&state.db, user_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, user_id = %user_id, "failed to list conversations");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "conversation_list_failed",
+                "Could not list conversations",
+            )
+        })?;
+
+    Ok(Json(ListConversationsResponse { conversations }))
+}
+
+pub async fn create_conversation(
+    State(state): State<AppState>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Json(payload): Json<CreateConversationRequest>,
+) -> Response {
+    if payload.member_ids.len() > 100 {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "too_many_members",
+            "A conversation can have at most 100 members",
+        )
+        .into_response();
+    }
+
+    let created = match service::create_conversation(&state.db, user_id, payload.member_ids, payload.name)
+        .await
+    {
+        Ok(conversation) => conversation,
+        Err(err) => {
+            tracing::error!(%err, user_id = %user_id, "failed to create conversation");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "conversation_create_failed",
+                "Could not create conversation",
+            )
+            .into_response();
+        }
+    };
+
+    let response = CreateConversationResponse {
+        id: created.id,
+        created_at: created.created_at,
+    };
+
+    (StatusCode::CREATED, Json(response)).into_response()
+}
+
+async fn ensure_membership(state: &AppState, conv_id: Uuid, user_id: Uuid) -> Result<(), Response> {
+    match service::check_member(&state.db, conv_id, user_id).await {
+        Ok(Membership::Member) => Ok(()),
+        Ok(Membership::NotMember) => Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            "User is not a member of this conversation",
+        )
+        .into_response()),
+        Ok(Membership::ConversationNotFound) => Err(error(
+            StatusCode::NOT_FOUND,
+            "conversation_not_found",
+            "Conversation not found",
+        )
+        .into_response()),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conv_id, user_id = %user_id, "failed membership check");
+            Err(error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "membership_check_failed",
+                "Could not validate conversation membership",
+            )
+            .into_response())
+        }
+    }
+}
+
+fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
+    (
+        status,
+        Json(json!({
+            "error": code,
+            "message": message,
+        })),
+    )
+}

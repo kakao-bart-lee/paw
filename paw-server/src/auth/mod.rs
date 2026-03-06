@@ -1,4 +1,5 @@
 use crate::db::DbPool;
+use crate::media::service::MediaService;
 use crate::ws::hub::Hub;
 use std::sync::Arc;
 
@@ -13,4 +14,5 @@ pub struct AppState {
     pub db: DbPool,
     pub jwt_secret: String,
     pub hub: Arc<Hub>,
+    pub media_service: Arc<MediaService>,
 }
