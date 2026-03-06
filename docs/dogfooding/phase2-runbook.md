@@ -101,9 +101,9 @@ Note: Update `echo_agent.py` to use the environment variable or replace the plac
 ## E2EE Testing
 
 1. **Key Bundle Upload**: Ensure your client uploads a prekey bundle upon registration.
-   - `POST /api/v1/keys/upload`
+   - `POST /api/v1/keys/bundle`
 2. **Conversation**: Start a 1:1 conversation. The client should fetch the recipient's bundle.
-   - `GET /api/v1/keys/:user_id`
+   - `GET /api/v1/keys/bundle/:user_id`
 3. **Verify 🔒 Banner**: In the Flutter client, verify that the conversation view displays the "End-to-end encrypted" banner.
 4. **Message Flow**: Send a message and verify it is encrypted (X25519 ECDH + AES-GCM).
 
@@ -111,7 +111,7 @@ Note: Update `echo_agent.py` to use the environment variable or replace the plac
 
 1. **Create Group**: Create a conversation with multiple members.
 ```bash
-curl -X POST http://localhost:3000/conversations \
+curl -X POST http://localhost:3000/api/v1/conversations \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -120,7 +120,7 @@ curl -X POST http://localhost:3000/conversations \
   }'
 ```
 2. **Invite Members**: Add more members to an existing group.
-   - `POST /conversations/:id/members`
+   - `POST /api/v1/conversations/:id/members`
 3. **Send Messages**: Verify all members receive messages in the group.
 
 ## Agent Streaming Testing
