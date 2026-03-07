@@ -103,8 +103,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                 ),
                 const Spacer(),
                 TextButton(
-                  onPressed: () {
-                    ref.read(authNotifierProvider.notifier);
+                  onPressed: () async {
+                    await ref.read(authNotifierProvider.notifier).logout();
+                    if (!context.mounted) return;
                     context.go('/login');
                   },
                   child: const Text(

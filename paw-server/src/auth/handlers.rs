@@ -67,7 +67,16 @@ pub async fn request_otp(
 
     tracing::info!(phone = %payload.phone, otp_code = %code, "Generated OTP (Phase 1: console log)");
 
-    Json(json!({ "ok": true }))
+    let expose_otp = std::env::var("PAW_EXPOSE_OTP_FOR_E2E")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    if expose_otp {
+        tracing::warn!("PAW_EXPOSE_OTP_FOR_E2E is enabled; do not use in production");
+        Json(json!({ "ok": true, "debug_code": code }))
+    } else {
+        Json(json!({ "ok": true }))
+    }
 }
 
 pub async fn verify_otp(

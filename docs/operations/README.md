@@ -27,6 +27,13 @@ make e2e-flutter
 make e2e-playwright
 ```
 
+3. 실서버 full-loop E2E
+```bash
+make e2e-real
+```
+
+`e2e-real`은 서버를 테스트 모드(OTP debug code 노출)로 올린 뒤 macOS `integration_test`를 실행합니다.
+
 백오피스 영향 추적은 [backlog-map.md](../backoffice/backlog-map.md)에서 상태를 함께 관리합니다.
 
 ## 로컬 퀵스타트 (Local Quick-start)

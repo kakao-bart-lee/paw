@@ -31,7 +31,10 @@ class _OtpInputFieldState extends State<OtpInputField>
   void initState() {
     super.initState();
     _focusNodes = List.generate(widget.length, (index) => FocusNode());
-    _controllers = List.generate(widget.length, (index) => TextEditingController());
+    _controllers = List.generate(
+      widget.length,
+      (index) => TextEditingController(),
+    );
 
     _shakeController = AnimationController(
       vsync: this,
@@ -75,10 +78,10 @@ class _OtpInputFieldState extends State<OtpInputField>
             _controllers[i].text = '';
           }
         }
-        
+
         final nextFocusIndex = math.min(pastedText.length, widget.length - 1);
         _focusNodes[nextFocusIndex].requestFocus();
-        
+
         _notifyChange();
         return;
       }
@@ -104,7 +107,9 @@ class _OtpInputFieldState extends State<OtpInputField>
     return AnimatedBuilder(
       animation: _shakeAnimation,
       builder: (context, child) {
-        final offset = widget.hasError ? math.sin(_shakeAnimation.value * math.pi) * 8 : 0.0;
+        final offset = widget.hasError
+            ? math.sin(_shakeAnimation.value * math.pi) * 8
+            : 0.0;
         return Transform.translate(
           offset: Offset(offset, 0),
           child: Row(
@@ -126,6 +131,7 @@ class _OtpInputFieldState extends State<OtpInputField>
                     }
                   },
                   child: TextField(
+                    key: ValueKey('otp-input-$index'),
                     controller: _controllers[index],
                     focusNode: _focusNodes[index],
                     keyboardType: TextInputType.number,

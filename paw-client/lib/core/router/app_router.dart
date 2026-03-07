@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
 import '../../features/auth/screens/otp_verify_screen.dart';
@@ -17,8 +18,28 @@ import '../../features/profile/screens/user_profile_screen.dart';
 import '../shell/main_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authNotifierProvider);
+
+  bool isPublicPath(String path) {
+    return path == '/login' || path.startsWith('/auth/');
+  }
+
   return GoRouter(
     initialLocation: '/chat',
+    redirect: (context, state) {
+      final path = state.uri.path;
+      final isAuthenticated = authState.step == AuthStep.authenticated;
+
+      if (!isAuthenticated && !isPublicPath(path)) {
+        return '/login';
+      }
+
+      if (isAuthenticated && isPublicPath(path)) {
+        return '/chat';
+      }
+
+      return null;
+    },
     routes: [
       // Auth routes
       GoRoute(

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap-local local-stack dev server test lint fmt clean docker-up docker-down migrate migrate-add e2e-flutter e2e-playwright
+.PHONY: help bootstrap-local local-stack dev server test lint fmt clean docker-up docker-down migrate migrate-add e2e-flutter e2e-playwright e2e-real
 
 help:
 	@printf "%s\n" \
@@ -17,7 +17,8 @@ help:
 	"  make migrate          # run SQLx migrations" \
 	"  make migrate-add name=example  # create a new migration" \
 	"  make e2e-flutter [device=auto] # run Flutter integration tests" \
-	"  make e2e-playwright   # run Playwright web smoke test"
+	"  make e2e-playwright   # run Playwright web smoke test" \
+	"  make e2e-real         # run real server full-loop web E2E"
 
 # Start development server
 dev: docker-up server
@@ -72,3 +73,6 @@ e2e-flutter:
 
 e2e-playwright:
 	cd paw-client/e2e/playwright && npm install && npx playwright test
+
+e2e-real:
+	./scripts/run-real-flutter-e2e.sh

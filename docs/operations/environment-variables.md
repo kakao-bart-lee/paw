@@ -36,6 +36,11 @@ Paw 서버의 동작을 제어하는 주요 환경 변수 목록입니다.
 |:---|:---:|:---:|:---|
 | `RUST_LOG` | No | `info` | 로그 레벨 설정 (예: `paw_server=debug,info`) |
 
+### E2E 테스트 (Test-only)
+| 변수명 | 필수 여부 | 기본값 | 설명 |
+|:---|:---:|:---:|:---|
+| `PAW_EXPOSE_OTP_FOR_E2E` | No | `false` | `true/1`이면 `/auth/request-otp` 응답에 `debug_code`를 포함. **테스트 전용**으로만 사용해야 함. |
+
 ## 로컬 개발용 .env 예시 (.env Example)
 
 로컬 개발 시 프로젝트 루트에 `.env` 파일을 생성하여 사용할 수 있습니다.
@@ -59,4 +64,7 @@ NATS_URL=nats://localhost:4222
 
 # Logging
 RUST_LOG=paw_server=debug,tower_http=debug,info
+
+# Test-only
+PAW_EXPOSE_OTP_FOR_E2E=false
 ```

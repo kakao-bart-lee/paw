@@ -39,8 +39,10 @@ class _DeviceNameScreenState extends ConsumerState<DeviceNameScreen> {
   void _onSubmit() async {
     if (!_isNameValid) return;
 
-    await ref.read(authNotifierProvider.notifier).setDeviceName(_nameController.text.trim());
-    
+    await ref
+        .read(authNotifierProvider.notifier)
+        .setDeviceName(_nameController.text.trim());
+
     if (mounted) {
       final state = ref.read(authNotifierProvider);
       if (state.step == AuthStep.authenticated) {
@@ -76,18 +78,19 @@ class _DeviceNameScreenState extends ConsumerState<DeviceNameScreen> {
               Text(
                 '다른 기기에서 이 기기를 식별하는 데 사용됩니다',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 32),
               TextField(
+                key: const ValueKey('device-name-input'),
                 controller: _nameController,
                 style: Theme.of(context).textTheme.bodyLarge,
                 decoration: InputDecoration(
                   hintText: '기기 이름 입력',
                   hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 14,

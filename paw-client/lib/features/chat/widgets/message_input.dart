@@ -87,6 +87,7 @@ class _MessageInputState extends State<MessageInput> {
           ),
           Expanded(
             child: TextField(
+              key: const ValueKey('chat-message-input'),
               controller: _controller,
               minLines: 1,
               maxLines: 5,
@@ -117,7 +118,9 @@ class _MessageInputState extends State<MessageInput> {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
+                key: const ValueKey('chat-send-button'),
                 icon: const Icon(Icons.arrow_upward),
+                tooltip: '전송',
                 color: _hasText
                     ? theme.colorScheme.onPrimary
                     : theme.colorScheme.onSurfaceVariant,

@@ -263,6 +263,7 @@ make e2e-flutter
 # 디바이스 직접 지정
 make e2e-flutter device=macos
 make e2e-flutter device=chrome
+make e2e-real
 ```
 
 - 테스트 위치: `paw-client/integration_test/app_flow_test.dart`
@@ -270,6 +271,7 @@ make e2e-flutter device=chrome
 - 웹 `flutter drive` 실행에는 `chromedriver`가 필요합니다.
 - `chromedriver`가 없으면 스크립트가 Playwright smoke test로 자동 폴백합니다.
 - 데스크톱/모바일은 `flutter test integration_test ... -d <device>` 경로를 사용합니다.
+- `make e2e-real`은 로컬 서버를 자동 기동해 macOS `integration_test`로 로그인→대화목록→송수신→재시작 복원 루프를 검증합니다.
 
 ### 5.10 Back Office 준비 문서
 

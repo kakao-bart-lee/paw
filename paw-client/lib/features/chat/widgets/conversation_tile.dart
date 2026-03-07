@@ -7,15 +7,13 @@ class ConversationTile extends StatelessWidget {
   final Conversation conversation;
   final VoidCallback? onTap;
 
-  const ConversationTile({
-    super.key,
-    required this.conversation,
-    this.onTap,
-  });
+  const ConversationTile({super.key, required this.conversation, this.onTap});
 
   String _formatTimestamp(DateTime time) {
     final now = DateTime.now();
-    if (now.year == time.year && now.month == time.month && now.day == time.day) {
+    if (now.year == time.year &&
+        now.month == time.month &&
+        now.day == time.day) {
       return DateFormat('a h:mm', 'ko_KR').format(time);
     }
     return DateFormat('MM월 dd일', 'ko_KR').format(time);
@@ -24,18 +22,21 @@ class ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return ListTile(
-      onTap: onTap ?? () {
-        // Navigate to chat screen
-        context.push('/chat/${conversation.id}');
-      },
+      key: ValueKey('conversation-tile-${conversation.id}'),
+      onTap:
+          onTap ??
+          () {
+            // Navigate to chat screen
+            context.push('/chat/${conversation.id}');
+          },
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(
         radius: 24, // 48dp diameter
         backgroundColor: theme.colorScheme.surfaceVariant,
-        backgroundImage: conversation.avatarUrl != null 
-            ? NetworkImage(conversation.avatarUrl!) 
+        backgroundImage: conversation.avatarUrl != null
+            ? NetworkImage(conversation.avatarUrl!)
             : null,
         child: conversation.avatarUrl == null
             ? Text(
@@ -84,7 +85,9 @@ class ConversationTile extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Text(
-                conversation.unreadCount > 99 ? '99+' : conversation.unreadCount.toString(),
+                conversation.unreadCount > 99
+                    ? '99+'
+                    : conversation.unreadCount.toString(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,

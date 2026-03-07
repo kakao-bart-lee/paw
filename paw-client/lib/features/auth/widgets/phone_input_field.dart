@@ -86,17 +86,16 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
           child: SizedBox(
             height: 52,
             child: TextField(
+              key: const ValueKey('phone-input'),
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: Theme.of(context).textTheme.bodyLarge,
               decoration: InputDecoration(
                 hintText: '전화번호 입력',
                 hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,

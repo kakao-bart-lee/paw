@@ -8,6 +8,7 @@
     "install:browsers": "playwright install"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.2"
+    "@playwright/test": "^1.54.2",
+    "pg": "^8.16.3"
   }
 }
