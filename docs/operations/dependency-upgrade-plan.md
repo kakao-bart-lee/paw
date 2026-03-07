@@ -66,3 +66,4 @@ flutter build web
 - `drift_dev >= 2.32.0` requires `analyzer ^10`.
 - Current `riverpod_generator 4.0.3` requires `analyzer ^9`.
 - Therefore `drift_dev 2.32.x` and `riverpod_generator 4.0.3` cannot coexist in one lockfile.
+- Resolution guidance is documented in `docs/operations/analyzer-conflict-resolution.md`.
