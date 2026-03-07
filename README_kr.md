@@ -354,6 +354,9 @@ flutter run
 [Makefile](/Users/joy/workspace/paw/Makefile) 기준 자주 쓰는 명령은 아래와 같습니다.
 
 ```bash
+make              # help 출력
+make bootstrap-local  # 로컬 의존성 설치 및 저장소 준비
+make local-stack      # postgres/minio 시작, 마이그레이션, 서버 실행
 make dev          # docker-up + 서버 실행
 make server       # paw-server 실행
 make test         # cargo test --workspace
@@ -367,6 +370,7 @@ make migrate      # SQLx migration 실행
 
 주의할 점:
 
+- `make`만 입력하면 아무 서비스도 실행하지 않고 도움말만 출력합니다.
 - `make test`, `make lint`, `make fmt`는 Rust 워크스페이스 중심입니다.
 - Flutter 테스트/분석이나 TypeScript 패키지 빌드는 각 서브프로젝트 디렉터리에서 별도로 실행해야 합니다.
 
