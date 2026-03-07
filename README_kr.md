@@ -109,7 +109,8 @@ flowchart LR
 초기화 순서:
 
 1. Flutter 바인딩 초기화
-2. `RustLib.init()` 호출로 FFI 초기화
+2. Rust 초기화 (`initRust()`)
+웹에서는 no-op, 네이티브에서만 FRB 초기화
 3. 서비스 로케이터 설정
 4. 데스크톱 환경이면 시스템 트레이/단축키 등록
 5. `ProviderScope`로 앱 시작
@@ -227,6 +228,13 @@ flutter run
 ```
 
 클라이언트는 Flutter만으로 끝나지 않고 `flutter_rust_bridge`와 Rust FFI를 사용하므로, 플랫폼별 개발 환경 구성이 필요할 수 있습니다.
+
+### 5.7 웹 실행 시 주의사항
+
+- 웹에서는 Rust FFI를 직접 로드하지 않도록 분리되어 있습니다.
+- 따라서 `paw_ffi.js` 관련 MIME/type 에러는 정상 구성에서는 발생하지 않아야 합니다.
+- `profile/me` 경로는 인증 토큰이 있을 때만 서버 프로필을 조회합니다.
+토큰이 없거나 만료되면 로그인 흐름으로 진입해야 합니다.
 
 ## 6. 서브프로젝트별 상세 설명
 
@@ -439,3 +447,16 @@ make migrate      # SQLx migration 실행
 ## 11. 참고
 
 이 문서는 현재 저장소 구조와 실제 엔트리 파일, 설정 파일, 문서 디렉터리를 바탕으로 작성했습니다. 일부 세부 구현은 하위 폴더를 더 깊게 읽으면 추가 보완이 가능하지만, 온보딩과 저장소 개요 파악에는 이 문서만으로도 충분하도록 구성했습니다.
+
+## 12. 웹 콘솔 에러 트러블슈팅
+
+대표 이슈와 조치:
+
+- `paw_ffi ... codegen version` 또는 `pkg/paw_ffi.js MIME`:
+웹에서 FRB를 직접 로드하는 경로가 섞였는지 확인합니다.
+현재 구조는 `rust_init_web.dart` / `api_bridge_web.dart`를 통해 웹 no-op로 처리합니다.
+- `LocaleDataException`:
+`main.dart`에서 `initializeDateFormatting('ko_KR')` 호출 여부를 확인합니다.
+- `401 Unauthorized` (`/conversations`, `/users/me`):
+로그인 전 또는 만료 토큰 복원 상태일 수 있습니다.
+웹에서는 자동 세션 복원을 스킵하고, 인증이 필요한 요청에는 토큰 가드가 적용되어야 합니다.
