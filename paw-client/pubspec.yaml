@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_rust_bridge: ^2.9.0
+  flutter_rust_bridge: 2.11.1
   
   # State management
   flutter_riverpod: ^2.6.1
@@ -49,7 +49,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_rust_bridge: ^2.9.0
+  flutter_rust_bridge: 2.11.1
   flutter_lints: ^5.0.0
   build_runner: ^2.4.13
   riverpod_generator: ^2.6.1
