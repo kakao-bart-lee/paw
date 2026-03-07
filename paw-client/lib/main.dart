@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/di/service_locator.dart';
 import 'core/platform/desktop_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'src/rust/frb_generated.dart';
+import 'src/rust/rust_init.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await RustLib.init();
+  await initializeDateFormatting('ko_KR');
+  await initRust();
   await setupServiceLocator();
 
   // Desktop-specific initialisation

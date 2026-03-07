@@ -186,7 +186,7 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
 
   Future<void> _loadConversations() async {
     final apiClient = _apiClient;
-    if (apiClient == null) {
+    if (apiClient == null || apiClient.accessToken == null) {
       return;
     }
 
@@ -312,7 +312,7 @@ class MessagesNotifier extends Notifier<List<Message>> {
 
   Future<void> _loadMessages(String conversationId) async {
     final apiClient = _apiClient;
-    if (apiClient == null) {
+    if (apiClient == null || apiClient.accessToken == null) {
       return;
     }
 

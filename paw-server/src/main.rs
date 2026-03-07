@@ -20,6 +20,7 @@ use axum::{
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -197,6 +198,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/ws", get(ws::handler::ws_handler))
         .route("/agent/ws", get(agents::handlers::agent_ws_handler))
         .merge(protected_routes)
+        .layer(CorsLayer::permissive())
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

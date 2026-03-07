@@ -3214,6 +3214,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "flutter_rust_bridge",
+ "getrandom 0.2.17",
  "hkdf",
  "rand 0.8.5",
  "sha2",

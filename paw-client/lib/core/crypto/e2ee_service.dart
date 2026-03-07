@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import '../../src/rust/api.dart' as rust_api;
+import '../../src/rust/api_bridge.dart' as rust_api;
 
 /// Local representation of E2EE account keys returned from paw-ffi.
 /// signedPrekey = X25519 public key (share with server)

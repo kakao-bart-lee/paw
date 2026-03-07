@@ -104,14 +104,29 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     apiClient.setToken(accessToken);
-    await wsService?.connect(wsService.serverUrl, accessToken);
 
-    state = state.copyWith(
-      step: AuthStep.authenticated,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-      error: null,
-    );
+    try {
+      await apiClient.getMe();
+      await wsService?.connect(wsService.serverUrl, accessToken);
+
+      state = state.copyWith(
+        step: AuthStep.authenticated,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        error: null,
+      );
+    } catch (_) {
+      await _secureStorage.delete(key: _accessTokenKey);
+      await _secureStorage.delete(key: _refreshTokenKey);
+      apiClient.clearToken();
+
+      state = state.copyWith(
+        step: AuthStep.phoneInput,
+        accessToken: null,
+        refreshToken: null,
+        error: null,
+      );
+    }
   }
 
   Future<void> requestOtp(String phone) async {

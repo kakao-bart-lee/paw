@@ -9,6 +9,7 @@ class ApiClient {
   ApiClient({required this.baseUrl});
 
   void setToken(String token) => _accessToken = token;
+  void clearToken() => _accessToken = null;
 
   String? get accessToken => _accessToken;
 
