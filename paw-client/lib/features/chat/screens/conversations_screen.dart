@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,25 @@ class ConversationsScreen extends ConsumerStatefulWidget {
 
 class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
   String? _selectedConversationId;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(conversationsNotifierProvider.notifier).refresh());
+      Future<void>.delayed(const Duration(milliseconds: 750), () async {
+        if (!mounted) {
+          return;
+        }
+
+        final loadState = ref.read(conversationsLoadStateProvider);
+        final conversations = ref.read(conversationsNotifierProvider);
+        if (loadState == ResourceLoadState.ready && conversations.isEmpty) {
+          await ref.read(conversationsNotifierProvider.notifier).refresh();
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

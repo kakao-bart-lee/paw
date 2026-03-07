@@ -13,6 +13,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/http/api_client.dart';
 import '../../../core/proto/messages.dart';
 import '../../../core/ws/ws_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 
@@ -97,7 +98,29 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
 
   @override
   List<Conversation> build() {
-    Future.microtask(() => unawaited(_loadConversations()));
+    final auth = ref.watch(
+      authNotifierProvider.select(
+        (state) => (state.step, state.isLoading, state.accessToken),
+      ),
+    );
+
+    Future.microtask(() async {
+      final (step, isLoading, accessToken) = auth;
+      if (step == AuthStep.authenticated &&
+          !isLoading &&
+          accessToken != null &&
+          accessToken.isNotEmpty) {
+        await _loadConversations();
+        return;
+      }
+
+      ref.read(conversationsErrorProvider.notifier).state = null;
+      ref.read(conversationsLoadStateProvider.notifier).state = isLoading
+          ? ResourceLoadState.loading
+          : ResourceLoadState.ready;
+      state = const [];
+    });
+
     return const [];
   }
 

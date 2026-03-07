@@ -31,7 +31,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.step == AuthStep.authenticated;
 
       if (!isAuthenticated && !isPublicPath(path)) {
-        return '/login';
+        return '/auth/phone';
       }
 
       if (isAuthenticated && isPublicPath(path)) {
@@ -42,10 +42,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       // Auth routes
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/auth/phone',
         builder: (context, state) => const PhoneInputScreen(),
@@ -58,7 +55,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/auth/device-name',
         builder: (context, state) => const DeviceNameScreen(),
       ),
-      
+
       // Search route (outside shell — no bottom nav)
       GoRoute(
         path: '/search',
@@ -68,9 +65,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Profile routes (outside shell — no bottom nav)
       GoRoute(
         path: '/group/:id/info',
-        builder: (context, state) => GroupInfoScreen(
-          conversationId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            GroupInfoScreen(conversationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/create-group',
@@ -82,9 +78,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/profile/:userId',
-        builder: (context, state) => UserProfileScreen(
-          userId: state.pathParameters['userId']!,
-        ),
+        builder: (context, state) =>
+            UserProfileScreen(userId: state.pathParameters['userId']!),
       ),
 
       // Main shell with bottom navigation

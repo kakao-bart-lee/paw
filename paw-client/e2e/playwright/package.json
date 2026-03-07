@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "test": "playwright test tests/routes-console.spec.ts",
-    "test:real": "playwright test tests/real-full-loop.spec.ts",
+    "test:real": "playwright test tests/real-*.spec.ts",
     "test:headed": "playwright test --headed",
     "install:browsers": "playwright install"
   },

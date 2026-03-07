@@ -92,8 +92,26 @@ class AuthNotifier extends Notifier<AuthState> {
 
   bool get isAuthenticated => state.step == AuthStep.authenticated;
 
+  String? _queryParam(String key) {
+    final direct = Uri.base.queryParameters[key];
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+
+    final fragment = Uri.base.fragment;
+    final queryIndex = fragment.indexOf('?');
+    if (queryIndex == -1 || queryIndex == fragment.length - 1) {
+      return null;
+    }
+
+    return Uri.splitQueryString(fragment.substring(queryIndex + 1))[key];
+  }
+
   @override
   AuthState build() {
+    final queryAccessToken = kIsWeb ? _queryParam('e2e_access_token') : null;
+    final queryRefreshToken = kIsWeb ? _queryParam('e2e_refresh_token') : null;
+
     _sessionEventSubscription ??= _sessionEvents?.stream.listen((event) {
       if (event.reason == SessionExpiryReason.unauthorized) {
         unawaited(_clearSession());
@@ -101,10 +119,63 @@ class AuthNotifier extends Notifier<AuthState> {
     });
     ref.onDispose(() => _sessionEventSubscription?.cancel());
 
-    if (!kIsWeb) {
+    if (kIsWeb) {
+      unawaited(_bootstrapWebSessionFromQuery());
+    } else {
       unawaited(_restoreSession());
     }
+
+    if (queryAccessToken != null && queryAccessToken.isNotEmpty) {
+      return AuthState(
+        step: AuthStep.authenticated,
+        accessToken: queryAccessToken,
+        refreshToken: queryRefreshToken,
+        isLoading: true,
+      );
+    }
+
     return const AuthState.initial();
+  }
+
+  Future<void> _bootstrapWebSessionFromQuery() async {
+    final apiClient = _apiClient;
+    final wsService = _wsService;
+    if (apiClient == null) {
+      return;
+    }
+
+    final accessToken = _queryParam('e2e_access_token');
+    final refreshToken = _queryParam('e2e_refresh_token');
+    if (accessToken == null || accessToken.isEmpty) {
+      return;
+    }
+
+    apiClient.setToken(accessToken);
+
+    try {
+      await apiClient.getMe();
+      await wsService?.connect(wsService.serverUrl, accessToken);
+
+      AppLogger.event(
+        'auth.session.bootstrap.success',
+        data: {'platform': 'web'},
+      );
+
+      state = state.copyWith(
+        step: AuthStep.authenticated,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        isLoading: false,
+        error: null,
+      );
+    } catch (error) {
+      final uiError = AppErrorMapper.map(error);
+      AppLogger.event(
+        'auth.session.bootstrap.failed',
+        data: {'code': uiError.code.name, 'detail': uiError.message},
+      );
+      await _clearSession();
+    }
   }
 
   Future<void> _restoreSession() async {

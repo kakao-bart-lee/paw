@@ -17,15 +17,10 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref.read(profileProvider.notifier).loadProfile(),
-    );
+    Future.microtask(() => ref.read(profileProvider.notifier).loadProfile());
   }
 
-  Future<void> _showEditDialog(
-    BuildContext context,
-    String currentName,
-  ) async {
+  Future<void> _showEditDialog(BuildContext context, String currentName) async {
     final controller = TextEditingController(text: currentName);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -57,6 +52,12 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authNotifierProvider, (_, next) {
+      if (next.step != AuthStep.authenticated && context.mounted) {
+        context.go('/auth/phone');
+      }
+    });
+
     final profileState = ref.watch(profileProvider);
 
     return Scaffold(
@@ -84,15 +85,15 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                 Text(
                   displayName.isNotEmpty ? displayName : '(이름 없음)',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   phone,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(

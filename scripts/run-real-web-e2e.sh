@@ -41,6 +41,16 @@ echo "[real-e2e] running migrations"
   cargo sqlx migrate run
 )
 
+if lsof -ti tcp:3000 >/dev/null 2>&1; then
+  echo "[real-e2e] stopping existing process on :3000"
+  lsof -ti tcp:3000 | xargs kill -9 >/dev/null 2>&1 || true
+fi
+
+if lsof -ti tcp:8080 >/dev/null 2>&1; then
+  echo "[real-e2e] stopping existing process on :8080"
+  lsof -ti tcp:8080 | xargs kill -9 >/dev/null 2>&1 || true
+fi
+
 echo "[real-e2e] starting paw-server"
 cargo run -p paw-server >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
@@ -82,7 +92,7 @@ echo "[real-e2e] running Playwright real full-loop"
 (
   cd paw-client/e2e/playwright
   npm install
-  npx playwright test tests/real-full-loop.spec.ts
+  npm run test:real
 )
 
 echo "[real-e2e] completed"
