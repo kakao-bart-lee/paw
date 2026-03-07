@@ -73,9 +73,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final apiClient = getIt.isRegistered<ApiClient>()
         ? getIt<ApiClient>()
         : null;
-    final canSend =
-        (apiClient?.accessToken?.isNotEmpty ?? false) &&
-        (wsService?.isConnected ?? false);
+    final hasToken = apiClient?.accessToken?.isNotEmpty ?? false;
     final activeStreams = ref
         .watch(messagesNotifierProvider(widget.conversationId).notifier)
         .activeStreams;
@@ -169,6 +167,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
+          if (wsService != null)
+            ValueListenableBuilder<WsConnectionState>(
+              valueListenable: wsService.connectionState,
+              builder: (context, state, _) => _WsStatusBanner(state: state),
+            )
+          else
+            const _WsStatusBanner(state: WsConnectionState.disconnected),
           Expanded(
             child: switch (messagesLoadState) {
               ResourceLoadState.loading => const Center(
@@ -213,14 +218,76 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               return const TypingIndicator(userName: '상대방');
             },
           ),
-          MessageInput(
-            onSend: _handleSend,
-            canSend: canSend,
-            sendDisabledReason: (apiClient?.accessToken?.isNotEmpty ?? false)
-                ? '연결이 복구되면 전송할 수 있습니다.'
-                : '로그인 상태가 만료되어 전송할 수 없습니다.',
-          ),
+          if (wsService != null)
+            ValueListenableBuilder<WsConnectionState>(
+              valueListenable: wsService.connectionState,
+              builder: (context, wsState, _) {
+                final canSend =
+                    hasToken && wsState == WsConnectionState.connected;
+                return MessageInput(
+                  onSend: _handleSend,
+                  canSend: canSend,
+                  sendDisabledReason: hasToken
+                      ? switch (wsState) {
+                          WsConnectionState.connecting =>
+                            '연결 중입니다. 잠시만 기다려주세요.',
+                          WsConnectionState.retrying =>
+                            '재연결 중입니다. 연결이 복구되면 전송할 수 있습니다.',
+                          WsConnectionState.disconnected =>
+                            '연결이 끊겼습니다. 재시도 중입니다.',
+                          WsConnectionState.connected => null,
+                        }
+                      : '로그인 상태가 만료되어 전송할 수 없습니다.',
+                );
+              },
+            )
+          else
+            MessageInput(
+              onSend: _handleSend,
+              canSend: false,
+              sendDisabledReason: '연결 서비스가 준비되지 않았습니다.',
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _WsStatusBanner extends StatelessWidget {
+  const _WsStatusBanner({required this.state});
+
+  final WsConnectionState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state == WsConnectionState.connected) {
+      return const SizedBox.shrink();
+    }
+
+    final (text, color) = switch (state) {
+      WsConnectionState.connecting => (
+        '서버에 연결 중입니다...',
+        const Color(0xFF0D47A1),
+      ),
+      WsConnectionState.retrying => (
+        '연결이 끊겨 재시도 중입니다...',
+        const Color(0xFFEF6C00),
+      ),
+      WsConnectionState.disconnected => (
+        '오프라인 상태입니다. 네트워크를 확인해주세요.',
+        const Color(0xFFB71C1C),
+      ),
+      WsConnectionState.connected => ('', Colors.transparent),
+    };
+
+    return Container(
+      width: double.infinity,
+      color: color,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 12),
+        textAlign: TextAlign.center,
       ),
     );
   }
