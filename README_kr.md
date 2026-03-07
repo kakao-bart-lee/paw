@@ -238,6 +238,20 @@ flutter run
 - 보호 라우트(`/chat`, `/profile/me` 등)는 비인증 상태에서 접근 시 `/login`으로 강제 리다이렉트됩니다.
 - `profile/me`/`conversations`는 토큰이 없으면 호출하지 않으며, 만료 시 401 처리 규칙에 따라 세션이 정리됩니다.
 
+### 5.8 웹 E2E (Playwright)
+
+웹 라우트 가드/콘솔 안정성 시나리오는 Playwright로 실행할 수 있습니다.
+
+```bash
+cd paw-client/e2e/playwright
+npm install
+npm run install:browsers
+PAW_WEB_BASE_URL=http://127.0.0.1:8080 npm test
+```
+
+- 기본 시나리오: `/login` → `/chat` → `/profile/me` → 새로고침
+- 통과 조건: console error/pageerror 0건
+
 ## 6. 서브프로젝트별 상세 설명
 
 ### 6.1 `paw-server`
