@@ -97,7 +97,7 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
 
   @override
   List<Conversation> build() {
-    unawaited(_loadConversations());
+    Future.microtask(() => unawaited(_loadConversations()));
     return const [];
   }
 
@@ -205,7 +205,7 @@ class MessagesNotifier extends Notifier<List<Message>> {
   @override
   List<Message> build() {
     _bindWs(_conversationId);
-    unawaited(_loadMessages(_conversationId));
+    Future.microtask(() => unawaited(_loadMessages(_conversationId)));
     return const [];
   }
 
