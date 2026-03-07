@@ -9,6 +9,7 @@
 3. [데이터베이스 관리 (Database Operations)](database.md) - 마이그레이션 및 백업 절차
 4. [모니터링 및 관측성 (Monitoring & Observability)](monitoring.md) - 상태 확인 및 로그 관리
 5. [CDN 설정 (CDN Setup)](cdn-setup.md) - 미디어 캐싱 및 전송 최적화
+6. [Back Office 준비 문서](../backoffice/README.md) - 운영/CS/Admin 대비 요구사항 관리
 
 운영 중 인증 이슈를 추적할 때는 `monitoring.md`의 `x-request-id`/`auth failed` 표준 로그 규칙을 우선 적용하세요.
 
@@ -25,6 +26,8 @@ make e2e-flutter
 ```bash
 make e2e-playwright
 ```
+
+백오피스 영향 추적은 [backlog-map.md](../backoffice/backlog-map.md)에서 상태를 함께 관리합니다.
 
 ## 로컬 퀵스타트 (Local Quick-start)
 

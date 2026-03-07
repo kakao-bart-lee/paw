@@ -271,6 +271,13 @@ make e2e-flutter device=chrome
 - `chromedriver`가 없으면 스크립트가 Playwright smoke test로 자동 폴백합니다.
 - 데스크톱/모바일은 `flutter test integration_test ... -d <device>` 경로를 사용합니다.
 
+### 5.10 Back Office 준비 문서
+
+기능 구현과 동시에 운영/CS/Admin 대비를 위해 아래 문서를 함께 갱신합니다.
+
+- 기준 문서: [docs/backoffice/README.md](/Users/joy/workspace/paw/docs/backoffice/README.md)
+- 백로그 매핑: [docs/backoffice/backlog-map.md](/Users/joy/workspace/paw/docs/backoffice/backlog-map.md)
+
 ## 6. 서브프로젝트별 상세 설명
 
 ### 6.1 `paw-server`
