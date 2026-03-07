@@ -27,6 +27,8 @@ make e2e-flutter
 make e2e-playwright
 ```
 
+`e2e-playwright`는 Flutter web-server를 자동 기동한 뒤 `/login`, `/chat`, `/profile/me` 라우트 가드와 console/pageerror 0건을 검증합니다.
+
 3. 실서버 full-loop E2E
 ```bash
 make e2e-real

@@ -3,7 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test tests/routes-console.spec.ts",
+    "test:real": "playwright test tests/real-full-loop.spec.ts",
     "test:headed": "playwright test --headed",
     "install:browsers": "playwright install"
   },

@@ -72,7 +72,7 @@ e2e-flutter:
 	./scripts/run-flutter-e2e.sh $(device)
 
 e2e-playwright:
-	cd paw-client/e2e/playwright && npm install && npx playwright test
+	./scripts/run-playwright-smoke.sh
 
 e2e-real:
 	./scripts/run-real-flutter-e2e.sh

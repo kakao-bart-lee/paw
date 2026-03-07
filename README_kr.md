@@ -251,6 +251,7 @@ PAW_WEB_BASE_URL=http://127.0.0.1:8080 npm test
 ```
 
 - 기본 시나리오: `/login` → `/chat` → `/profile/me` → 새로고침
+- 루트에서 `make e2e-playwright`를 사용하면 Flutter web-server를 자동 기동한 뒤 같은 smoke 시나리오를 실행합니다.
 - 통과 조건: console error/pageerror 0건
 
 ### 5.9 Flutter Integration Test (공식 E2E)
