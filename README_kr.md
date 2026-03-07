@@ -252,6 +252,25 @@ PAW_WEB_BASE_URL=http://127.0.0.1:8080 npm test
 - 기본 시나리오: `/login` → `/chat` → `/profile/me` → 새로고침
 - 통과 조건: console error/pageerror 0건
 
+### 5.9 Flutter Integration Test (공식 E2E)
+
+Flutter 공식 `integration_test/` 구조 기반 E2E는 아래처럼 실행합니다.
+
+```bash
+# 자동 디바이스 선택 (macos -> android -> ios -> chrome)
+make e2e-flutter
+
+# 디바이스 직접 지정
+make e2e-flutter device=macos
+make e2e-flutter device=chrome
+```
+
+- 테스트 위치: `paw-client/integration_test/app_flow_test.dart`
+- 웹(`chrome`)은 `flutter drive` 경로로 자동 실행됩니다.
+- 웹 `flutter drive` 실행에는 `chromedriver`가 필요합니다.
+- `chromedriver`가 없으면 스크립트가 Playwright smoke test로 자동 폴백합니다.
+- 데스크톱/모바일은 `flutter test integration_test ... -d <device>` 경로를 사용합니다.
+
 ## 6. 서브프로젝트별 상세 설명
 
 ### 6.1 `paw-server`
