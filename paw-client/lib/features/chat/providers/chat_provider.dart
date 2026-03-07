@@ -205,7 +205,10 @@ class MessagesNotifier extends Notifier<List<Message>> {
   @override
   List<Message> build() {
     _bindWs(_conversationId);
-    Future.microtask(() => unawaited(_loadMessages(_conversationId)));
+    Future.microtask(() async {
+      await _loadMessages(_conversationId);
+      _requestWsSync(_conversationId);
+    });
     return const [];
   }
 
@@ -235,11 +238,16 @@ class MessagesNotifier extends Notifier<List<Message>> {
       _wsSubscription?.cancel();
       _wsSubscription = null;
     });
+  }
 
-    if (wsService.isConnected) {
-      final lastSeq = state.isEmpty ? 0 : state.last.seq;
-      wsService.requestSync(conversationId, lastSeq);
+  void _requestWsSync(String conversationId) {
+    final wsService = _wsService;
+    if (wsService == null || !wsService.isConnected) {
+      return;
     }
+
+    final lastSeq = state.isEmpty ? 0 : state.last.seq;
+    wsService.requestSync(conversationId, lastSeq);
   }
 
   Future<void> refresh() async {
