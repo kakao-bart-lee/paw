@@ -30,6 +30,9 @@ local-stack:
 
 # Start Rust server
 server:
+	@if [ -f .env ]; then \
+	  set -a; . ./.env; set +a; \
+	fi; \
 	cargo run -p paw-server
 
 # Run all tests
