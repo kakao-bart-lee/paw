@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 
@@ -30,11 +28,17 @@ class ProfileNotifier extends Notifier<ProfileState> {
 
   @override
   ProfileState build() {
-    unawaited(loadProfile());
     return const ProfileState();
   }
 
   Future<void> loadProfile() async {
+    if (_apiClient.accessToken == null) {
+      state = state.copyWith(
+        userAsync: const AsyncValue.data(<String, dynamic>{}),
+      );
+      return;
+    }
+
     state = state.copyWith(userAsync: const AsyncValue.loading());
     try {
       final result = await _apiClient.getMe();
@@ -45,6 +49,16 @@ class ProfileNotifier extends Notifier<ProfileState> {
   }
 
   Future<void> updateProfile(String displayName) async {
+    if (_apiClient.accessToken == null) {
+      state = state.copyWith(
+        userAsync: AsyncValue.error(
+          Exception('Authentication required'),
+          StackTrace.current,
+        ),
+      );
+      return;
+    }
+
     state = state.copyWith(isSaving: true);
     try {
       await _apiClient.updateMe(displayName: displayName);
