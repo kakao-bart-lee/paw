@@ -291,6 +291,19 @@ class MessagesNotifier extends Notifier<List<Message>> {
   }
 
   void addMessageFromWs(MessageReceivedMsg msg) {
+    final lastSeq = state.isEmpty ? 0 : state.last.seq;
+    if (msg.seq <= lastSeq) {
+      // Duplicate or stale frame: keep local state unchanged and ack current head.
+      _wsService?.sendAck(msg.conversationId, lastSeq);
+      return;
+    }
+
+    if (msg.seq > lastSeq + 1) {
+      // GAP detected: request sync from the last contiguous seq.
+      _wsService?.requestSync(msg.conversationId, lastSeq);
+      return;
+    }
+
     final convs = ref.read(conversationsNotifierProvider);
     Conversation? conversation;
     for (final conv in convs) {
