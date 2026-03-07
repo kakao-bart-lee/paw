@@ -170,7 +170,7 @@ final conversationsNotifierProvider =
 );
 
 final messagesNotifierProvider =
-    NotifierProviderFamily<MessagesNotifier, List<Message>, String>(
+    NotifierProvider.family<MessagesNotifier, List<Message>, String>(
   MessagesNotifier.new,
 );
 
@@ -255,24 +255,26 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
   }
 }
 
-class MessagesNotifier extends FamilyNotifier<List<Message>, String> {
+class MessagesNotifier extends Notifier<List<Message>> {
+  MessagesNotifier(this._conversationId);
+
+  final String _conversationId;
+
   ApiClient? get _apiClient =>
       getIt.isRegistered<ApiClient>() ? getIt<ApiClient>() : null;
   WsService? get _wsService =>
       getIt.isRegistered<WsService>() ? getIt<WsService>() : null;
 
   StreamSubscription<ServerMessage>? _wsSubscription;
-  late final String _conversationId;
   final Map<String, StreamingMessage> _activeStreams = {};
 
   Map<String, StreamingMessage> get activeStreams => _activeStreams;
 
   @override
-  List<Message> build(String conversationId) {
-    _conversationId = conversationId;
-    _bindWs(conversationId);
-    unawaited(_loadMessages(conversationId));
-    return _mockMessagesData[conversationId] ?? [];
+  List<Message> build() {
+    _bindWs(_conversationId);
+    unawaited(_loadMessages(_conversationId));
+    return _mockMessagesData[_conversationId] ?? [];
   }
 
   void _bindWs(String conversationId) {

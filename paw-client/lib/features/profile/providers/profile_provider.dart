@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 
@@ -23,11 +25,13 @@ class ProfileState {
   }
 }
 
-class ProfileNotifier extends StateNotifier<ProfileState> {
-  final ApiClient _apiClient;
+class ProfileNotifier extends Notifier<ProfileState> {
+  ApiClient get _apiClient => GetIt.instance<ApiClient>();
 
-  ProfileNotifier(this._apiClient) : super(const ProfileState()) {
-    loadProfile();
+  @override
+  ProfileState build() {
+    unawaited(loadProfile());
+    return const ProfileState();
   }
 
   Future<void> loadProfile() async {
@@ -57,7 +61,4 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 }
 
 final profileProvider =
-    StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
-  final apiClient = GetIt.instance<ApiClient>();
-  return ProfileNotifier(apiClient);
-});
+    NotifierProvider<ProfileNotifier, ProfileState>(ProfileNotifier.new);

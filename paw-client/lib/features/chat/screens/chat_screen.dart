@@ -147,7 +147,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           Consumer(
             builder: (context, ref, _) {
-              final typing = ref.watch(typingNotifierProvider);
+              final typing = ref.watch(typingProvider);
               final typingInConv = typing[widget.conversationId] ?? {};
               if (typingInConv.isEmpty) return const SizedBox.shrink();
               return const TypingIndicator(userName: '상대방');
