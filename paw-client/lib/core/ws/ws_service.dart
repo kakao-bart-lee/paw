@@ -12,9 +12,12 @@ import 'reconnection_manager.dart';
 
 enum WsConnectionState { disconnected, connecting, connected, retrying }
 
+typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri);
+
 class WsService {
   final String serverUrl;
   final ReconnectionManager _reconnectionManager;
+  final WebSocketChannelFactory _channelFactory;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
@@ -36,7 +39,9 @@ class WsService {
   WsService({
     required this.serverUrl,
     required ReconnectionManager reconnectionManager,
-  }) : _reconnectionManager = reconnectionManager;
+    WebSocketChannelFactory? channelFactory,
+  }) : _reconnectionManager = reconnectionManager,
+       _channelFactory = channelFactory ?? WebSocketChannel.connect;
 
   void setSyncService(SyncService syncService) {
     _syncService = syncService;
@@ -47,16 +52,14 @@ class WsService {
     AppLogger.event('ws.state.connecting');
     _accessToken = accessToken;
     _manualDisconnect = false;
+    _connected = false;
 
     await _subscription?.cancel();
     await _channel?.sink.close();
     _reconnectionManager.dispose();
 
     final uri = _buildWsUri(serverUrl, accessToken);
-    _channel = WebSocketChannel.connect(uri);
-    _connected = true;
-    _connectionState.value = WsConnectionState.connected;
-    AppLogger.event('ws.state.connected');
+    _channel = _channelFactory(uri);
 
     _subscription = _channel!.stream.listen(
       _onMessage,
@@ -65,7 +68,7 @@ class WsService {
       cancelOnError: false,
     );
 
-    send(ConnectMsg(token: accessToken).toJson());
+    _sendRaw(ConnectMsg(token: accessToken).toJson());
   }
 
   Future<void> connectWithStoredToken() async {
@@ -84,8 +87,19 @@ class WsService {
       _messageController.add(msg);
 
       if (msg is HelloOkMsg) {
+        _connected = true;
+        _connectionState.value = WsConnectionState.connected;
+        AppLogger.event('ws.state.connected');
         _reconnectionManager.onConnected();
         unawaited(_syncService?.syncAllConversations());
+      } else if (msg is HelloErrorMsg) {
+        _connected = false;
+        _connectionState.value = WsConnectionState.disconnected;
+        AppLogger.event(
+          'ws.state.disconnected',
+          data: {'code': msg.code, 'message': msg.message},
+        );
+        _scheduleReconnect();
       }
     } catch (error, stackTrace) {
       _messageController.addError(error, stackTrace);
@@ -131,6 +145,10 @@ class WsService {
     if (!_connected) {
       return;
     }
+    _sendRaw(message);
+  }
+
+  void _sendRaw(Map<String, dynamic> message) {
     _channel?.sink.add(jsonEncode(message));
   }
 

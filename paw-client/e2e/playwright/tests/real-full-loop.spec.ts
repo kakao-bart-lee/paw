@@ -191,6 +191,11 @@ test.describe('real server full loop', () => {
     await expect(page).toHaveURL(/#\/chat/);
     await expect(page.getByText(seeded.title)).toBeVisible();
 
+    await page.goto('/#/profile/me', { waitUntil: 'networkidle' });
+    await expect(page.getByText('내 프로필')).toBeVisible();
+    await page.goto('/#/chat', { waitUntil: 'networkidle' });
+    await expect(page.getByText(seeded.title)).toBeVisible();
+
     await page.getByText(seeded.title).first().click();
     const myMessage = `hello-${Date.now()}`;
     await page.locator('input, textarea').last().fill(myMessage);
@@ -207,6 +212,7 @@ test.describe('real server full loop', () => {
 
     // In-session restore: navigate away/back and verify message history is still shown.
     await page.goto('/#/settings', { waitUntil: 'networkidle' });
+    await page.goto('/#/chat', { waitUntil: 'networkidle' });
     await page.goto(`/#/chat/${seeded.conversationId}`, { waitUntil: 'networkidle' });
     await expect(page.getByText(myMessage)).toBeVisible();
 

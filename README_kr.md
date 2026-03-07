@@ -237,6 +237,7 @@ flutter run
 - 네이티브 세션 정책: 저장 토큰 복원 후 `getMe` 검증에 실패하면 토큰을 즉시 폐기하고 로그인 화면으로 전환합니다.
 - 보호 라우트(`/chat`, `/profile/me` 등)는 비인증 상태에서 접근 시 `/login`으로 강제 리다이렉트됩니다.
 - `profile/me`/`conversations`는 토큰이 없으면 호출하지 않으며, 만료 시 401 처리 규칙에 따라 세션이 정리됩니다.
+- WebSocket은 `connecting/connected/retrying/disconnected` 네 상태만 사용하며, `connected`는 서버 `hello_ok` 수신 후에만 성립합니다.
 
 ### 5.8 웹 E2E (Playwright)
 

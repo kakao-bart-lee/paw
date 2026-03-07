@@ -34,6 +34,14 @@ make e2e-real
 
 `e2e-real`은 서버를 테스트 모드(OTP debug code 노출)로 올린 뒤 macOS `integration_test`를 실행합니다.
 
+## 클라이언트 정책 스냅샷
+
+- 웹 세션: 자동 복원을 건너뛰고 사용자가 명시적으로 로그인해야 합니다.
+- 네이티브 세션: 저장 토큰 복원 후 `getMe` 검증이 실패하면 토큰을 즉시 폐기합니다.
+- 보호 라우트: 비인증 상태에서 `/chat`, `/profile/me` 접근 시 `/login`으로 리다이렉트됩니다.
+- WebSocket 상태: `connecting`, `connected`, `retrying`, `disconnected` 네 가지 상태만 사용합니다.
+- `connected`는 소켓 생성 시점이 아니라 서버 `hello_ok` 수신 이후에만 성립합니다.
+
 백오피스 영향 추적은 [backlog-map.md](../backoffice/backlog-map.md)에서 상태를 함께 관리합니다.
 
 ## 로컬 퀵스타트 (Local Quick-start)
