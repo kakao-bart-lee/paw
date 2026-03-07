@@ -157,6 +157,8 @@ flowchart LR
 - `S3_BUCKET`
 - `S3_ACCESS_KEY`
 - `S3_SECRET_KEY`
+- `STORAGE_BACKEND`
+- `S3_FORCE_PATH_STYLE`
 - `JWT_SECRET`
 - `OTP_PROVIDER`
 
@@ -373,6 +375,23 @@ make migrate      # SQLx migration 실행
 - `make`만 입력하면 아무 서비스도 실행하지 않고 도움말만 출력합니다.
 - `make test`, `make lint`, `make fmt`는 Rust 워크스페이스 중심입니다.
 - Flutter 테스트/분석이나 TypeScript 패키지 빌드는 각 서브프로젝트 디렉터리에서 별도로 실행해야 합니다.
+
+## 8. 클라우드 스토리지 운영 계획 (AWS + GCP)
+
+현재는 AWS SDK 기반 스토리지 어댑터를 공용 키/버킷/엔드포인트 설정으로 추상화해 두었고, `STORAGE_BACKEND`를 통해 런타임 동작을 분기합니다.
+
+- `aws` (기본): MinIO/로컬, AWS S3에서 사용 (`S3_FORCE_PATH_STYLE` 기본 `true`)
+- `gcp`: GCS 호환 엔드포인트에서 동작. 기본적으로 `storage.googleapis.com`을 가리키고 path-style은 비활성화
+
+권장 GCP 이전 단계:
+1. `storage`용 trait를 명시적으로 분리 (`upload`, `presigned_url`, `delete`)
+2. AWS 구현(`aws-sdk-s3`)과 GCP 구현(서비스 계정 기반) 추가
+3. `STORAGE_BACKEND=gcp`면 GCP 구현을 선택하도록 라우팅
+4. Cloud Run / GKE에서는 OIDC 토큰 또는 Workload Identity로 인증 통합
+
+현시점 권장 실행:
+- AWS 테스트: `STORAGE_BACKEND=aws`, 기존 `S3_*` 변수 유지
+- GCP 호환 테스트: `STORAGE_BACKEND=gcp`, `S3_ENDPOINT=https://storage.googleapis.com`, `S3_FORCE_PATH_STYLE=false`
 
 ## 8. 문서 읽는 순서 추천
 
