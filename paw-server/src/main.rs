@@ -71,83 +71,83 @@ async fn main() -> anyhow::Result<()> {
     let protected_routes = Router::new()
         .route("/users/me", get(users::handlers::get_me).patch(users::handlers::update_me))
         .route("/users/search", get(users::handlers::search_user))
-        .route("/users/:user_id", get(users::handlers::get_user))
+        .route("/users/{user_id}", get(users::handlers::get_user))
         .route("/conversations", get(messages::handlers::list_conversations))
         .route("/conversations", post(messages::handlers::create_conversation))
         .route(
-            "/conversations/:id",
+            "/conversations/{id}",
             patch(messages::handlers::update_group_name_handler),
         )
         .route(
-            "/conversations/:id/members",
+            "/conversations/{id}/members",
             post(messages::handlers::add_member_handler),
         )
         .route(
-            "/conversations/:id/members/:user_id",
+            "/conversations/{id}/members/{user_id}",
             delete(messages::handlers::remove_member_handler),
         )
         .route(
-            "/conversations/:id/agents",
+            "/conversations/{id}/agents",
             post(agents::handlers::invite_agent_handler),
         )
         .route(
-            "/conversations/:id/agents/:agent_id",
+            "/conversations/{id}/agents/{agent_id}",
             delete(agents::handlers::remove_agent_handler),
         )
         .route(
-            "/conversations/:conv_id/messages",
+            "/conversations/{conv_id}/messages",
             post(messages::handlers::send_message),
         )
         .route(
-            "/conversations/:conv_id/messages",
+            "/conversations/{conv_id}/messages",
             get(messages::handlers::get_messages),
         )
         .route("/api/v1/channels", post(channels::handlers::create_channel))
         .route("/api/v1/channels", get(channels::handlers::list_channels))
         .route(
-            "/api/v1/channels/:id/subscribe",
+            "/api/v1/channels/{id}/subscribe",
             post(channels::handlers::subscribe_channel),
         )
         .route(
-            "/api/v1/channels/:id/subscribe",
+            "/api/v1/channels/{id}/subscribe",
             delete(channels::handlers::unsubscribe_channel),
         )
         .route(
-            "/api/v1/channels/:id/messages",
+            "/api/v1/channels/{id}/messages",
             post(channels::handlers::send_channel_message),
         )
         .route(
-            "/api/v1/channels/:id/messages",
+            "/api/v1/channels/{id}/messages",
             get(channels::handlers::get_channel_messages),
         )
         .route("/api/v1/keys/upload", post(keys::handlers::upload_keys_handler))
         .route(
-            "/api/v1/keys/:user_id",
+            "/api/v1/keys/{user_id}",
             get(keys::handlers::get_key_bundle_handler),
         )
-        .route("/media/:media_id/url", get(media::handlers::get_url))
+        .route("/media/{media_id}/url", get(media::handlers::get_url))
         .route("/api/v1/agents/register", post(agents::handlers::register_agent_handler))
-        .route("/api/v1/agents/:agent_id", get(agents::handlers::get_agent_handler))
-        .route("/api/v1/agents/:agent_id/revoke", post(agents::handlers::revoke_agent_handler))
-        .route("/api/v1/agents/:agent_id/publish", put(agents::handlers::publish_agent_handler))
+        .route("/api/v1/agents/{agent_id}", get(agents::handlers::get_agent_handler))
+        .route("/api/v1/agents/{agent_id}/revoke", post(agents::handlers::revoke_agent_handler))
+        .route("/api/v1/agents/{agent_id}/publish", put(agents::handlers::publish_agent_handler))
         .route("/api/v1/marketplace/agents", get(agents::handlers::marketplace_search_handler))
-        .route("/api/v1/marketplace/agents/:agent_id", get(agents::handlers::marketplace_agent_detail_handler))
-        .route("/api/v1/marketplace/agents/:agent_id/install", post(agents::handlers::install_agent_handler))
-        .route("/api/v1/marketplace/agents/:agent_id/install", delete(agents::handlers::uninstall_agent_handler))
+        .route("/api/v1/marketplace/agents/{agent_id}", get(agents::handlers::marketplace_agent_detail_handler))
+        .route("/api/v1/marketplace/agents/{agent_id}/install", post(agents::handlers::install_agent_handler))
+        .route("/api/v1/marketplace/agents/{agent_id}/install", delete(agents::handlers::uninstall_agent_handler))
         .route("/api/v1/marketplace/installed", get(agents::handlers::list_installed_agents_handler))
         .route("/api/v1/backup/initiate", post(backup::handlers::initiate_backup))
         .route("/api/v1/backup/list", get(backup::handlers::list_backups))
-        .route("/api/v1/backup/:id/restore", post(backup::handlers::restore_backup))
-        .route("/api/v1/backup/:id", delete(backup::handlers::delete_backup))
+        .route("/api/v1/backup/{id}/restore", post(backup::handlers::restore_backup))
+        .route("/api/v1/backup/{id}", delete(backup::handlers::delete_backup))
         .route("/api/v1/backup/settings", put(backup::handlers::update_settings))
         .route("/api/v1/backup/settings", get(backup::handlers::get_settings))
         .route("/api/v1/reports", post(moderation::handlers::create_report))
         .route(
-            "/api/v1/users/:id/block",
+            "/api/v1/users/{id}/block",
             post(moderation::handlers::block_user),
         )
         .route(
-            "/api/v1/users/:id/block",
+            "/api/v1/users/{id}/block",
             delete(moderation::handlers::unblock_user),
         )
         .route(
@@ -155,11 +155,11 @@ async fn main() -> anyhow::Result<()> {
             get(moderation::handlers::list_blocked_users),
         )
         .route(
-            "/api/v1/admin/users/:id/suspend",
+            "/api/v1/admin/users/{id}/suspend",
             post(moderation::handlers::suspend_user),
         )
         .route(
-            "/api/v1/admin/users/:id/suspend",
+            "/api/v1/admin/users/{id}/suspend",
             delete(moderation::handlers::unsuspend_user),
         )
         .route(
@@ -175,11 +175,11 @@ async fn main() -> anyhow::Result<()> {
             delete(push::handlers::unregister_push_token),
         )
         .route(
-            "/api/v1/conversations/:id/mute",
+            "/api/v1/conversations/{id}/mute",
             post(push::handlers::mute_conversation),
         )
         .route(
-            "/api/v1/conversations/:id/mute",
+            "/api/v1/conversations/{id}/mute",
             delete(push::handlers::unmute_conversation),
         )
         .merge(media_upload)
