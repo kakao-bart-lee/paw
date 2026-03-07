@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use hkdf::Hkdf;

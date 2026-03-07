@@ -35,7 +35,7 @@ pub async fn get_me(
     {
         Ok(Some(user)) => (
             StatusCode::OK,
-            Json(serde_json::to_value(user).unwrap_or_else(|_| json!(null))),
+            Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
         Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
         Err(_) => error(
@@ -66,7 +66,7 @@ pub async fn update_me(
     {
         Ok(Some(user)) => (
             StatusCode::OK,
-            Json(serde_json::to_value(user).unwrap_or_else(|_| json!(null))),
+            Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
         Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
         Err(_) => error(
@@ -91,7 +91,7 @@ pub async fn search_user(
     {
         Ok(Some(user)) => (
             StatusCode::OK,
-            Json(serde_json::to_value(user).unwrap_or_else(|_| json!(null))),
+            Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
         Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
         Err(_) => error(
@@ -116,7 +116,7 @@ pub async fn get_user(
     {
         Ok(Some(user)) => (
             StatusCode::OK,
-            Json(serde_json::to_value(user).unwrap_or_else(|_| json!(null))),
+            Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
         Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
         Err(_) => error(
