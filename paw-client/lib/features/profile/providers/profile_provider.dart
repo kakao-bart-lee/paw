@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../../core/errors/app_error.dart';
 import '../../../core/http/api_client.dart';
 
 class ProfileState {
@@ -44,7 +45,10 @@ class ProfileNotifier extends Notifier<ProfileState> {
       final result = await _apiClient.getMe();
       state = state.copyWith(userAsync: AsyncValue.data(result));
     } catch (e, st) {
-      state = state.copyWith(userAsync: AsyncValue.error(e, st));
+      final uiError = AppErrorMapper.map(e);
+      state = state.copyWith(
+        userAsync: AsyncValue.error(Exception(uiError.message), st),
+      );
     }
   }
 
@@ -64,8 +68,9 @@ class ProfileNotifier extends Notifier<ProfileState> {
       await _apiClient.updateMe(displayName: displayName);
       await loadProfile();
     } catch (e, st) {
+      final uiError = AppErrorMapper.map(e);
       state = state.copyWith(
-        userAsync: AsyncValue.error(e, st),
+        userAsync: AsyncValue.error(Exception(uiError.message), st),
         isSaving: false,
       );
       return;
@@ -74,5 +79,6 @@ class ProfileNotifier extends Notifier<ProfileState> {
   }
 }
 
-final profileProvider =
-    NotifierProvider<ProfileNotifier, ProfileState>(ProfileNotifier.new);
+final profileProvider = NotifierProvider<ProfileNotifier, ProfileState>(
+  ProfileNotifier.new,
+);

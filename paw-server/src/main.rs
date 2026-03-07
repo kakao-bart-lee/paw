@@ -7,6 +7,7 @@ mod keys;
 mod media;
 mod messages;
 mod moderation;
+mod observability;
 mod push;
 mod users;
 mod ws;
@@ -198,6 +199,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/ws", get(ws::handler::ws_handler))
         .route("/agent/ws", get(agents::handlers::agent_ws_handler))
         .merge(protected_routes)
+        .layer(middleware::from_fn(observability::request_id_middleware))
         .layer(CorsLayer::permissive())
         .with_state(state);
 

@@ -44,11 +44,7 @@ class MediaUploadService {
     }
 
     request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: fileName,
-      ),
+      http.MultipartFile.fromBytes('file', bytes, filename: fileName),
     );
 
     final streamedResponse = await request.send();
@@ -58,7 +54,10 @@ class MediaUploadService {
       final json = jsonDecode(response.body);
       return MediaUploadResult.fromJson(json);
     } else {
-      throw ApiException(response.statusCode, 'Failed to upload media');
+      throw ApiException.fromStatusCode(
+        response.statusCode,
+        'Failed to upload media',
+      );
     }
   }
 
@@ -76,7 +75,10 @@ class MediaUploadService {
       final json = jsonDecode(response.body);
       return json['url'] as String;
     } else {
-      throw ApiException(response.statusCode, 'Failed to get presigned URL');
+      throw ApiException.fromStatusCode(
+        response.statusCode,
+        'Failed to get presigned URL',
+      );
     }
   }
 }

@@ -3,10 +3,14 @@ import 'media_picker.dart';
 
 class MessageInput extends StatefulWidget {
   final ValueChanged<String> onSend;
+  final bool canSend;
+  final String? sendDisabledReason;
 
   const MessageInput({
     super.key,
     required this.onSend,
+    this.canSend = true,
+    this.sendDisabledReason,
   });
 
   @override
@@ -37,6 +41,15 @@ class _MessageInputState extends State<MessageInput> {
   }
 
   void _handleSend() {
+    if (!widget.canSend) {
+      if (widget.sendDisabledReason != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(widget.sendDisabledReason!)));
+      }
+      return;
+    }
+
     final text = _controller.text.trim();
     if (text.isNotEmpty) {
       widget.onSend(text);
@@ -98,13 +111,17 @@ class _MessageInputState extends State<MessageInput> {
             padding: const EdgeInsets.only(bottom: 2),
             child: Container(
               decoration: BoxDecoration(
-                color: _hasText ? theme.colorScheme.primary : theme.colorScheme.surfaceVariant,
+                color: _hasText
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surfaceVariant,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_upward),
-                color: _hasText ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
-                onPressed: _hasText ? _handleSend : null,
+                color: _hasText
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurfaceVariant,
+                onPressed: (_hasText && widget.canSend) ? _handleSend : null,
               ),
             ),
           ),

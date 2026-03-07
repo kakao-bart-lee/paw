@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../crypto/e2ee_service.dart';
 import '../crypto/key_storage_service.dart';
+import '../auth/session_events.dart';
 import '../db/app_database.dart';
 import '../db/daos/conversations_dao.dart';
 import '../db/daos/messages_dao.dart';
@@ -15,11 +16,24 @@ final getIt = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
   // Config
-  const serverUrl =
-      String.fromEnvironment('SERVER_URL', defaultValue: 'http://localhost:3000');
+  const serverUrl = String.fromEnvironment(
+    'SERVER_URL',
+    defaultValue: 'http://localhost:3000',
+  );
+
+  if (!getIt.isRegistered<SessionEvents>()) {
+    getIt.registerSingleton<SessionEvents>(SessionEvents());
+  }
 
   if (!getIt.isRegistered<ApiClient>()) {
-    getIt.registerSingleton<ApiClient>(ApiClient(baseUrl: serverUrl));
+    getIt.registerSingleton<ApiClient>(
+      ApiClient(
+        baseUrl: serverUrl,
+        onUnauthorized: () async {
+          getIt<SessionEvents>().emitUnauthorized();
+        },
+      ),
+    );
   }
 
   if (!getIt.isRegistered<AppDatabase>()) {
@@ -31,7 +45,9 @@ Future<void> setupServiceLocator() async {
   }
 
   if (!getIt.isRegistered<ConversationsDao>()) {
-    getIt.registerSingleton<ConversationsDao>(ConversationsDao(getIt<AppDatabase>()));
+    getIt.registerSingleton<ConversationsDao>(
+      ConversationsDao(getIt<AppDatabase>()),
+    );
   }
 
   if (!getIt.isRegistered<SearchService>()) {

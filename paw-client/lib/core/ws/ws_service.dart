@@ -7,7 +7,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../platform/web_service.dart';
 import '../proto/messages.dart';
 import '../sync/sync_service.dart';
+import '../observability/app_logger.dart';
 import 'reconnection_manager.dart';
+
+enum WsConnectionState { disconnected, connecting, connected, retrying }
 
 class WsService {
   final String serverUrl;
@@ -20,11 +23,15 @@ class WsService {
   bool _connected = false;
   bool _manualDisconnect = false;
   String? _accessToken;
+  final ValueNotifier<WsConnectionState> _connectionState = ValueNotifier(
+    WsConnectionState.disconnected,
+  );
 
   final _messageController = StreamController<ServerMessage>.broadcast();
   Stream<ServerMessage> get messages => _messageController.stream;
 
   bool get isConnected => _connected;
+  ValueListenable<WsConnectionState> get connectionState => _connectionState;
 
   WsService({
     required this.serverUrl,
@@ -36,6 +43,8 @@ class WsService {
   }
 
   Future<void> connect(String serverUrl, String accessToken) async {
+    _connectionState.value = WsConnectionState.connecting;
+    AppLogger.event('ws.state.connecting');
     _accessToken = accessToken;
     _manualDisconnect = false;
 
@@ -46,6 +55,8 @@ class WsService {
     final uri = _buildWsUri(serverUrl, accessToken);
     _channel = WebSocketChannel.connect(uri);
     _connected = true;
+    _connectionState.value = WsConnectionState.connected;
+    AppLogger.event('ws.state.connected');
 
     _subscription = _channel!.stream.listen(
       _onMessage,
@@ -83,12 +94,16 @@ class WsService {
 
   void _onError(Object error) {
     _connected = false;
+    _connectionState.value = WsConnectionState.disconnected;
+    AppLogger.event('ws.state.disconnected', data: {'error': error.toString()});
     _messageController.addError(error);
     _scheduleReconnect();
   }
 
   void _onDone() {
     _connected = false;
+    _connectionState.value = WsConnectionState.disconnected;
+    AppLogger.event('ws.state.disconnected');
     _scheduleReconnect();
   }
 
@@ -102,6 +117,11 @@ class WsService {
       return;
     }
 
+    _connectionState.value = WsConnectionState.retrying;
+    AppLogger.event(
+      'ws.state.retrying',
+      data: {'attempt': _reconnectionManager.attempts + 1},
+    );
     _reconnectionManager.scheduleReconnect(() async {
       await connect(serverUrl, token);
     });
@@ -127,7 +147,9 @@ class WsService {
   }
 
   void sendAck(String conversationId, int lastSeq) {
-    send(MessageAckMsg(conversationId: conversationId, lastSeq: lastSeq).toJson());
+    send(
+      MessageAckMsg(conversationId: conversationId, lastSeq: lastSeq).toJson(),
+    );
   }
 
   void requestSync(String conversationId, int lastSeq) {
@@ -142,11 +164,14 @@ class WsService {
     _subscription = null;
     _channel = null;
     _connected = false;
+    _connectionState.value = WsConnectionState.disconnected;
+    AppLogger.event('ws.state.disconnected.manual');
   }
 
   Future<void> dispose() async {
     await disconnect();
     await _messageController.close();
+    _connectionState.dispose();
   }
 
   Uri _buildWsUri(String rawServerUrl, String token) {
@@ -159,9 +184,6 @@ class WsService {
       wsUrl = base.replace(scheme: isSecure ? 'wss' : 'ws').toString();
     }
     final wsUri = Uri.parse(wsUrl);
-    return wsUri.replace(
-      path: '/ws',
-      queryParameters: {'token': token},
-    );
+    return wsUri.replace(path: '/ws', queryParameters: {'token': token});
   }
 }

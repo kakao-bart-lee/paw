@@ -36,7 +36,15 @@ docker compose logs -f paw-server
 
 # 특정 문자열 검색
 docker compose logs paw-server | grep "ERROR"
+
+# request_id 기반 인증 실패 추적
+docker compose logs paw-server | grep "auth failed"
 ```
+
+### 요청 ID / 인증 실패 표준
+- 서버는 모든 HTTP 응답에 `x-request-id` 헤더를 부여합니다.
+- 인증 미들웨어 실패 로그는 `request_id`, `path`, `code`를 공통 필드로 기록합니다.
+- 401 응답 본문에도 `request_id`를 포함해 클라이언트/서버 로그를 상호 추적할 수 있습니다.
 
 ## 3. 인프라 모니터링 (Infrastructure)
 
@@ -56,8 +64,19 @@ docker compose logs paw-server | grep "ERROR"
 2. **메시지 처리량 (Throughput)**: 초당 전송/수신되는 메시지 수
 3. **DB 쿼리 지연 시간**: 데이터베이스 응답 속도
 4. **메모리 및 CPU 사용량**: 특히 미디어 처리 시의 리소스 변화
+5. **인증 실패율(401/403)**: 토큰 만료 폭증, 클라이언트 세션 정책 문제 조기 탐지
+6. **클라이언트 WS 상태 전이 빈도**: `connecting → connected → retrying → disconnected` 패턴 이상 감지
 
-## 5. 알림 권장 사항 (Alerting)
+## 5. 클라이언트 핵심 이벤트
+
+클라이언트는 다음 이벤트를 구조화 로그(`paw.client`)로 남깁니다.
+
+- 로그인 성공/실패 (`auth.login.*`)
+- 세션 복원 성공/실패 (`auth.session.restore.*`)
+- WS 상태 전이 (`ws.state.*`)
+- Sync 시작/완료 (`sync.start`, `sync.complete`)
+
+## 6. 알림 권장 사항 (Alerting)
 
 다음 상황 발생 시 알림(Slack, Email 등)을 받도록 설정하는 것이 좋습니다:
 

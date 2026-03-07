@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/di/service_locator.dart';
+import '../../../core/http/api_client.dart';
+import '../../../core/ws/ws_service.dart';
 import '../providers/chat_provider.dart';
 import '../providers/typing_provider.dart';
 import '../widgets/message_bubble.dart';
@@ -39,9 +43,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _handleSend(String text) async {
-    await ref
+    final result = await ref
         .read(messagesNotifierProvider(widget.conversationId).notifier)
         .sendMessage(text);
+    if (!mounted) return;
+    if (!result.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message ?? '메시지 전송에 실패했습니다.')),
+      );
+      return;
+    }
 
     // Scroll to bottom after a short delay to allow the list to update
     Future.delayed(const Duration(milliseconds: 50), _scrollToBottom);
@@ -50,8 +61,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(messagesNotifierProvider(widget.conversationId));
-    final activeStreams = ref.watch(messagesNotifierProvider(widget.conversationId).notifier).activeStreams;
-    
+    final messagesLoadState = ref.watch(
+      messagesLoadStateProvider(widget.conversationId),
+    );
+    final messagesError = ref.watch(
+      messagesErrorProvider(widget.conversationId),
+    );
+    final wsService = getIt.isRegistered<WsService>()
+        ? getIt<WsService>()
+        : null;
+    final apiClient = getIt.isRegistered<ApiClient>()
+        ? getIt<ApiClient>()
+        : null;
+    final canSend =
+        (apiClient?.accessToken?.isNotEmpty ?? false) &&
+        (wsService?.isConnected ?? false);
+    final activeStreams = ref
+        .watch(messagesNotifierProvider(widget.conversationId).notifier)
+        .activeStreams;
+
     // Sort by sequence/time? Active streams are always at the bottom.
     // Since we reverse the list, active streams should be at the beginning of the reversed list.
     final reversedMessages = messages.reversed.toList();
@@ -60,7 +88,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         .toList()
         .reversed
         .toList();
-    
+
     final itemCount = reversedMessages.length + activeStreamsList.length;
 
     final conversations = ref.watch(conversationsNotifierProvider);
@@ -88,7 +116,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Icon(
                 conversation.isE2ee ? Icons.lock : Icons.lock_open,
                 size: 16,
-                color: conversation.isE2ee ? const Color(0xFF4CAF50) : Colors.grey,
+                color: conversation.isE2ee
+                    ? const Color(0xFF4CAF50)
+                    : Colors.grey,
               ),
             ),
           ],
@@ -97,7 +127,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (conversation.agents.isEmpty)
             IconButton(
               icon: const Icon(Icons.group),
-              onPressed: () => context.push('/group/${widget.conversationId}/info'),
+              onPressed: () =>
+                  context.push('/group/${widget.conversationId}/info'),
             ),
         ],
       ),
@@ -114,36 +145,65 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             E2eeBanner(
               type: E2eeBannerType.available,
               onActivate: () {
-                // Stub for activating E2EE
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('E2EE 활성화 요청됨')),
-                );
+                if (kIsWeb) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('웹에서는 E2EE/Rust 기능이 지원되지 않습니다.'),
+                    ),
+                  );
+                  return;
+                }
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('E2EE 활성화 요청됨')));
               },
+            ),
+          if (kIsWeb && conversation.isE2ee)
+            Container(
+              width: double.infinity,
+              color: const Color(0xFF2E1B1B),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: const Text(
+                '웹에서는 E2EE/Rust 기능을 지원하지 않습니다.',
+                style: TextStyle(color: Color(0xFFFFC107), fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
             ),
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              reverse: true,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              itemCount: itemCount,
-              itemBuilder: (context, index) {
-                if (index < activeStreamsList.length) {
-                  final stream = activeStreamsList[index];
-                  return StreamBubble(
-                    streamId: stream.streamId,
-                    contentNotifier: stream.contentNotifier,
-                    isComplete: stream.isComplete,
-                    toolName: stream.currentTool,
-                    toolLabel: stream.currentToolLabel,
-                    toolComplete: stream.toolComplete,
-                  );
-                }
-                
-                final messageIndex = index - activeStreamsList.length;
-                final message = reversedMessages[messageIndex];
-                return MessageBubble(message: message);
-              },
-            ),
+            child: switch (messagesLoadState) {
+              ResourceLoadState.loading => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              ResourceLoadState.error => Center(
+                child: Text(messagesError ?? '메시지를 불러오지 못했습니다.'),
+              ),
+              ResourceLoadState.ready =>
+                itemCount == 0
+                    ? const Center(child: Text('메시지가 없습니다.'))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        itemCount: itemCount,
+                        itemBuilder: (context, index) {
+                          if (index < activeStreamsList.length) {
+                            final stream = activeStreamsList[index];
+                            return StreamBubble(
+                              streamId: stream.streamId,
+                              contentNotifier: stream.contentNotifier,
+                              isComplete: stream.isComplete,
+                              toolName: stream.currentTool,
+                              toolLabel: stream.currentToolLabel,
+                              toolComplete: stream.toolComplete,
+                            );
+                          }
+
+                          final messageIndex = index - activeStreamsList.length;
+                          final message = reversedMessages[messageIndex];
+                          return MessageBubble(message: message);
+                        },
+                      ),
+            },
           ),
           Consumer(
             builder: (context, ref, _) {
@@ -155,6 +215,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           MessageInput(
             onSend: _handleSend,
+            canSend: canSend,
+            sendDisabledReason: (apiClient?.accessToken?.isNotEmpty ?? false)
+                ? '연결이 복구되면 전송할 수 있습니다.'
+                : '로그인 상태가 만료되어 전송할 수 없습니다.',
           ),
         ],
       ),

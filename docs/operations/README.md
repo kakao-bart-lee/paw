@@ -10,6 +10,8 @@
 4. [모니터링 및 관측성 (Monitoring & Observability)](monitoring.md) - 상태 확인 및 로그 관리
 5. [CDN 설정 (CDN Setup)](cdn-setup.md) - 미디어 캐싱 및 전송 최적화
 
+운영 중 인증 이슈를 추적할 때는 `monitoring.md`의 `x-request-id`/`auth failed` 표준 로그 규칙을 우선 적용하세요.
+
 ## 로컬 퀵스타트 (Local Quick-start)
 
 로컬 개발 환경을 빠르게 시작하려면 다음 3개의 명령어를 실행하세요:

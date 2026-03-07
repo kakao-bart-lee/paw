@@ -1,18 +1,49 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart' as legacy;
 import 'package:uuid/uuid.dart';
 
 import '../../../core/crypto/e2ee_service.dart';
 import '../../../core/crypto/key_storage_service.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/http/api_client.dart';
 import '../../../core/proto/messages.dart';
 import '../../../core/ws/ws_service.dart';
-import 'package:flutter/foundation.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
+
+enum ResourceLoadState { loading, ready, error }
+
+class SendMessageResult {
+  final bool ok;
+  final String? message;
+
+  const SendMessageResult._({required this.ok, this.message});
+
+  const SendMessageResult.success() : this._(ok: true);
+
+  const SendMessageResult.failure(String message)
+    : this._(ok: false, message: message);
+}
+
+final conversationsLoadStateProvider = legacy.StateProvider<ResourceLoadState>(
+  (ref) => ResourceLoadState.loading,
+);
+
+final conversationsErrorProvider = legacy.StateProvider<String?>((ref) => null);
+
+final messagesLoadStateProvider =
+    legacy.StateProvider.family<ResourceLoadState, String>(
+      (ref, _) => ResourceLoadState.loading,
+    );
+
+final messagesErrorProvider = legacy.StateProvider.family<String?, String>(
+  (ref, _) => null,
+);
 
 class ToolRecord {
   final String tool;
@@ -41,138 +72,24 @@ class StreamingMessage {
     this.currentToolLabel,
     this.toolComplete = false,
   }) : contentNotifier = ValueNotifier(initialContent);
-  
+
   String get content => contentNotifier.value;
   set content(String value) => contentNotifier.value = value;
-  
+
   void dispose() {
     contentNotifier.dispose();
   }
 }
 
-final _mockMessagesData = <String, List<Message>>{
-  'conv_1': [
-    Message(
-      id: 'msg_1',
-      conversationId: 'conv_1',
-      senderId: 'other_1',
-      content: '안녕하세요! Paw 메신저에 오신 것을 환영합니다.',
-      format: MessageFormat.plain,
-      seq: 1,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
-      isMe: false,
-      isAgent: false,
-    ),
-    Message(
-      id: 'msg_2',
-      conversationId: 'conv_1',
-      senderId: 'me',
-      content: '반갑습니다. AI 에이전트 기능은 어떻게 사용하나요?',
-      format: MessageFormat.plain,
-      seq: 2,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 9)),
-      isMe: true,
-      isAgent: false,
-    ),
-    Message(
-      id: 'msg_3',
-      conversationId: 'conv_1',
-      senderId: 'agent_1',
-      content: '제가 도와드릴게요! 궁금한 점을 물어보시면 답변해 드립니다.',
-      format: MessageFormat.plain,
-      seq: 3,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 8)),
-      isMe: false,
-      isAgent: true,
-    ),
-    Message(
-      id: 'msg_4',
-      conversationId: 'conv_1',
-      senderId: 'me',
-      content: '오, 신기하네요. 감사합니다.',
-      format: MessageFormat.plain,
-      seq: 4,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 7)),
-      isMe: true,
-      isAgent: false,
-    ),
-    Message(
-      id: 'msg_5',
-      conversationId: 'conv_1',
-      senderId: 'other_1',
-      content: '앞으로 자주 이용해주세요!',
-      format: MessageFormat.plain,
-      seq: 5,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 6)),
-      isMe: false,
-      isAgent: false,
-    ),
-  ],
-  'conv_2': [
-    Message(
-      id: 'msg_6',
-      conversationId: 'conv_2',
-      senderId: 'other_2',
-      content: '오늘 회의 시간 언제가 좋으신가요?',
-      format: MessageFormat.plain,
-      seq: 1,
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-      isMe: false,
-      isAgent: false,
-    ),
-  ],
-  'conv_3': [
-    Message(
-      id: 'msg_7',
-      conversationId: 'conv_3',
-      senderId: 'me',
-      content: '프로젝트 일정 확인 부탁드립니다.',
-      format: MessageFormat.plain,
-      seq: 1,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      isMe: true,
-      isAgent: false,
-    ),
-  ],
-};
-
-final _mockConversations = [
-  Conversation(
-    id: 'conv_1',
-    name: 'Paw 공식 지원팀',
-    unreadCount: 0,
-    updatedAt: DateTime.now().subtract(const Duration(minutes: 6)),
-    lastMessage: _mockMessagesData['conv_1']!.last,
-    isE2ee: false,
-    agents: ['Paw Assistant'],
-  ),
-  Conversation(
-    id: 'conv_2',
-    name: '개발팀',
-    unreadCount: 1,
-    updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
-    lastMessage: _mockMessagesData['conv_2']!.last,
-    isE2ee: true,
-  ),
-  Conversation(
-    id: 'conv_3',
-    name: '디자인팀',
-    unreadCount: 0,
-    updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-    lastMessage: _mockMessagesData['conv_3']!.last,
-    isE2ee: false,
-  ),
-];
-
 final conversationsNotifierProvider =
     NotifierProvider<ConversationsNotifier, List<Conversation>>(
-  ConversationsNotifier.new,
-);
+      ConversationsNotifier.new,
+    );
 
 final messagesNotifierProvider =
     NotifierProvider.family<MessagesNotifier, List<Message>, String>(
-  MessagesNotifier.new,
-);
+      MessagesNotifier.new,
+    );
 
 class ConversationsNotifier extends Notifier<List<Conversation>> {
   ApiClient? get _apiClient =>
@@ -181,25 +98,37 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
   @override
   List<Conversation> build() {
     unawaited(_loadConversations());
-    return _mockConversations;
+    return const [];
+  }
+
+  Future<void> refresh() async {
+    await _loadConversations();
   }
 
   Future<void> _loadConversations() async {
     final apiClient = _apiClient;
+    ref.read(conversationsLoadStateProvider.notifier).state =
+        ResourceLoadState.loading;
+    ref.read(conversationsErrorProvider.notifier).state = null;
+
     if (apiClient == null || apiClient.accessToken == null) {
+      state = const [];
+      ref.read(conversationsLoadStateProvider.notifier).state =
+          ResourceLoadState.ready;
       return;
     }
 
     try {
       final rows = await apiClient.getConversations();
-      if (rows.isEmpty) {
-        return;
-      }
-
-      final next = rows.map(_conversationFromJson).toList();
-      state = next;
-    } catch (_) {
-      // Keep mock fallback when network fails.
+      state = rows.map(_conversationFromJson).toList();
+      ref.read(conversationsLoadStateProvider.notifier).state =
+          ResourceLoadState.ready;
+    } catch (error) {
+      final uiError = AppErrorMapper.map(error);
+      ref.read(conversationsErrorProvider.notifier).state = uiError.message;
+      ref.read(conversationsLoadStateProvider.notifier).state =
+          ResourceLoadState.error;
+      state = const [];
     }
   }
 
@@ -244,13 +173,16 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
       name: (json['name'] ?? 'Conversation').toString(),
       avatarUrl: json['avatar_url'] as String?,
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
-      updatedAt: DateTime.tryParse((json['updated_at'] ?? '').toString()) ??
+      updatedAt:
+          DateTime.tryParse((json['updated_at'] ?? '').toString()) ??
           DateTime.now(),
       lastMessage: lastMessage is Map<String, dynamic>
           ? _messageFromJson(lastMessage)
           : null,
       isE2ee: json['is_e2ee'] == true,
-      agents: (json['agents'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      agents:
+          (json['agents'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
     );
   }
 }
@@ -274,7 +206,7 @@ class MessagesNotifier extends Notifier<List<Message>> {
   List<Message> build() {
     _bindWs(_conversationId);
     unawaited(_loadMessages(_conversationId));
-    return _mockMessagesData[_conversationId] ?? [];
+    return const [];
   }
 
   void _bindWs(String conversationId) {
@@ -310,31 +242,47 @@ class MessagesNotifier extends Notifier<List<Message>> {
     }
   }
 
+  Future<void> refresh() async {
+    await _loadMessages(_conversationId);
+  }
+
   Future<void> _loadMessages(String conversationId) async {
     final apiClient = _apiClient;
+    ref.read(messagesLoadStateProvider(conversationId).notifier).state =
+        ResourceLoadState.loading;
+    ref.read(messagesErrorProvider(conversationId).notifier).state = null;
+
     if (apiClient == null || apiClient.accessToken == null) {
+      state = const [];
+      ref.read(messagesLoadStateProvider(conversationId).notifier).state =
+          ResourceLoadState.ready;
       return;
     }
 
     try {
       final payload = await apiClient.getMessages(conversationId);
       final rows = (payload['messages'] as List?) ?? const [];
-      if (rows.isEmpty) {
-        return;
-      }
+      state =
+          rows
+              .whereType<Map>()
+              .map((row) => _messageFromJson(Map<String, dynamic>.from(row)))
+              .toList()
+            ..sort((a, b) => a.seq.compareTo(b.seq));
 
-      state = rows
-          .whereType<Map>()
-          .map((row) => _messageFromJson(Map<String, dynamic>.from(row)))
-          .toList()
-        ..sort((a, b) => a.seq.compareTo(b.seq));
-    } catch (_) {
-      // Keep mock fallback.
+      ref.read(messagesLoadStateProvider(conversationId).notifier).state =
+          ResourceLoadState.ready;
+    } catch (error) {
+      final uiError = AppErrorMapper.map(error);
+      ref.read(messagesErrorProvider(conversationId).notifier).state =
+          uiError.message;
+      ref.read(messagesLoadStateProvider(conversationId).notifier).state =
+          ResourceLoadState.error;
+      state = const [];
     }
   }
 
   void addMessage(Message msg) {
-    if (state.any((m) => m.id == msg.id)) {
+    if (state.any((m) => m.id == msg.id || m.seq == msg.seq)) {
       return;
     }
 
@@ -344,9 +292,14 @@ class MessagesNotifier extends Notifier<List<Message>> {
 
   void addMessageFromWs(MessageReceivedMsg msg) {
     final convs = ref.read(conversationsNotifierProvider);
-    final conversation = convs.where((c) => c.id == msg.conversationId).firstOrNull;
+    Conversation? conversation;
+    for (final conv in convs) {
+      if (conv.id == msg.conversationId) {
+        conversation = conv;
+        break;
+      }
+    }
     final hasAgents = conversation?.agents.isNotEmpty ?? false;
-    // TODO: Better heuristic for identifying agent messages vs other users
     final isAgent = hasAgents && msg.senderId != 'me';
 
     final localMessage = Message(
@@ -379,7 +332,6 @@ class MessagesNotifier extends Notifier<List<Message>> {
     final stream = _activeStreams[msg.streamId];
     if (stream != null) {
       stream.content += msg.delta;
-      // Do not call ref.notifyListeners() here to avoid rebuilding the whole list
     }
   }
 
@@ -406,12 +358,11 @@ class MessagesNotifier extends Notifier<List<Message>> {
     final stream = _activeStreams[msg.streamId];
     if (stream != null) {
       stream.isComplete = true;
-      
+
       final toolCalls = stream.toolHistory
           .map((t) => ToolCallRecord(tool: t.tool, label: t.label))
           .toList();
 
-      // Convert to regular message
       final finalMessage = Message(
         id: msg.streamId,
         conversationId: stream.conversationId,
@@ -424,14 +375,27 @@ class MessagesNotifier extends Notifier<List<Message>> {
         isAgent: true,
         toolCalls: toolCalls,
       );
-      
+
       _activeStreams.remove(msg.streamId);
       stream.dispose();
       addMessage(finalMessage);
     }
   }
 
-  Future<void> sendMessage(String content) async {
+  Future<SendMessageResult> sendMessage(String content) async {
+    final apiClient = _apiClient;
+    final wsService = _wsService;
+
+    if (apiClient == null || apiClient.accessToken == null) {
+      return const SendMessageResult.failure('로그인 후 메시지를 전송할 수 있습니다.');
+    }
+
+    if (wsService == null || !wsService.isConnected) {
+      return const SendMessageResult.failure(
+        '실시간 연결이 끊겨 있어 전송할 수 없습니다. 잠시 후 다시 시도해주세요.',
+      );
+    }
+
     String contentToSend = content;
     Conversation? conversation;
     for (final conv in ref.read(conversationsNotifierProvider)) {
@@ -442,8 +406,9 @@ class MessagesNotifier extends Notifier<List<Message>> {
     }
 
     if (conversation?.isE2ee == true) {
-      final e2eeService =
-          getIt.isRegistered<E2eeService>() ? getIt<E2eeService>() : null;
+      final e2eeService = getIt.isRegistered<E2eeService>()
+          ? getIt<E2eeService>()
+          : null;
       final keyStorage = getIt.isRegistered<KeyStorageService>()
           ? getIt<KeyStorageService>()
           : null;
@@ -476,11 +441,6 @@ class MessagesNotifier extends Notifier<List<Message>> {
 
     addMessage(optimistic);
 
-    final apiClient = _apiClient;
-    if (apiClient == null) {
-      return;
-    }
-
     try {
       final serverMessage = await apiClient.sendMessage(
         _conversationId,
@@ -488,32 +448,40 @@ class MessagesNotifier extends Notifier<List<Message>> {
         const Uuid().v4(),
       );
 
-      final confirmed = _messageFromJson(serverMessage, fallback: optimistic)
-          .copyWithMe(isMe: true, isAgent: false);
+      final confirmed = _messageFromJson(
+        serverMessage,
+        fallback: optimistic,
+      ).copyWithMe(isMe: true, isAgent: false);
       state = [
         for (final msg in state)
           if (msg.id == optimistic.id) confirmed else msg,
       ];
-      ref.read(conversationsNotifierProvider.notifier).upsertFromMessage(confirmed);
-    } catch (_) {
-      // Keep optimistic message and wait for eventual WS sync.
+      ref
+          .read(conversationsNotifierProvider.notifier)
+          .upsertFromMessage(confirmed);
+      return const SendMessageResult.success();
+    } catch (error) {
+      final uiError = AppErrorMapper.map(error);
+      state = state.where((msg) => msg.id != optimistic.id).toList();
+      return SendMessageResult.failure(uiError.message);
     }
   }
 
-  Message _messageFromJson(
-    Map<String, dynamic> json, {
-    Message? fallback,
-  }) {
+  Message _messageFromJson(Map<String, dynamic> json, {Message? fallback}) {
     return Message(
       id: (json['id'] ?? fallback?.id ?? const Uuid().v4()).toString(),
       conversationId:
-          (json['conversation_id'] ?? fallback?.conversationId ?? _conversationId)
+          (json['conversation_id'] ??
+                  fallback?.conversationId ??
+                  _conversationId)
               .toString(),
-      senderId: (json['sender_id'] ?? fallback?.senderId ?? 'unknown').toString(),
+      senderId: (json['sender_id'] ?? fallback?.senderId ?? 'unknown')
+          .toString(),
       content: (json['content'] ?? fallback?.content ?? '').toString(),
       format: _toMessageFormat((json['format'] ?? 'plain').toString()),
       seq: (json['seq'] as num?)?.toInt() ?? fallback?.seq ?? 0,
-      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+      createdAt:
+          DateTime.tryParse((json['created_at'] ?? '').toString()) ??
           fallback?.createdAt ??
           DateTime.now(),
       isMe: fallback?.isMe ?? false,
@@ -530,7 +498,8 @@ Message _messageFromJson(Map<String, dynamic> json) {
     content: (json['content'] ?? '').toString(),
     format: _toMessageFormat((json['format'] ?? 'plain').toString()),
     seq: (json['seq'] as num?)?.toInt() ?? 0,
-    createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+    createdAt:
+        DateTime.tryParse((json['created_at'] ?? '').toString()) ??
         DateTime.now(),
     isMe: false,
     isAgent: false,

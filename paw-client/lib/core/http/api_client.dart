@@ -1,12 +1,26 @@
 import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+enum ApiErrorKind {
+  unauthorized,
+  forbidden,
+  server,
+  network,
+  timeout,
+  client,
+  unknown,
+}
+
 class ApiClient {
   final String baseUrl;
+  final Future<void> Function()? _onUnauthorized;
   String? _accessToken;
 
-  ApiClient({required this.baseUrl});
+  ApiClient({required this.baseUrl, Future<void> Function()? onUnauthorized})
+    : _onUnauthorized = onUnauthorized;
 
   void setToken(String token) => _accessToken = token;
   void clearToken() => _accessToken = null;
@@ -86,7 +100,9 @@ class ApiClient {
 
   Future<void> removeMember(String convId, String userId) async {
     final uri = _buildUri('/conversations/$convId/members/$userId');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await _runRequest(
+      () => http.delete(uri, headers: _headers),
+    );
     _throwIfError(response);
   }
 
@@ -114,10 +130,7 @@ class ApiClient {
   }) async {
     final response = await _get(
       '/conversations/$convId/messages',
-      queryParameters: {
-        'after_seq': '$afterSeq',
-        'limit': '$limit',
-      },
+      queryParameters: {'after_seq': '$afterSeq', 'limit': '$limit'},
     );
     return _decodeJsonObject(response);
   }
@@ -134,17 +147,14 @@ class ApiClient {
   }) async {
     final response = await _patch(
       '/users/me',
-      body: {
-        'display_name': displayName,
-        'avatar_url': avatarUrl,
-      },
+      body: {'display_name': displayName, 'avatar_url': avatarUrl},
     );
     return _decodeJsonObject(response);
   }
 
   Future<Map<String, dynamic>?> searchUser(String phone) async {
     final uri = _buildUri('/users/search', queryParameters: {'phone': phone});
-    final response = await http.get(uri, headers: _headers);
+    final response = await _runRequest(() => http.get(uri, headers: _headers));
 
     if (response.statusCode == 404) {
       return null;
@@ -173,7 +183,7 @@ class ApiClient {
     Map<String, String>? queryParameters,
   }) async {
     final uri = _buildUri(path, queryParameters: queryParameters);
-    final response = await http.get(uri, headers: _headers);
+    final response = await _runRequest(() => http.get(uri, headers: _headers));
     _throwIfError(response);
     return response;
   }
@@ -183,10 +193,8 @@ class ApiClient {
     required Map<String, dynamic> body,
   }) async {
     final uri = _buildUri(path);
-    final response = await http.post(
-      uri,
-      headers: _headers,
-      body: jsonEncode(body),
+    final response = await _runRequest(
+      () => http.post(uri, headers: _headers, body: jsonEncode(body)),
     );
     _throwIfError(response);
     return response;
@@ -197,13 +205,25 @@ class ApiClient {
     required Map<String, dynamic> body,
   }) async {
     final uri = _buildUri(path);
-    final response = await http.patch(
-      uri,
-      headers: _headers,
-      body: jsonEncode(body),
+    final response = await _runRequest(
+      () => http.patch(uri, headers: _headers, body: jsonEncode(body)),
     );
     _throwIfError(response);
     return response;
+  }
+
+  Future<http.Response> _runRequest(
+    Future<http.Response> Function() requestFn,
+  ) async {
+    try {
+      return await requestFn().timeout(const Duration(seconds: 15));
+    } on SocketException catch (e) {
+      throw ApiException.network(e.message);
+    } on TimeoutException {
+      throw ApiException.timeout();
+    } on HttpException catch (e) {
+      throw ApiException.network(e.message);
+    }
   }
 
   Uri _buildUri(String path, {Map<String, String>? queryParameters}) {
@@ -238,7 +258,8 @@ class ApiClient {
       try {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
-          message = (decoded['message'] as String?) ??
+          message =
+              (decoded['message'] as String?) ??
               (decoded['error'] as String?) ??
               message;
         }
@@ -247,15 +268,55 @@ class ApiClient {
       }
     }
 
-    throw ApiException(response.statusCode, message);
+    throw ApiException.fromStatusCode(
+      response.statusCode,
+      message,
+      onUnauthorized: _onUnauthorized,
+    );
   }
 }
 
 class ApiException implements Exception {
   final int statusCode;
   final String message;
+  final ApiErrorKind kind;
 
-  ApiException(this.statusCode, this.message);
+  ApiException(this.statusCode, this.message, {required this.kind});
+
+  factory ApiException.fromStatusCode(
+    int statusCode,
+    String message, {
+    Future<void> Function()? onUnauthorized,
+  }) {
+    if (statusCode == 401) {
+      unawaited(onUnauthorized?.call());
+      return ApiException(statusCode, message, kind: ApiErrorKind.unauthorized);
+    }
+
+    if (statusCode == 403) {
+      return ApiException(statusCode, message, kind: ApiErrorKind.forbidden);
+    }
+
+    if (statusCode >= 500) {
+      return ApiException(statusCode, message, kind: ApiErrorKind.server);
+    }
+
+    if (statusCode >= 400) {
+      return ApiException(statusCode, message, kind: ApiErrorKind.client);
+    }
+
+    return ApiException(statusCode, message, kind: ApiErrorKind.unknown);
+  }
+
+  factory ApiException.network(String message) {
+    return ApiException(-1, message, kind: ApiErrorKind.network);
+  }
+
+  factory ApiException.timeout() {
+    return ApiException(-1, 'Request timed out', kind: ApiErrorKind.timeout);
+  }
+
+  bool get isUnauthorized => statusCode == 401;
 
   @override
   String toString() => 'ApiException($statusCode): $message';

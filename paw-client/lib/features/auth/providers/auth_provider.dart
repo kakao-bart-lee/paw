@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../../core/auth/session_events.dart';
+import '../../../core/auth/token_storage.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/http/api_client.dart';
+import '../../../core/observability/app_logger.dart';
 import '../../../core/ws/ws_service.dart';
 
 enum AuthStep { phoneInput, otpVerify, deviceName, authenticated }
@@ -32,14 +35,14 @@ class AuthState {
   });
 
   const AuthState.initial()
-      : step = AuthStep.phoneInput,
-        phone = '',
-        deviceName = '',
-        sessionToken = null,
-        accessToken = null,
-        refreshToken = null,
-        isLoading = false,
-        error = null;
+    : step = AuthStep.phoneInput,
+      phone = '',
+      deviceName = '',
+      sessionToken = null,
+      accessToken = null,
+      refreshToken = null,
+      isLoading = false,
+      error = null;
 
   AuthState copyWith({
     AuthStep? step,
@@ -58,8 +61,9 @@ class AuthState {
       sessionToken: sessionToken == _unset
           ? this.sessionToken
           : sessionToken as String?,
-      accessToken:
-          accessToken == _unset ? this.accessToken : accessToken as String?,
+      accessToken: accessToken == _unset
+          ? this.accessToken
+          : accessToken as String?,
       refreshToken: refreshToken == _unset
           ? this.refreshToken
           : refreshToken as String?,
@@ -76,17 +80,27 @@ final authNotifierProvider = NotifierProvider<AuthNotifier, AuthState>(
 );
 
 class AuthNotifier extends Notifier<AuthState> {
-  static const _secureStorage = FlutterSecureStorage();
-  static const _accessTokenKey = 'access_token';
-  static const _refreshTokenKey = 'refresh_token';
+  final TokenStorage _tokenStorage = const TokenStorage();
+  StreamSubscription<SessionEvent>? _sessionEventSubscription;
 
   ApiClient? get _apiClient =>
       getIt.isRegistered<ApiClient>() ? getIt<ApiClient>() : null;
   WsService? get _wsService =>
       getIt.isRegistered<WsService>() ? getIt<WsService>() : null;
+  SessionEvents? get _sessionEvents =>
+      getIt.isRegistered<SessionEvents>() ? getIt<SessionEvents>() : null;
+
+  bool get isAuthenticated => state.step == AuthStep.authenticated;
 
   @override
   AuthState build() {
+    _sessionEventSubscription ??= _sessionEvents?.stream.listen((event) {
+      if (event.reason == SessionExpiryReason.unauthorized) {
+        unawaited(_clearSession());
+      }
+    });
+    ref.onDispose(() => _sessionEventSubscription?.cancel());
+
     if (!kIsWeb) {
       unawaited(_restoreSession());
     }
@@ -100,35 +114,35 @@ class AuthNotifier extends Notifier<AuthState> {
       return;
     }
 
-    final accessToken = await _secureStorage.read(key: _accessTokenKey);
-    final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
-    if (accessToken == null || refreshToken == null) {
+    final storedTokens = await _tokenStorage.read();
+    if (storedTokens == null) {
       return;
     }
 
-    apiClient.setToken(accessToken);
+    apiClient.setToken(storedTokens.accessToken);
 
     try {
       await apiClient.getMe();
-      await wsService?.connect(wsService.serverUrl, accessToken);
+      await wsService?.connect(wsService.serverUrl, storedTokens.accessToken);
+
+      AppLogger.event(
+        'auth.session.restore.success',
+        data: {'platform': kIsWeb ? 'web' : 'native'},
+      );
 
       state = state.copyWith(
         step: AuthStep.authenticated,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
+        accessToken: storedTokens.accessToken,
+        refreshToken: storedTokens.refreshToken,
         error: null,
       );
-    } catch (_) {
-      await _secureStorage.delete(key: _accessTokenKey);
-      await _secureStorage.delete(key: _refreshTokenKey);
-      apiClient.clearToken();
-
-      state = state.copyWith(
-        step: AuthStep.phoneInput,
-        accessToken: null,
-        refreshToken: null,
-        error: null,
+    } catch (error) {
+      final uiError = AppErrorMapper.map(error);
+      AppLogger.event(
+        'auth.session.restore.failed',
+        data: {'code': uiError.code.name, 'detail': uiError.message},
       );
+      await _clearSession();
     }
   }
 
@@ -137,12 +151,16 @@ class AuthNotifier extends Notifier<AuthState> {
 
     final apiClient = _apiClient;
     if (apiClient == null) {
-      state = state.copyWith(isLoading: false, error: 'ApiClient not configured');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'ApiClient not configured',
+      );
       return;
     }
 
     try {
       await apiClient.requestOtp(phone);
+      AppLogger.event('auth.login.request_otp.success');
       state = state.copyWith(
         step: AuthStep.otpVerify,
         phone: phone,
@@ -150,7 +168,12 @@ class AuthNotifier extends Notifier<AuthState> {
         error: null,
       );
     } catch (error) {
-      state = state.copyWith(isLoading: false, error: error.toString());
+      final uiError = AppErrorMapper.map(error);
+      AppLogger.event(
+        'auth.login.request_otp.failed',
+        data: {'code': uiError.code.name, 'detail': uiError.message},
+      );
+      state = state.copyWith(isLoading: false, error: uiError.message);
     }
   }
 
@@ -159,7 +182,10 @@ class AuthNotifier extends Notifier<AuthState> {
 
     final apiClient = _apiClient;
     if (apiClient == null) {
-      state = state.copyWith(isLoading: false, error: 'ApiClient not configured');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'ApiClient not configured',
+      );
       return;
     }
 
@@ -177,7 +203,12 @@ class AuthNotifier extends Notifier<AuthState> {
         error: null,
       );
     } catch (error) {
-      state = state.copyWith(isLoading: false, error: error.toString());
+      final uiError = AppErrorMapper.map(error);
+      AppLogger.event(
+        'auth.login.verify_otp.failed',
+        data: {'code': uiError.code.name, 'detail': uiError.message},
+      );
+      state = state.copyWith(isLoading: false, error: uiError.message);
     }
   }
 
@@ -211,13 +242,16 @@ class AuthNotifier extends Notifier<AuthState> {
         throw Exception('Missing tokens from register-device response');
       }
 
-      await _secureStorage.write(key: _accessTokenKey, value: accessToken);
-      await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
+      await _tokenStorage.write(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
 
       apiClient.setToken(accessToken);
       if (wsService != null) {
         await wsService.connect(wsService.serverUrl, accessToken);
       }
+      AppLogger.event('auth.login.success');
 
       state = state.copyWith(
         step: AuthStep.authenticated,
@@ -228,7 +262,25 @@ class AuthNotifier extends Notifier<AuthState> {
         error: null,
       );
     } catch (error) {
-      state = state.copyWith(isLoading: false, error: error.toString());
+      final uiError = AppErrorMapper.map(error);
+      AppLogger.event(
+        'auth.login.register_device.failed',
+        data: {'code': uiError.code.name, 'detail': uiError.message},
+      );
+      state = state.copyWith(isLoading: false, error: uiError.message);
     }
+  }
+
+  Future<void> logout() async {
+    await _clearSession();
+  }
+
+  Future<void> _clearSession() async {
+    await _tokenStorage.clear();
+    _apiClient?.clearToken();
+    await _wsService?.disconnect();
+    AppLogger.event('auth.session.cleared');
+
+    state = const AuthState.initial();
   }
 }

@@ -23,15 +23,22 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     final conversations = ref.watch(conversationsNotifierProvider);
+    final loadState = ref.watch(conversationsLoadStateProvider);
+    final loadError = ref.watch(conversationsErrorProvider);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > kDesktopBreakpoint;
 
         if (isWide) {
-          return _buildDesktopLayout(context, conversations);
+          return _buildDesktopLayout(
+            context,
+            conversations,
+            loadState,
+            loadError,
+          );
         }
-        return _buildMobileLayout(context, conversations);
+        return _buildMobileLayout(context, conversations, loadState, loadError);
       },
     );
   }
@@ -41,6 +48,8 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
   Widget _buildMobileLayout(
     BuildContext context,
     List conversations,
+    ResourceLoadState loadState,
+    String? loadError,
   ) {
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +67,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
           ),
         ],
       ),
-      body: _buildConversationList(conversations),
+      body: _buildConversationList(conversations, loadState, loadError),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},
         icon: const Icon(Icons.add),
@@ -72,6 +81,8 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
   Widget _buildDesktopLayout(
     BuildContext context,
     List conversations,
+    ResourceLoadState loadState,
+    String? loadError,
   ) {
     return Scaffold(
       body: Row(
@@ -96,7 +107,13 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                     ),
                   ],
                 ),
-                Expanded(child: _buildConversationList(conversations)),
+                Expanded(
+                  child: _buildConversationList(
+                    conversations,
+                    loadState,
+                    loadError,
+                  ),
+                ),
               ],
             ),
           ),
@@ -112,21 +129,18 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                         Icon(
                           Icons.chat_bubble_outline,
                           size: 64,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withOpacity(0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '\ub300\ud654\ub97c \uc120\ud0dd\ud558\uc138\uc694',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                         ),
                       ],
@@ -140,7 +154,19 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
 
   // ── Shared conversation list ───────────────────────────────────────
 
-  Widget _buildConversationList(List conversations) {
+  Widget _buildConversationList(
+    List conversations,
+    ResourceLoadState loadState,
+    String? loadError,
+  ) {
+    if (loadState == ResourceLoadState.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (loadState == ResourceLoadState.error) {
+      return Center(child: Text(loadError ?? '대화 목록을 불러오지 못했습니다.'));
+    }
+
     if (conversations.isEmpty) {
       return Center(
         child: Column(
@@ -149,17 +175,16 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
             Icon(
               Icons.chat_bubble_outline,
               size: 64,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant
-                  .withOpacity(0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
               '\uc544\uc9c1 \ub300\ud654\uac00 \uc5c6\uc2b5\ub2c8\ub2e4',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

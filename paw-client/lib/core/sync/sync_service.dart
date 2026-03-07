@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../db/app_database.dart';
 import '../db/daos/conversations_dao.dart';
 import '../db/daos/messages_dao.dart';
+import '../observability/app_logger.dart';
 import '../proto/messages.dart';
 
 typedef SyncRequestFn = void Function(String conversationId, int lastSeq);
@@ -21,12 +22,17 @@ class SyncService {
        _requestSync = requestSync;
 
   Future<void> syncAllConversations() async {
+    AppLogger.event('sync.start');
     final conversations = await _conversationsDao.getAllConversations();
 
     for (final conversation in conversations) {
       final lastSeq = await _messagesDao.getLastSeq(conversation.id);
       _requestSync(conversation.id, lastSeq);
     }
+    AppLogger.event(
+      'sync.complete',
+      data: {'conversation_count': conversations.length},
+    );
   }
 
   Future<void> persistMessage(MessageReceivedMsg msg) async {

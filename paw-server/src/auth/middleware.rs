@@ -9,6 +9,8 @@ use axum::{
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::observability::RequestId;
+
 use super::{AppState, jwt};
 
 #[derive(Clone, Copy, Debug)]
@@ -23,20 +25,28 @@ pub async fn auth_middleware(
     next: Next,
 ) -> Response {
     let Some(auth_header) = request.headers().get(header::AUTHORIZATION) else {
-        return unauthorized("missing_authorization", "Authorization header is required");
+        return unauthorized(
+            "missing_authorization",
+            "Authorization header is required",
+            &request,
+        );
     };
 
     let Ok(auth_str) = auth_header.to_str() else {
-        return unauthorized("invalid_authorization", "Authorization header is invalid");
+        return unauthorized(
+            "invalid_authorization",
+            "Authorization header is invalid",
+            &request,
+        );
     };
 
     let Some(token) = auth_str.strip_prefix("Bearer ") else {
-        return unauthorized("invalid_authorization", "Expected Bearer token");
+        return unauthorized("invalid_authorization", "Expected Bearer token", &request);
     };
 
     let claims = match jwt::verify_token(token, &state.jwt_secret, Some(jwt::TOKEN_TYPE_ACCESS)) {
         Ok(claims) => claims,
-        Err(_) => return unauthorized("invalid_token", "Access token is invalid"),
+        Err(_) => return unauthorized("invalid_token", "Access token is invalid", &request),
     };
 
     request.extensions_mut().insert(UserId(claims.sub));
@@ -45,12 +55,25 @@ pub async fn auth_middleware(
     next.run(request).await
 }
 
-fn unauthorized(code: &str, message: &str) -> Response {
+fn unauthorized(code: &str, message: &str, request: &Request<Body>) -> Response {
+    let request_id = request
+        .extensions()
+        .get::<RequestId>()
+        .map(|req_id| req_id.0.as_str())
+        .unwrap_or("-");
+    tracing::warn!(
+        request_id = %request_id,
+        path = %request.uri().path(),
+        code = %code,
+        "auth failed"
+    );
+
     (
         StatusCode::UNAUTHORIZED,
         Json(json!({
             "error": code,
             "message": message,
+            "request_id": request_id,
         })),
     )
         .into_response()
