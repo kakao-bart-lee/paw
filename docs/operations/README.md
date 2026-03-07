@@ -12,6 +12,20 @@
 
 운영 중 인증 이슈를 추적할 때는 `monitoring.md`의 `x-request-id`/`auth failed` 표준 로그 규칙을 우선 적용하세요.
 
+## E2E 검증 실행
+
+클라이언트 핵심 플로우 검증은 아래 2단계로 운영합니다.
+
+1. Flutter 공식 Integration Test
+```bash
+make e2e-flutter
+```
+
+2. 웹 콘솔 안정성 Playwright smoke
+```bash
+make e2e-playwright
+```
+
 ## 로컬 퀵스타트 (Local Quick-start)
 
 로컬 개발 환경을 빠르게 시작하려면 다음 3개의 명령어를 실행하세요:
