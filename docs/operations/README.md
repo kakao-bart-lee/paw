@@ -1,0 +1,39 @@
+# 운영 및 배포 가이드 (Operations & Deployment)
+
+이 디렉토리는 Paw 메신저 서버의 운영, 배포, 데이터베이스 관리 및 모니터링에 관한 문서를 포함하고 있습니다.
+
+## 목차 (Table of Contents)
+
+1. [배포 가이드 (Deployment Guide)](deployment.md) - 로컬, Docker, Fly.io 배포 방법
+2. [환경 변수 설정 (Environment Variables)](environment-variables.md) - 서버 설정 및 보안 변수 목록
+3. [데이터베이스 관리 (Database Operations)](database.md) - 마이그레이션 및 백업 절차
+4. [모니터링 및 관측성 (Monitoring & Observability)](monitoring.md) - 상태 확인 및 로그 관리
+5. [CDN 설정 (CDN Setup)](cdn-setup.md) - 미디어 캐싱 및 전송 최적화
+
+## 로컬 퀵스타트 (Local Quick-start)
+
+로컬 개발 환경을 빠르게 시작하려면 다음 3개의 명령어를 실행하세요:
+
+```bash
+# 1. 인프라 스트럭처 실행 (PostgreSQL, MinIO, NATS)
+make docker-up
+
+# 2. 데이터베이스 마이그레이션 적용
+make migrate
+
+# 3. 개발 서버 실행
+make dev
+```
+
+## 사전 요구 사항 (Prerequisites)
+
+운영 및 관리를 위해 다음 도구들이 설치되어 있어야 합니다:
+
+- **Rust**: 1.75 버전 이상 (Cargo 포함)
+- **Docker & Docker Compose**: 컨테이너화된 서비스 실행용
+- **sqlx-cli**: 데이터베이스 마이그레이션 관리용 (`cargo install sqlx-cli`)
+
+## 관련 문서 (Related Documents)
+
+- [메인 README.md](../../README.md) - 프로젝트 개요 및 개발 가이드
+- [아키텍처 설계](../ARCHITECTURE.md) - 시스템 구조 및 설계 원칙
