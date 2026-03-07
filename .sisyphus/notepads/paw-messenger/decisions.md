@@ -581,3 +581,10 @@ Rationale: MIT license compatibility across Apache-2.0 components, first-class g
 - X25519 ECDH: ~0.5ms but amortized (once per ratchet step, not per message)
 - Server never decrypts — zero server-side crypto overhead for message content
 - PreKey bundle upload ~1ms one-time cost, not in hot path
+
+## Release Preparation + Documentation (T54)
+- Created comprehensive OpenAPI 3.0 spec covering all REST endpoints.
+- Developed Python and TypeScript SDK quickstart guides with streaming and tool frame examples.
+- Updated WebSocket protocol spec (v1) to include Phase 3 additions: `device_sync` and channel message broadcasting.
+- Created project README with architecture diagram, CONTRIBUTING guide, and CHANGELOG organized by development phases.
+- Provided production-ready deployment configurations for Fly.io and Docker Compose.

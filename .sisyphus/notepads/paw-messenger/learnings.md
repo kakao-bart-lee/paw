@@ -1,0 +1,3 @@
+- Created Phase 3 dogfooding runbook mirroring Phase 2 structure.
+- Included concrete curl examples for all Phase 3 API endpoints.
+- Added sections for Channels, Multi-device Sync, Push, Backup, Marketplace, TS SDK, Search, Desktop/Web QA, Moderation, and Performance.
