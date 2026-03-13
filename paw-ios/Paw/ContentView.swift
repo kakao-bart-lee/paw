@@ -16,12 +16,7 @@ struct ContentView: View {
                             .foregroundStyle(PawTheme.mutedText)
                     }
 
-                    shellCard(title: "대화 목록", subtitle: "rounded cards · thin outline", background: PawTheme.surface2)
-
-                    HStack(spacing: 12) {
-                        shellCard(title: "보낸 메시지", subtitle: "primary 강조", background: PawTheme.sentBubble)
-                        shellCard(title: "AI 스트림", subtitle: "agent bubble", background: PawTheme.agentBubble)
-                    }
+                    PawBootstrapView()
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("paw-core bridge")
@@ -51,25 +46,5 @@ struct ContentView: View {
             )
             .navigationTitle("Paw")
         }
-    }
-
-    @ViewBuilder
-    private func shellCard(title: String, subtitle: String, background: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(PawTypography.titleMedium)
-                .foregroundStyle(PawTheme.strongText)
-            Text(subtitle)
-                .font(PawTypography.bodySmall)
-                .foregroundStyle(PawTheme.mutedText)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(background)
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(PawTheme.outline, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
