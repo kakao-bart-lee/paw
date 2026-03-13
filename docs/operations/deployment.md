@@ -76,7 +76,7 @@ fly deploy --config deploy/fly.toml
 ### 상태 확인 (Health Check)
 서버의 `/health` 엔드포인트가 `200 OK`를 반환하는지 확인합니다.
 ```bash
-curl -i http://localhost:3000/health
+curl -i http://localhost:38173/health
 ```
 
 ### 로그 확인

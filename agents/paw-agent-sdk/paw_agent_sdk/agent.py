@@ -19,7 +19,7 @@ MessageHandler = Callable[
 
 
 class PawAgent:
-    def __init__(self, token: str, server_url: str = "ws://localhost:3000"):
+    def __init__(self, token: str, server_url: str = "ws://localhost:38173"):
         self.token: str = token
         self.server_url: str = server_url.rstrip("/")
         self._handler: MessageHandler | None = None

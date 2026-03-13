@@ -13,11 +13,11 @@ void main() {
       await getIt.reset();
       getIt.registerSingleton<SessionEvents>(SessionEvents());
       getIt.registerSingleton<ApiClient>(
-        ApiClient(baseUrl: 'http://localhost:3000'),
+        ApiClient(baseUrl: 'http://localhost:38173'),
       );
       getIt.registerSingleton<WsService>(
         WsService(
-          serverUrl: 'http://localhost:3000',
+          serverUrl: 'http://localhost:38173',
           reconnectionManager: ReconnectionManager(),
         ),
       );

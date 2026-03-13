@@ -141,7 +141,7 @@ class _SeedMessagesNotifier extends MessagesNotifier {
 class _FakeWsService extends WsService {
   _FakeWsService()
     : super(
-        serverUrl: 'http://localhost:3000',
+        serverUrl: 'http://localhost:38173',
         reconnectionManager: ReconnectionManager(),
       );
 

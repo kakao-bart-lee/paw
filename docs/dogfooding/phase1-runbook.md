@@ -30,9 +30,9 @@ cp .env.example .env
 Required env values (default local values from `.env.example`):
 
 - `PAW_HOST=0.0.0.0`
-- `PAW_PORT=3000`
-- `DATABASE_URL=postgresql://paw:paw_dev_password@localhost:5432/paw_dev`
-- `S3_ENDPOINT=http://localhost:9000`
+- `PAW_PORT=38173`
+- `DATABASE_URL=postgresql://paw:paw_dev_password@localhost:35432/paw_dev`
+- `S3_ENDPOINT=http://localhost:39080`
 - `S3_BUCKET=paw-media`
 - `S3_ACCESS_KEY=paw_minio`
 - `S3_SECRET_KEY=paw_minio_password`
@@ -48,9 +48,9 @@ docker-compose up -d
 
 Expected exposed services:
 
-- PostgreSQL: `localhost:5432`
-- MinIO API: `localhost:9000`
-- MinIO Console: `http://localhost:9001`
+- PostgreSQL: `localhost:35432`
+- MinIO API: `localhost:39080`
+- MinIO Console: `http://localhost:39081`
 
 ## Start Paw Server
 
@@ -66,11 +66,11 @@ Alternative (inside `paw-server/`):
 ~/.cargo/bin/cargo run
 ```
 
-Server default endpoint: `http://localhost:3000`
+Server default endpoint: `http://localhost:38173`
 
 ## Connect Client for Dogfooding
 
-1. Ensure server is running on `localhost:3000`.
+1. Ensure server is running on `localhost:38173`.
 2. Launch Paw client with the same backend base URL configuration used in your local setup.
 3. Run auth flow: OTP request → OTP verify → device registration.
 4. Join/create a conversation and verify:

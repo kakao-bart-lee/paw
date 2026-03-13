@@ -6,23 +6,23 @@ Use this template for all functional defects found during Phase 1 dogfooding.
 
 ## 1) Summary
 
-- **Title**: 
-- **Severity**: 
+- **Title**:
+- **Severity**:
   - `P0` Crash / system down / blocker
   - `P1` Data loss / security issue / irreversible corruption
   - `P2` Functional defect (major behavior incorrect)
   - `P3` UX/usability issue (workflow friction, confusing behavior)
   - `P4` Cosmetic issue (layout/text/visual polish)
-- **Area** (auth, messaging, websocket, media, profile, etc.): 
+- **Area** (auth, messaging, websocket, media, profile, etc.):
 
 ## 2) Environment
 
-- **Date/Time found**: 
-- **Tester name**: 
-- **Client platform** (iOS/Android/Web/Desktop): 
-- **Client build/branch**: 
-- **Server commit/branch**: 
-- **Backend endpoint** (e.g. `http://localhost:3000`): 
+- **Date/Time found**:
+- **Tester name**:
+- **Client platform** (iOS/Android/Web/Desktop):
+- **Client build/branch**:
+- **Server commit/branch**:
+- **Backend endpoint** (e.g. `http://localhost:38173`):
 
 ## 3) Preconditions
 
@@ -32,9 +32,9 @@ Use this template for all functional defects found during Phase 1 dogfooding.
 
 ## 4) Steps to Reproduce
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## 5) Expected Result
 

@@ -28,9 +28,9 @@ set -a
 source .env
 set +a
 
-export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:5432/paw}"
-export PAW_API_BASE_URL="${PAW_API_BASE_URL:-http://127.0.0.1:3000}"
-export PAW_WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:8080}"
+export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:35432/paw}"
+export PAW_API_BASE_URL="${PAW_API_BASE_URL:-http://127.0.0.1:38173}"
+export PAW_WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:38481}"
 
 echo "[real-e2e] starting docker dependencies"
 docker compose up -d
@@ -41,14 +41,14 @@ echo "[real-e2e] running migrations"
   cargo sqlx migrate run
 )
 
-if lsof -ti tcp:3000 >/dev/null 2>&1; then
-  echo "[real-e2e] stopping existing process on :3000"
-  lsof -ti tcp:3000 | xargs kill -9 >/dev/null 2>&1 || true
+if lsof -ti tcp:38173 >/dev/null 2>&1; then
+  echo "[real-e2e] stopping existing process on :38173"
+  lsof -ti tcp:38173 | xargs kill -9 >/dev/null 2>&1 || true
 fi
 
-if lsof -ti tcp:8080 >/dev/null 2>&1; then
-  echo "[real-e2e] stopping existing process on :8080"
-  lsof -ti tcp:8080 | xargs kill -9 >/dev/null 2>&1 || true
+if lsof -ti tcp:38481 >/dev/null 2>&1; then
+  echo "[real-e2e] stopping existing process on :38481"
+  lsof -ti tcp:38481 | xargs kill -9 >/dev/null 2>&1 || true
 fi
 
 echo "[real-e2e] starting paw-server"
@@ -70,7 +70,7 @@ fi
 echo "[real-e2e] starting flutter web-server"
 (
   cd paw-client
-  flutter run -d web-server --web-port 8080 --dart-define=SERVER_URL="$PAW_API_BASE_URL" >"$WEB_LOG" 2>&1
+  flutter run -d web-server --web-port 38481 --dart-define=SERVER_URL="$PAW_API_BASE_URL" >"$WEB_LOG" 2>&1
 ) &
 WEB_PID=$!
 

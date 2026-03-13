@@ -7,7 +7,7 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: process.env.PAW_WEB_BASE_URL ?? 'http://127.0.0.1:8080',
+    baseURL: process.env.PAW_WEB_BASE_URL ?? 'http://127.0.0.1:38481',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

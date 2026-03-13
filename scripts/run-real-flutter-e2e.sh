@@ -23,8 +23,8 @@ set -a
 source .env
 set +a
 
-export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:5432/paw}"
-export SERVER_URL="${SERVER_URL:-http://127.0.0.1:3000}"
+export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:35432/paw}"
+export SERVER_URL="${SERVER_URL:-http://127.0.0.1:38173}"
 
 echo "[real-flutter-e2e] starting docker dependencies"
 docker compose up -d
@@ -35,9 +35,9 @@ echo "[real-flutter-e2e] running migrations"
   cargo sqlx migrate run
 )
 
-if lsof -ti tcp:3000 >/dev/null 2>&1; then
-  echo "[real-flutter-e2e] stopping existing process on :3000"
-  lsof -ti tcp:3000 | xargs kill -9 >/dev/null 2>&1 || true
+if lsof -ti tcp:38173 >/dev/null 2>&1; then
+  echo "[real-flutter-e2e] stopping existing process on :38173"
+  lsof -ti tcp:38173 | xargs kill -9 >/dev/null 2>&1 || true
 fi
 
 echo "[real-flutter-e2e] starting paw-server with OTP debug exposure"

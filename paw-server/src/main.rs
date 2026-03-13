@@ -14,10 +14,10 @@ mod ws;
 
 use auth::AppState;
 use axum::{
-    Router,
     extract::DefaultBodyLimit,
     middleware,
     routing::{delete, get, patch, post, put},
+    Router,
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/paw".to_string());
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:35432/paw".to_string());
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "dev_only_change_me_in_production".to_string());
 
@@ -44,7 +44,8 @@ async fn main() -> anyhow::Result<()> {
     let hub = Arc::new(ws::hub::Hub::new());
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
 
-    let nats_url = std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
+    let nats_url =
+        std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:34223".to_string());
     let nats_client = match async_nats::connect(&nats_url).await {
         Ok(client) => {
             tracing::info!("NATS connected at {}", nats_url);
@@ -71,11 +72,20 @@ async fn main() -> anyhow::Result<()> {
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024));
 
     let protected_routes = Router::new()
-        .route("/users/me", get(users::handlers::get_me).patch(users::handlers::update_me))
+        .route(
+            "/users/me",
+            get(users::handlers::get_me).patch(users::handlers::update_me),
+        )
         .route("/users/search", get(users::handlers::search_user))
         .route("/users/{user_id}", get(users::handlers::get_user))
-        .route("/conversations", get(messages::handlers::list_conversations))
-        .route("/conversations", post(messages::handlers::create_conversation))
+        .route(
+            "/conversations",
+            get(messages::handlers::list_conversations),
+        )
+        .route(
+            "/conversations",
+            post(messages::handlers::create_conversation),
+        )
         .route(
             "/conversations/{id}",
             patch(messages::handlers::update_group_name_handler),
@@ -122,27 +132,72 @@ async fn main() -> anyhow::Result<()> {
             "/api/v1/channels/{id}/messages",
             get(channels::handlers::get_channel_messages),
         )
-        .route("/api/v1/keys/upload", post(keys::handlers::upload_keys_handler))
+        .route(
+            "/api/v1/keys/upload",
+            post(keys::handlers::upload_keys_handler),
+        )
         .route(
             "/api/v1/keys/{user_id}",
             get(keys::handlers::get_key_bundle_handler),
         )
         .route("/media/{media_id}/url", get(media::handlers::get_url))
-        .route("/api/v1/agents/register", post(agents::handlers::register_agent_handler))
-        .route("/api/v1/agents/{agent_id}", get(agents::handlers::get_agent_handler))
-        .route("/api/v1/agents/{agent_id}/revoke", post(agents::handlers::revoke_agent_handler))
-        .route("/api/v1/agents/{agent_id}/publish", put(agents::handlers::publish_agent_handler))
-        .route("/api/v1/marketplace/agents", get(agents::handlers::marketplace_search_handler))
-        .route("/api/v1/marketplace/agents/{agent_id}", get(agents::handlers::marketplace_agent_detail_handler))
-        .route("/api/v1/marketplace/agents/{agent_id}/install", post(agents::handlers::install_agent_handler))
-        .route("/api/v1/marketplace/agents/{agent_id}/install", delete(agents::handlers::uninstall_agent_handler))
-        .route("/api/v1/marketplace/installed", get(agents::handlers::list_installed_agents_handler))
-        .route("/api/v1/backup/initiate", post(backup::handlers::initiate_backup))
+        .route(
+            "/api/v1/agents/register",
+            post(agents::handlers::register_agent_handler),
+        )
+        .route(
+            "/api/v1/agents/{agent_id}",
+            get(agents::handlers::get_agent_handler),
+        )
+        .route(
+            "/api/v1/agents/{agent_id}/revoke",
+            post(agents::handlers::revoke_agent_handler),
+        )
+        .route(
+            "/api/v1/agents/{agent_id}/publish",
+            put(agents::handlers::publish_agent_handler),
+        )
+        .route(
+            "/api/v1/marketplace/agents",
+            get(agents::handlers::marketplace_search_handler),
+        )
+        .route(
+            "/api/v1/marketplace/agents/{agent_id}",
+            get(agents::handlers::marketplace_agent_detail_handler),
+        )
+        .route(
+            "/api/v1/marketplace/agents/{agent_id}/install",
+            post(agents::handlers::install_agent_handler),
+        )
+        .route(
+            "/api/v1/marketplace/agents/{agent_id}/install",
+            delete(agents::handlers::uninstall_agent_handler),
+        )
+        .route(
+            "/api/v1/marketplace/installed",
+            get(agents::handlers::list_installed_agents_handler),
+        )
+        .route(
+            "/api/v1/backup/initiate",
+            post(backup::handlers::initiate_backup),
+        )
         .route("/api/v1/backup/list", get(backup::handlers::list_backups))
-        .route("/api/v1/backup/{id}/restore", post(backup::handlers::restore_backup))
-        .route("/api/v1/backup/{id}", delete(backup::handlers::delete_backup))
-        .route("/api/v1/backup/settings", put(backup::handlers::update_settings))
-        .route("/api/v1/backup/settings", get(backup::handlers::get_settings))
+        .route(
+            "/api/v1/backup/{id}/restore",
+            post(backup::handlers::restore_backup),
+        )
+        .route(
+            "/api/v1/backup/{id}",
+            delete(backup::handlers::delete_backup),
+        )
+        .route(
+            "/api/v1/backup/settings",
+            put(backup::handlers::update_settings),
+        )
+        .route(
+            "/api/v1/backup/settings",
+            get(backup::handlers::get_settings),
+        )
         .route("/api/v1/reports", post(moderation::handlers::create_report))
         .route(
             "/api/v1/users/{id}/block",
@@ -194,7 +249,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health_check))
         .route("/auth/request-otp", post(auth::handlers::request_otp))
         .route("/auth/verify-otp", post(auth::handlers::verify_otp))
-        .route("/auth/register-device", post(auth::handlers::register_device))
+        .route(
+            "/auth/register-device",
+            post(auth::handlers::register_device),
+        )
         .route("/auth/refresh", post(auth::handlers::refresh_token))
         .route("/ws", get(ws::handler::ws_handler))
         .route("/agent/ws", get(agents::handlers::agent_ws_handler))
@@ -203,12 +261,18 @@ async fn main() -> anyhow::Result<()> {
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let host = std::env::var("PAW_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = std::env::var("PAW_PORT")
+        .or_else(|_| std::env::var("PORT"))
+        .ok()
+        .and_then(|value| value.parse::<u16>().ok())
+        .unwrap_or(38173);
+    let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
     tracing::info!("Paw server listening on {}", addr);
-    
+
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }
 

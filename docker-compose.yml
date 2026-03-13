@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +6,7 @@ services:
       POSTGRES_PASSWORD: paw_dev_password
       POSTGRES_DB: paw_dev
     ports:
-      - "5432:5432"
+      - "35432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,8 +22,8 @@ services:
       MINIO_ROOT_USER: paw_minio
       MINIO_ROOT_PASSWORD: paw_minio_password
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "39080:9000"
+      - "39081:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -37,8 +35,8 @@ services:
   nats:
     image: nats:2.10-alpine
     ports:
-      - "4222:4222"
-      - "8222:8222"  # monitoring
+      - "34223:4222"
+      - "38223:8222"  # monitoring
     command: ["--jetstream"]
 
 volumes:

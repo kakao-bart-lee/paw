@@ -1,8 +1,8 @@
+use async_trait::async_trait;
 use aws_credential_types::Credentials;
 use aws_sdk_s3::config::Builder as S3ConfigBuilder;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::primitives::ByteStream;
-use async_trait::async_trait;
 use std::time::Duration;
 
 use aws_sdk_s3::Client;
@@ -16,11 +16,8 @@ trait StorageProvider {
         content_type: &str,
     ) -> Result<String, anyhow::Error>;
 
-    async fn presigned_url(
-        &self,
-        key: &str,
-        expires_in: Duration,
-    ) -> Result<String, anyhow::Error>;
+    async fn presigned_url(&self, key: &str, expires_in: Duration)
+        -> Result<String, anyhow::Error>;
 
     async fn presigned_put_url(
         &self,
@@ -43,7 +40,7 @@ struct GcpStorage {
 
 impl AwsS3Storage {
     async fn from_env() -> Self {
-        let endpoint = read_env("S3_ENDPOINT", Some("http://localhost:9000"));
+        let endpoint = read_env("S3_ENDPOINT", Some("http://localhost:39080"));
         let bucket = read_env("S3_BUCKET", Some("paw-media"));
         let region = read_env("S3_REGION", Some("us-east-1"));
         let access_key = read_credential("AWS_ACCESS_KEY_ID", "S3_ACCESS_KEY");
@@ -55,9 +52,8 @@ impl AwsS3Storage {
 
         if let (Some(access), Some(secret)) = (access_key, secret_key) {
             if !access.is_empty() && !secret.is_empty() {
-                cfg_builder = cfg_builder.credentials_provider(Credentials::new(
-                    access, secret, None, None, "env",
-                ));
+                cfg_builder = cfg_builder
+                    .credentials_provider(Credentials::new(access, secret, None, None, "env"));
             }
         } else {
             cfg_builder = cfg_builder.credentials_provider(Credentials::new(
@@ -99,9 +95,8 @@ impl GcpStorage {
             std::env::var("GOOGLE_STORAGE_SECRET_KEY").ok(),
         ) {
             if !access.is_empty() && !secret.is_empty() {
-                cfg_builder = cfg_builder.credentials_provider(Credentials::new(
-                    access, secret, None, None, "gcp",
-                ));
+                cfg_builder = cfg_builder
+                    .credentials_provider(Credentials::new(access, secret, None, None, "gcp"));
             }
         }
 

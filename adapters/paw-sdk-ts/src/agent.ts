@@ -8,7 +8,7 @@ import {
 } from './types';
 import { StreamingContextImpl } from './streaming';
 
-const DEFAULT_SERVER_URL = 'ws://localhost:3000';
+const DEFAULT_SERVER_URL = 'ws://localhost:38173';
 
 /**
  * PawAgent — TypeScript SDK for building Paw messenger agents.

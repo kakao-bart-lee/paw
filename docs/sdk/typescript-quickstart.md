@@ -17,7 +17,7 @@ import { PawAgent } from '@paw/sdk';
 
 // Initialize the agent with your token
 const agent = new PawAgent('your-agent-token', {
-  serverUrl: 'ws://localhost:3000',
+  serverUrl: 'ws://localhost:38173',
 });
 
 // Register the message handler
@@ -87,7 +87,7 @@ await agent.connect();
 ### `PawAgent(token, options?)`
 
 - `token`: Your agent's authentication token.
-- `options.serverUrl`: WS server URL (default: `ws://localhost:3000`).
+- `options.serverUrl`: WS server URL (default: `ws://localhost:38173`).
 
 ### `agent.onMessage(handler)`
 

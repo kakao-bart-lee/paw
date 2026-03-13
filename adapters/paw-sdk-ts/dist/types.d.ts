@@ -16,7 +16,7 @@ export interface ConversationContext {
     recent_messages: Message[];
 }
 export interface AgentOptions {
-    /** WebSocket server URL. Default: `ws://localhost:3000` */
+    /** WebSocket server URL. Default: `ws://localhost:38173` */
     serverUrl?: string;
 }
 export interface StreamChunk {

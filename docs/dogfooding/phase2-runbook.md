@@ -31,11 +31,11 @@ cp .env.example .env
 
 Required env values (additions for Phase 2):
 
-- `NATS_URL=nats://localhost:4222`
+- `NATS_URL=nats://localhost:34223`
 - `PAW_HOST=0.0.0.0`
-- `PAW_PORT=3000`
-- `DATABASE_URL=postgresql://paw:paw_dev_password@localhost:5432/paw_dev`
-- `S3_ENDPOINT=http://localhost:9000`
+- `PAW_PORT=38173`
+- `DATABASE_URL=postgresql://paw:paw_dev_password@localhost:35432/paw_dev`
+- `S3_ENDPOINT=http://localhost:39080`
 - `S3_BUCKET=paw-media`
 - `S3_ACCESS_KEY=paw_minio`
 - `S3_SECRET_KEY=paw_minio_password`
@@ -51,11 +51,11 @@ docker-compose up -d
 
 Expected exposed services:
 
-- PostgreSQL: `localhost:5432`
-- MinIO API: `localhost:9000`
-- MinIO Console: `http://localhost:9001`
-- NATS JetStream: `localhost:4222`
-- NATS Management: `http://localhost:8222`
+- PostgreSQL: `localhost:35432`
+- MinIO API: `localhost:39080`
+- MinIO Console: `http://localhost:39081`
+- NATS JetStream: `localhost:34223`
+- NATS Management: `http://localhost:38223`
 
 ## Start Paw Server
 
@@ -65,14 +65,14 @@ From repository root:
 ~/.cargo/bin/cargo run -p paw-server
 ```
 
-Server default endpoint: `http://localhost:3000`
+Server default endpoint: `http://localhost:38173`
 
 ## Agent Gateway: Register an Agent Token
 
 To register a new agent and get a token:
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/agents/register \
+curl -X POST http://localhost:38173/api/v1/agents/register \
   -H "Authorization: Bearer <your_user_session_token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -111,7 +111,7 @@ Note: Update `echo_agent.py` to use the environment variable or replace the plac
 
 1. **Create Group**: Create a conversation with multiple members.
 ```bash
-curl -X POST http://localhost:3000/api/v1/conversations \
+curl -X POST http://localhost:38173/api/v1/conversations \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -127,7 +127,7 @@ curl -X POST http://localhost:3000/api/v1/conversations \
 
 1. **Invite Agent**: Invite your registered agent to a conversation.
 ```bash
-curl -X POST http://localhost:3000/conversations/:id/agents \
+curl -X POST http://localhost:38173/conversations/:id/agents \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{

@@ -163,7 +163,7 @@ flowchart LR
 - `JWT_SECRET`
 - `OTP_PROVIDER`
 
-개발 기본값 기준으로는 PostgreSQL은 `localhost:5432`, MinIO는 `localhost:9000`, 서버는 `:3000`을 사용합니다.
+개발 기본값 기준으로는 PostgreSQL은 `localhost:35432`, MinIO는 `localhost:39080`, 서버는 `:38173`을 사용합니다.
 
 ### 5.3 의존 서비스 실행
 
@@ -247,7 +247,7 @@ flutter run
 cd paw-client/e2e/playwright
 npm install
 npm run install:browsers
-PAW_WEB_BASE_URL=http://127.0.0.1:8080 npm test
+PAW_WEB_BASE_URL=http://127.0.0.1:38481 npm test
 ```
 
 - 기본 시나리오: `/login` → `/chat` → `/profile/me` → 새로고침

@@ -28,7 +28,7 @@ void main() {
       tester,
     ) async {
       getIt.registerSingleton<ApiClient>(
-        ApiClient(baseUrl: 'http://localhost:3000'),
+        ApiClient(baseUrl: 'http://localhost:38173'),
       );
       getIt.registerSingleton<WsService>(
         _FakeWsService(state: WsConnectionState.connected, hasToken: true),
@@ -56,7 +56,7 @@ void main() {
 
     testWidgets('shows error text when messages fail to load', (tester) async {
       getIt.registerSingleton<ApiClient>(
-        ApiClient(baseUrl: 'http://localhost:3000'),
+        ApiClient(baseUrl: 'http://localhost:38173'),
       );
       getIt.registerSingleton<WsService>(
         _FakeWsService(state: WsConnectionState.connected, hasToken: true),
@@ -85,7 +85,7 @@ void main() {
 
     testWidgets('shows empty text when ready without messages', (tester) async {
       getIt.registerSingleton<ApiClient>(
-        ApiClient(baseUrl: 'http://localhost:3000'),
+        ApiClient(baseUrl: 'http://localhost:38173'),
       );
       getIt.registerSingleton<WsService>(
         _FakeWsService(state: WsConnectionState.connected, hasToken: true),
@@ -114,7 +114,7 @@ void main() {
     testWidgets('shows reconnecting guidance when ws is retrying', (
       tester,
     ) async {
-      final apiClient = ApiClient(baseUrl: 'http://localhost:3000');
+      final apiClient = ApiClient(baseUrl: 'http://localhost:38173');
       apiClient.setToken('token');
       getIt.registerSingleton<ApiClient>(apiClient);
       getIt.registerSingleton<WsService>(
@@ -178,7 +178,7 @@ class _FakeWsService extends WsService {
   _FakeWsService({required WsConnectionState state, required bool hasToken})
     : _state = ValueNotifier(state),
       super(
-        serverUrl: 'http://localhost:3000',
+        serverUrl: 'http://localhost:38173',
         reconnectionManager: ReconnectionManager(),
       );
 

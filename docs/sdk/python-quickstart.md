@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
 ## API Reference
 
-### `PawAgent(token, server_url="ws://localhost:3000")`
+### `PawAgent(token, server_url="ws://localhost:38173")`
 
 - `token`: Your agent's authentication token.
 - `server_url`: The Paw server WebSocket URL.

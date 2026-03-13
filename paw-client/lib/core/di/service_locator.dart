@@ -18,7 +18,7 @@ Future<void> setupServiceLocator() async {
   // Config
   const serverUrl = String.fromEnvironment(
     'SERVER_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'http://localhost:38173',
   );
 
   if (!getIt.isRegistered<SessionEvents>()) {

@@ -14,7 +14,7 @@ npm install @paw/sdk
 import { PawAgent } from '@paw/sdk';
 
 const agent = new PawAgent('your-agent-token', {
-  serverUrl: 'ws://localhost:3000',
+  serverUrl: 'ws://localhost:38173',
 });
 
 agent.onMessage(async (ctx, streaming) => {
@@ -63,7 +63,7 @@ agent.onMessage(async (ctx, streaming) => {
 | Param | Type | Description |
 |-------|------|-------------|
 | `token` | `string` | Agent authentication token |
-| `options.serverUrl` | `string` | WS server URL (default: `ws://localhost:3000`) |
+| `options.serverUrl` | `string` | WS server URL (default: `ws://localhost:38173`) |
 
 ### `agent.onMessage(handler)`
 

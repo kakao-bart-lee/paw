@@ -51,8 +51,8 @@ cargo run -p paw-server --bin seed
 
 # Run final benchmark
 k6 run \
-  --env BASE_URL=http://localhost:3000 \
-  --env WS_URL=ws://localhost:3000 \
+  --env BASE_URL=http://localhost:38173 \
+  --env WS_URL=ws://localhost:38173 \
   --env TOKEN=<jwt_access_token> \
   --env CONVERSATION_ID=<uuid> \
   --env MEDIA_ID=<uuid> \

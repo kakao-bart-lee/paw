@@ -12,7 +12,7 @@
  *
  * Run:
  *   k6 run k6/http_load_test.js
- *   k6 run --env BASE_URL=http://localhost:3000 k6/http_load_test.js
+ *   k6 run --env BASE_URL=http://localhost:38173 k6/http_load_test.js
  */
 
 import http from "k6/http";
@@ -20,7 +20,7 @@ import { check, group, sleep } from "k6";
 import { Counter, Rate, Trend } from "k6/metrics";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:38173";
 const TOKEN = __ENV.TOKEN || "REPLACE_WITH_JWT_ACCESS_TOKEN";
 const PHONE_PREFIX = __ENV.PHONE_PREFIX || "+8210";
 

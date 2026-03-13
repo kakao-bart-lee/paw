@@ -29,7 +29,7 @@ Paw 서버의 동작을 제어하는 주요 환경 변수 목록입니다.
 ### 메시징 (Messaging - NATS)
 | 변수명 | 필수 여부 | 기본값 | 설명 |
 |:---|:---:|:---:|:---|
-| `NATS_URL` | No | `localhost:4222` | NATS 서버 주소. 연결 실패 시 서버는 경고를 남기고 계속 작동함. |
+| `NATS_URL` | No | `localhost:34223` | NATS 서버 주소. 연결 실패 시 서버는 경고를 남기고 계속 작동함. |
 
 ### 로깅 (Logging)
 | 변수명 | 필수 여부 | 기본값 | 설명 |
@@ -50,17 +50,17 @@ Paw 서버의 동작을 제어하는 주요 환경 변수 목록입니다.
 JWT_SECRET=your_local_development_secret_key
 
 # Database
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/paw
+DATABASE_URL=postgres://postgres:postgres@localhost:35432/paw
 
 # Storage (Local MinIO)
-S3_ENDPOINT=http://localhost:9000
+S3_ENDPOINT=http://localhost:39080
 S3_BUCKET=paw-media
 S3_ACCESS_KEY=minioadmin
 S3_SECRET_KEY=minioadmin
 S3_REGION=us-east-1
 
 # Messaging
-NATS_URL=nats://localhost:4222
+NATS_URL=nats://localhost:34223
 
 # Logging
 RUST_LOG=paw_server=debug,tower_http=debug,info

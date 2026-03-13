@@ -41,7 +41,7 @@ class OpenClawAdapter {
     e2eeConfig;
     constructor(token, options = {}) {
         this.token = token;
-        this.serverUrl = (options.serverUrl ?? 'ws://localhost:3000').replace(/\/$/, '');
+        this.serverUrl = (options.serverUrl ?? 'ws://localhost:38173').replace(/\/$/, '');
         this.channelConfig = options.channelConfig ?? {};
         this.agentId = options.agentId ?? '00000000-0000-0000-0000-000000000000';
         this.defaultFormat = options.defaultFormat ?? 'markdown';

@@ -1,6 +1,6 @@
 use base64::Engine;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -42,8 +42,12 @@ fn verify_token(token: &str, secret: &str, expected_type: Option<&str>) -> Resul
     let mut validation = Validation::new(Algorithm::HS256);
     validation.validate_exp = true;
 
-    let data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &validation)
-        .map_err(|e| format!("invalid token: {e}"))?;
+    let data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &validation,
+    )
+    .map_err(|e| format!("invalid token: {e}"))?;
 
     if let Some(expected) = expected_type {
         if data.claims.token_type != expected {
@@ -58,7 +62,13 @@ fn verify_token(token: &str, secret: &str, expected_type: Option<&str>) -> Resul
 #[test]
 fn jwt_session_token_roundtrip() {
     let user_id = Uuid::new_v4();
-    let token = issue_token(user_id, None, "session", Duration::minutes(15), TEST_JWT_SECRET);
+    let token = issue_token(
+        user_id,
+        None,
+        "session",
+        Duration::minutes(15),
+        TEST_JWT_SECRET,
+    );
     let claims = verify_token(&token, TEST_JWT_SECRET, Some("session")).unwrap();
 
     assert_eq!(claims.sub, user_id);
@@ -104,21 +114,39 @@ fn jwt_refresh_token_thirty_day_ttl() {
 
 #[test]
 fn jwt_wrong_secret_rejected() {
-    let token = issue_token(Uuid::new_v4(), None, "session", Duration::minutes(15), TEST_JWT_SECRET);
+    let token = issue_token(
+        Uuid::new_v4(),
+        None,
+        "session",
+        Duration::minutes(15),
+        TEST_JWT_SECRET,
+    );
     let result = verify_token(&token, "wrong_secret", Some("session"));
     assert!(result.is_err());
 }
 
 #[test]
 fn jwt_wrong_token_type_rejected() {
-    let token = issue_token(Uuid::new_v4(), None, "session", Duration::minutes(15), TEST_JWT_SECRET);
+    let token = issue_token(
+        Uuid::new_v4(),
+        None,
+        "session",
+        Duration::minutes(15),
+        TEST_JWT_SECRET,
+    );
     let result = verify_token(&token, TEST_JWT_SECRET, Some("access"));
     assert!(result.is_err());
 }
 
 #[test]
 fn jwt_expired_token_rejected() {
-    let token = issue_token(Uuid::new_v4(), None, "session", Duration::seconds(-120), TEST_JWT_SECRET);
+    let token = issue_token(
+        Uuid::new_v4(),
+        None,
+        "session",
+        Duration::seconds(-120),
+        TEST_JWT_SECRET,
+    );
     let result = verify_token(&token, TEST_JWT_SECRET, Some("session"));
     assert!(result.is_err());
 }
@@ -222,7 +250,10 @@ fn protocol_typing_omits_user_id_when_none() {
         user_id: None,
     };
     let json = serde_json::to_string(&msg).unwrap();
-    assert!(!json.contains("user_id"), "user_id=None should be omitted via skip_serializing_if");
+    assert!(
+        !json.contains("user_id"),
+        "user_id=None should be omitted via skip_serializing_if"
+    );
 }
 
 #[test]
@@ -263,7 +294,7 @@ fn protocol_message_ack_roundtrip() {
 async fn auth_request_otp_valid_phone() {
     let client = reqwest::Client::new();
     let resp = client
-        .post("http://localhost:3000/auth/request-otp")
+        .post("http://localhost:38173/auth/request-otp")
         .json(&serde_json::json!({ "phone": "+821012345678" }))
         .send()
         .await
@@ -279,7 +310,7 @@ async fn auth_request_otp_valid_phone() {
 async fn auth_request_otp_invalid_phone_rejected() {
     let client = reqwest::Client::new();
     let resp = client
-        .post("http://localhost:3000/auth/request-otp")
+        .post("http://localhost:38173/auth/request-otp")
         .json(&serde_json::json!({ "phone": "123" }))
         .send()
         .await
@@ -295,7 +326,7 @@ async fn auth_request_otp_invalid_phone_rejected() {
 async fn auth_verify_otp_invalid_code_format() {
     let client = reqwest::Client::new();
     let resp = client
-        .post("http://localhost:3000/auth/verify-otp")
+        .post("http://localhost:38173/auth/verify-otp")
         .json(&serde_json::json!({ "phone": "+821012345678", "code": "abc" }))
         .send()
         .await
@@ -312,7 +343,7 @@ async fn auth_full_flow_request_verify_register() {
     let phone = format!("+8210{:08}", rand_u32() % 100_000_000);
 
     let resp = client
-        .post("http://localhost:3000/auth/request-otp")
+        .post("http://localhost:38173/auth/request-otp")
         .json(&serde_json::json!({ "phone": phone }))
         .send()
         .await
@@ -320,7 +351,7 @@ async fn auth_full_flow_request_verify_register() {
     assert_eq!(resp.status(), 200);
 
     let resp = client
-        .post("http://localhost:3000/auth/verify-otp")
+        .post("http://localhost:38173/auth/verify-otp")
         .json(&serde_json::json!({ "phone": phone, "code": "000000" }))
         .send()
         .await
@@ -333,7 +364,7 @@ async fn auth_full_flow_request_verify_register() {
 #[tokio::test]
 #[ignore = "requires running paw-server with auth token"]
 async fn message_send_and_retrieve() {
-    let base = "http://localhost:3000";
+    let base = "http://localhost:38173";
     let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
     let conv_id = std::env::var("PAW_TEST_CONV_ID")
         .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
@@ -379,7 +410,7 @@ async fn message_send_and_retrieve() {
 #[tokio::test]
 #[ignore = "requires running paw-server with auth token"]
 async fn message_idempotency_returns_same_result() {
-    let base = "http://localhost:3000";
+    let base = "http://localhost:38173";
     let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
     let conv_id = std::env::var("PAW_TEST_CONV_ID")
         .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
@@ -411,8 +442,14 @@ async fn message_idempotency_returns_same_result() {
     if resp1.status() == 200 && resp2.status() == 200 {
         let body1: serde_json::Value = resp1.json().await.unwrap();
         let body2: serde_json::Value = resp2.json().await.unwrap();
-        assert_eq!(body1["id"], body2["id"], "idempotent sends must return same message id");
-        assert_eq!(body1["seq"], body2["seq"], "idempotent sends must return same seq");
+        assert_eq!(
+            body1["id"], body2["id"],
+            "idempotent sends must return same message id"
+        );
+        assert_eq!(
+            body1["seq"], body2["seq"],
+            "idempotent sends must return same seq"
+        );
     }
 }
 
@@ -425,7 +462,7 @@ async fn ws_connect_receives_hello_ok() {
     use tokio_tungstenite::connect_async;
 
     let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
-    let url = format!("ws://localhost:3000/ws?token={token}");
+    let url = format!("ws://localhost:38173/ws?token={token}");
 
     let (mut ws_stream, _) = connect_async(&url).await.expect("WS connect failed");
 
@@ -450,7 +487,7 @@ async fn ws_sync_gap_fill() {
     let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
     let conv_id = std::env::var("PAW_TEST_CONV_ID")
         .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
-    let url = format!("ws://localhost:3000/ws?token={token}");
+    let url = format!("ws://localhost:38173/ws?token={token}");
 
     let (mut ws_stream, _) = connect_async(&url).await.expect("WS connect failed");
 
@@ -492,7 +529,10 @@ async fn ws_sync_gap_fill() {
     for window in received.windows(2) {
         let seq_a = window[0]["seq"].as_i64().unwrap();
         let seq_b = window[1]["seq"].as_i64().unwrap();
-        assert!(seq_b > seq_a, "gap-fill messages must be ordered by seq: {seq_a} < {seq_b}");
+        assert!(
+            seq_b > seq_a,
+            "gap-fill messages must be ordered by seq: {seq_a} < {seq_b}"
+        );
     }
 }
 
@@ -501,7 +541,7 @@ async fn ws_sync_gap_fill() {
 #[tokio::test]
 #[ignore = "requires running paw-server"]
 async fn health_check_returns_ok() {
-    let resp = reqwest::get("http://localhost:3000/health").await.unwrap();
+    let resp = reqwest::get("http://localhost:38173/health").await.unwrap();
     assert_eq!(resp.status(), 200);
     assert_eq!(resp.text().await.unwrap(), "OK");
 }
@@ -617,7 +657,9 @@ fn rand_u32() -> u32 {
 #[test]
 fn otp_code_must_be_six_ascii_digits() {
     let valid_codes = ["000000", "123456", "999999"];
-    let invalid_codes = ["12345", "1234567", "abcdef", "12 456", "", "12345a", "00000\n"];
+    let invalid_codes = [
+        "12345", "1234567", "abcdef", "12 456", "", "12345a", "00000\n",
+    ];
 
     for code in valid_codes {
         assert!(
@@ -716,7 +758,10 @@ fn different_idempotency_keys_produce_different_messages() {
 
     let json_a = serde_json::to_string(&msg_a).unwrap();
     let json_b = serde_json::to_string(&msg_b).unwrap();
-    assert_ne!(json_a, json_b, "different idempotency keys must serialize differently");
+    assert_ne!(
+        json_a, json_b,
+        "different idempotency keys must serialize differently"
+    );
 }
 
 #[test]
@@ -1162,7 +1207,11 @@ fn invite_agent_request_serialization_phase2() {
 
     let json = serde_json::to_value(&req).unwrap();
     let object = json.as_object().unwrap();
-    assert_eq!(object.len(), 1, "request should only contain agent_id field");
+    assert_eq!(
+        object.len(),
+        1,
+        "request should only contain agent_id field"
+    );
     assert_eq!(json["agent_id"], req.agent_id.to_string());
 
     let parsed: InviteAgentRequest = serde_json::from_value(json).unwrap();

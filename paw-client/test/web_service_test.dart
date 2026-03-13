@@ -17,9 +17,9 @@ void main() {
     });
 
     test('getWebSocketUrl converts http to ws', () {
-      final result = service.getWebSocketUrl('http://localhost:3000');
+      final result = service.getWebSocketUrl('http://localhost:38173');
       expect(result, startsWith('ws://'));
-      expect(result, contains('localhost:3000'));
+      expect(result, contains('localhost:38173'));
     });
 
     test('getWebSocketUrl converts https to wss', () {
@@ -29,9 +29,9 @@ void main() {
     });
 
     test('getWebSocketUrl preserves existing ws scheme', () {
-      final result = service.getWebSocketUrl('ws://localhost:3000/ws');
+      final result = service.getWebSocketUrl('ws://localhost:38173/ws');
       expect(result, startsWith('ws://'));
-      expect(result, contains('localhost:3000'));
+      expect(result, contains('localhost:38173'));
     });
 
     test('getWebSocketUrl preserves existing wss scheme', () {
@@ -42,8 +42,8 @@ void main() {
 
     test('getWebSocketUrl preserves path and query parameters', () {
       final result =
-          service.getWebSocketUrl('http://localhost:3000/api?key=value');
-      expect(result, 'ws://localhost:3000/api?key=value');
+          service.getWebSocketUrl('http://localhost:38173/api?key=value');
+      expect(result, 'ws://localhost:38173/api?key=value');
     });
 
     test('supportsServiceWorker returns false when not on web', () {

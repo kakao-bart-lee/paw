@@ -60,7 +60,7 @@ export class OpenClawAdapter {
   private readonly e2eeConfig: E2eeConfig | null;
 
   constructor(private readonly token: string, options: AdapterOptions = {}) {
-    this.serverUrl = (options.serverUrl ?? 'ws://localhost:3000').replace(/\/$/, '');
+    this.serverUrl = (options.serverUrl ?? 'ws://localhost:38173').replace(/\/$/, '');
     this.channelConfig = options.channelConfig ?? {};
     this.agentId = options.agentId ?? '00000000-0000-0000-0000-000000000000';
     this.defaultFormat = options.defaultFormat ?? 'markdown';

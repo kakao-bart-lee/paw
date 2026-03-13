@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PawAgent = void 0;
 const ws_1 = __importDefault(require("ws"));
 const streaming_1 = require("./streaming");
-const DEFAULT_SERVER_URL = 'ws://localhost:3000';
+const DEFAULT_SERVER_URL = 'ws://localhost:38173';
 /**
  * PawAgent — TypeScript SDK for building Paw messenger agents.
  *

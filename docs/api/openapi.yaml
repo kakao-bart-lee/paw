@@ -8,7 +8,7 @@ info:
 servers:
   - url: https://api.paw.im/api/v1
     description: Production server
-  - url: http://localhost:3000
+  - url: http://localhost:38173
     description: Local development server
 
 components:

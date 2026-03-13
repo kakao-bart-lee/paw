@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="$ROOT_DIR/paw-client"
 WEB_LOG="/tmp/paw_playwright_smoke_web.log"
 WEB_PID=""
-WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:8080}"
+WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:38481}"
 
 cleanup() {
   if [[ -n "$WEB_PID" ]]; then
@@ -18,7 +18,7 @@ cd "$APP_DIR"
 
 if ! curl -sf "$WEB_BASE_URL" >/dev/null 2>&1; then
   echo "[playwright-smoke] starting Flutter web-server at $WEB_BASE_URL"
-  flutter run -d web-server --web-port 8080 >"$WEB_LOG" 2>&1 &
+  flutter run -d web-server --web-port 38481 >"$WEB_LOG" 2>&1 &
   WEB_PID=$!
 
   for _ in {1..90}; do

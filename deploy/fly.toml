@@ -7,7 +7,7 @@ primary_region = "nrt"
   dockerfile = "../Dockerfile"
 
 [http_service]
-  internal_port = 3000
+  internal_port = 38173
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
@@ -21,7 +21,7 @@ primary_region = "nrt"
 
 [env]
   RUST_LOG = "info"
-  PORT = "3000"
+  PORT = "38173"
 
 [mounts]
   source = "paw_data"

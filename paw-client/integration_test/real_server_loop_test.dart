@@ -18,7 +18,7 @@ import 'package:paw_client/features/chat/providers/chat_provider.dart';
 const _uuid = Uuid();
 const _apiBaseUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'http://127.0.0.1:3000',
+  defaultValue: 'http://127.0.0.1:38173',
 );
 
 void main() {

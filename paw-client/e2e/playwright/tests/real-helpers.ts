@@ -8,12 +8,12 @@ export type ConsoleFailure = {
 };
 
 export const apiBaseUrl =
-  process.env.PAW_API_BASE_URL ?? 'http://127.0.0.1:3000';
+  process.env.PAW_API_BASE_URL ?? 'http://127.0.0.1:38173';
 export const webBaseUrl =
-  process.env.PAW_WEB_BASE_URL ?? 'http://127.0.0.1:8080';
+  process.env.PAW_WEB_BASE_URL ?? 'http://127.0.0.1:38481';
 export const dbUrl =
   process.env.DATABASE_URL ??
-  'postgres://postgres:postgres@127.0.0.1:5432/paw';
+  'postgres://postgres:postgres@127.0.0.1:35432/paw';
 
 export function startFailureCollection(page: Page) {
   const failures: ConsoleFailure[] = [];

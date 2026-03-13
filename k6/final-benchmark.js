@@ -8,8 +8,8 @@
  *
  * Run:
  *   k6 run k6/final-benchmark.js
- *   k6 run --env BASE_URL=http://localhost:3000 \
- *           --env WS_URL=ws://localhost:3000 \
+ *   k6 run --env BASE_URL=http://localhost:38173 \
+ *           --env WS_URL=ws://localhost:38173 \
  *           --env TOKEN=<jwt> \
  *           k6/final-benchmark.js
  */
@@ -24,8 +24,8 @@ import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 // Configuration
 // ---------------------------------------------------------------------------
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
-const WS_URL = __ENV.WS_URL || "ws://localhost:3000";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:38173";
+const WS_URL = __ENV.WS_URL || "ws://localhost:38173";
 const TOKEN = __ENV.TOKEN || "REPLACE_WITH_JWT_ACCESS_TOKEN";
 const CONVERSATION_ID =
   __ENV.CONVERSATION_ID || "00000000-0000-0000-0000-000000000001";

@@ -128,7 +128,7 @@ class _SeedMessagesNotifier extends MessagesNotifier {
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient({this.throwOnSend = false})
-    : super(baseUrl: 'http://localhost:3000');
+    : super(baseUrl: 'http://localhost:38173');
 
   final bool throwOnSend;
 
@@ -156,7 +156,7 @@ class _FakeApiClient extends ApiClient {
 class _FakeWsService extends WsService {
   _FakeWsService({required this.isConnectedValue})
     : super(
-        serverUrl: 'http://localhost:3000',
+        serverUrl: 'http://localhost:38173',
         reconnectionManager: ReconnectionManager(),
       );
 

@@ -4,7 +4,7 @@ async function main(): Promise<void> {
   const token = process.env.PAW_AGENT_TOKEN ?? 'dev-token';
 
   const adapter = new OpenClawAdapter(token, {
-    serverUrl: process.env.PAW_SERVER_URL ?? 'ws://localhost:3000',
+    serverUrl: process.env.PAW_SERVER_URL ?? 'ws://localhost:38173',
     channelConfig: { defaultChannel: 'slack' },
   });
 

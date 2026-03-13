@@ -15,11 +15,22 @@ set -a
 source .env
 set +a
 
+ensure_sqlx_cli() {
+  if cargo sqlx --help >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "sqlx-cli not found; installing via cargo..."
+  cargo install sqlx-cli --no-default-features --features rustls,postgres
+}
+
 docker compose up -d
+
+ensure_sqlx_cli
 
 (
   cd paw-server
-  sqlx migrate run
+  cargo sqlx migrate run
 )
 
 cargo run -p paw-server

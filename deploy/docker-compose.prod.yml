@@ -4,7 +4,7 @@ services:
   paw-server:
     image: paw-server:latest
     ports:
-      - "3000:3000"
+      - "38173:38173"
     environment:
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - JWT_SECRET=${JWT_SECRET}
@@ -13,6 +13,7 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - RUST_LOG=info
+      - PORT=38173
     depends_on:
       - db
       - nats
@@ -32,7 +33,7 @@ services:
   nats:
     image: nats:2.9-alpine
     ports:
-      - "4222:4222"
+      - "34223:4222"
     restart: always
 
   minio:

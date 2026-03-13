@@ -30,11 +30,11 @@ cp .env.example .env
 
 Required env values (same as Phase 2):
 
-- `NATS_URL=nats://localhost:4222`
+- `NATS_URL=nats://localhost:34223`
 - `PAW_HOST=0.0.0.0`
-- `PAW_PORT=3000`
-- `DATABASE_URL=postgresql://paw:paw_dev_password@localhost:5432/paw_dev`
-- `S3_ENDPOINT=http://localhost:9000`
+- `PAW_PORT=38173`
+- `DATABASE_URL=postgresql://paw:paw_dev_password@localhost:35432/paw_dev`
+- `S3_ENDPOINT=http://localhost:39080`
 - `S3_BUCKET=paw-media`
 - `S3_ACCESS_KEY=paw_minio`
 - `S3_SECRET_KEY=paw_minio_password`
@@ -50,11 +50,11 @@ docker-compose up -d
 
 Expected exposed services:
 
-- PostgreSQL: `localhost:5432`
-- MinIO API: `localhost:9000`
-- MinIO Console: `http://localhost:9001`
-- NATS JetStream: `localhost:4222`
-- NATS Management: `http://localhost:8222`
+- PostgreSQL: `localhost:35432`
+- MinIO API: `localhost:39080`
+- MinIO Console: `http://localhost:39081`
+- NATS JetStream: `localhost:34223`
+- NATS Management: `http://localhost:38223`
 
 ## Start Paw Server
 
@@ -64,13 +64,13 @@ From repository root:
 ~/.cargo/bin/cargo run -p paw-server
 ```
 
-Server default endpoint: `http://localhost:3000`
+Server default endpoint: `http://localhost:38173`
 
 ## Channels
 
 1. **Create Channel**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/channels \
+curl -X POST http://localhost:38173/api/v1/channels \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -81,13 +81,13 @@ curl -X POST http://localhost:3000/api/v1/channels \
 
 2. **Subscribe to Channel**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/channels/:id/subscribe \
+curl -X POST http://localhost:38173/api/v1/channels/:id/subscribe \
   -H "Authorization: Bearer <token>"
 ```
 
 3. **Send Message as Owner**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/channels/:id/messages \
+curl -X POST http://localhost:38173/api/v1/channels/:id/messages \
   -H "Authorization: Bearer <owner_token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -111,7 +111,7 @@ curl -X POST http://localhost:3000/api/v1/channels/:id/messages \
 
 1. **Register Token**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/push/register \
+curl -X POST http://localhost:38173/api/v1/push/register \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -124,7 +124,7 @@ curl -X POST http://localhost:3000/api/v1/push/register \
 
 3. **Mute Conversation**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/conversations/:id/mute \
+curl -X POST http://localhost:38173/api/v1/conversations/:id/mute \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -132,7 +132,7 @@ curl -X POST http://localhost:3000/api/v1/conversations/:id/mute \
 
 1. **Initiate Backup**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/backup/initiate \
+curl -X POST http://localhost:38173/api/v1/backup/initiate \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -140,13 +140,13 @@ curl -X POST http://localhost:3000/api/v1/backup/initiate \
 
 3. **List Backups**:
 ```bash
-curl -X GET http://localhost:3000/api/v1/backup/list \
+curl -X GET http://localhost:38173/api/v1/backup/list \
   -H "Authorization: Bearer <token>"
 ```
 
 4. **Restore Backup**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/backup/:id/restore \
+curl -X POST http://localhost:38173/api/v1/backup/:id/restore \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -154,19 +154,19 @@ curl -X POST http://localhost:3000/api/v1/backup/:id/restore \
 
 1. **Search Agents**:
 ```bash
-curl -X GET http://localhost:3000/api/v1/marketplace/agents \
+curl -X GET http://localhost:38173/api/v1/marketplace/agents \
   -H "Authorization: Bearer <token>"
 ```
 
 2. **Install Agent**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/marketplace/agents/:id/install \
+curl -X POST http://localhost:38173/api/v1/marketplace/agents/:id/install \
   -H "Authorization: Bearer <token>"
 ```
 
 3. **Verify Installed**:
 ```bash
-curl -X GET http://localhost:3000/api/v1/marketplace/installed \
+curl -X GET http://localhost:38173/api/v1/marketplace/installed \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -213,7 +213,7 @@ flutter build web
 
 1. **Submit Report**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/reports \
+curl -X POST http://localhost:38173/api/v1/reports \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -224,7 +224,7 @@ curl -X POST http://localhost:3000/api/v1/reports \
 
 2. **Block User**:
 ```bash
-curl -X POST http://localhost:3000/api/v1/users/:id/block \
+curl -X POST http://localhost:38173/api/v1/users/:id/block \
   -H "Authorization: Bearer <token>"
 ```
 

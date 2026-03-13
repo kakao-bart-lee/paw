@@ -16,13 +16,13 @@ void main() {
       () async {
         final channel = _FakeWebSocketChannel();
         final service = WsService(
-          serverUrl: 'http://localhost:3000',
+          serverUrl: 'http://localhost:38173',
           reconnectionManager: ReconnectionManager(),
           channelFactory: (_) => channel,
         );
         addTearDown(service.dispose);
 
-        await service.connect('http://localhost:3000', 'token');
+        await service.connect('http://localhost:38173', 'token');
 
         expect(_stateOf(service), WsConnectionState.connecting);
         expect(service.isConnected, isFalse);
@@ -71,7 +71,7 @@ void main() {
       var connectCount = 0;
 
       final service = WsService(
-        serverUrl: 'http://localhost:3000',
+        serverUrl: 'http://localhost:38173',
         reconnectionManager: ReconnectionManager(),
         channelFactory: (_) {
           connectCount += 1;
@@ -80,7 +80,7 @@ void main() {
       );
       addTearDown(service.dispose);
 
-      await service.connect('http://localhost:3000', 'token');
+      await service.connect('http://localhost:38173', 'token');
       firstChannel.emitJson({
         'v': 1,
         'type': 'hello_ok',
