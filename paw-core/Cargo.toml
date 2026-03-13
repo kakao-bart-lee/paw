@@ -20,13 +20,18 @@ x25519-dalek = { version = "2", features = ["static_secrets", "reusable_secrets"
 aes-gcm = "0.10"
 hkdf = "0.12"
 rand = "0.8"
-rusqlite = { version = "0.32", features = ["bundled-sqlcipher", "vtab", "chrono"] }
 async-trait = "0.1"
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 url = "2"
 
 [dependencies.paw-proto]
 path = "../paw-proto"
+
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+rusqlite = { version = "0.32", features = ["bundled", "vtab", "chrono"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+rusqlite = { version = "0.32", features = ["bundled-sqlcipher", "vtab", "chrono"] }
 
 [build-dependencies]
 uniffi = { version = "0.28", features = ["build"] }

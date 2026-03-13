@@ -12,6 +12,8 @@
 		A00000000000000000000013 /* PawCoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000005 /* PawCoreManager.swift */; };
 		A00000000000000000000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000006 /* Assets.xcassets */; };
 		A00000000000000000000015 /* PawTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000008 /* PawTests.swift */; };
+		A00000000000000000000040 /* PawTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000041 /* PawTheme.swift */; };
+		A00000000000000000000042 /* PawTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000043 /* PawTypography.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +24,8 @@
 		A00000000000000000000007 /* Paw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Paw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000008 /* PawTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000009 /* PawTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PawTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000041 /* PawTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTheme.swift; sourceTree = "<group>"; };
+		A00000000000000000000043 /* PawTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTypography.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +51,8 @@
 				A00000000000000000000003 /* PawApp.swift */,
 				A00000000000000000000004 /* ContentView.swift */,
 				A00000000000000000000005 /* PawCoreManager.swift */,
+				A00000000000000000000041 /* PawTheme.swift */,
+				A00000000000000000000043 /* PawTypography.swift */,
 				A00000000000000000000006 /* Assets.xcassets */,
 			);
 		};
@@ -158,6 +164,8 @@
 				A00000000000000000000011 /* PawApp.swift in Sources */,
 				A00000000000000000000012 /* ContentView.swift in Sources */,
 				A00000000000000000000013 /* PawCoreManager.swift in Sources */,
+				A00000000000000000000040 /* PawTheme.swift in Sources */,
+				A00000000000000000000042 /* PawTypography.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -14,6 +14,8 @@ pub enum DbError {
     Sqlite(#[from] rusqlite::Error),
     #[error("mutex poisoned")]
     LockPoisoned,
+    #[error("database encryption is not available on this platform yet")]
+    EncryptionUnavailable,
 }
 
 pub type DbResult<T> = Result<T, DbError>;
@@ -269,12 +271,19 @@ impl AppDatabase {
 
 fn configure_connection(connection: &Connection, key: Option<&str>) -> DbResult<()> {
     if let Some(key) = key {
+        if !supports_database_encryption() {
+            return Err(DbError::EncryptionUnavailable);
+        }
         let escaped = key.replace('\'', "''");
         connection.execute_batch(&format!(
             "PRAGMA key = '{escaped}'; PRAGMA cipher_page_size = 4096; PRAGMA kdf_iter = 64000;"
         ))?;
     }
     Ok(())
+}
+
+fn supports_database_encryption() -> bool {
+    cfg!(not(any(target_os = "android", target_os = "ios")))
 }
 
 fn read_message(row: &rusqlite::Row<'_>) -> rusqlite::Result<MessageRecord> {

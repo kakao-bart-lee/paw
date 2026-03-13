@@ -83,7 +83,7 @@ fun PawAndroidApp() {
                             background = PawAgentBubble,
                             modifier = Modifier.weight(1f),
                         )
-                    )
+                    }
 
                     Text(
                         text = "paw-core status: $coreStatus",
