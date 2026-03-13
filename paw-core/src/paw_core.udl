@@ -20,6 +20,21 @@ typedef enum RuntimeInitStepView;
 typedef record RuntimeBootstrapReportView;
 typedef record RuntimeSnapshot;
 typedef enum CoreEvent;
+typedef enum SecureStorageProvider;
+typedef enum SecureStorageAvailability;
+typedef record SecureStorageCapabilities;
+typedef record DeviceKeyMaterial;
+typedef enum SecureStorageErrorCode;
+typedef record SecureStorageError;
+typedef enum PushPlatform;
+typedef enum PushRegistrationStatus;
+typedef record PushTokenRegistration;
+typedef record PushRegistrationState;
+typedef enum PushRegistrationErrorCode;
+typedef record PushRegistrationError;
+typedef enum LifecycleState;
+typedef enum LifecycleHint;
+typedef record LifecycleEvent;
 
 namespace paw_core {
   string ping();
@@ -29,4 +44,7 @@ namespace paw_core {
   AuthStateView initial_auth_state_view();
   RuntimeSnapshot empty_runtime_snapshot();
   string core_event_json(CoreEvent event);
+  SecureStorageCapabilities memory_fallback_secure_storage_capabilities();
+  PushRegistrationState empty_push_registration_state();
+  sequence<LifecycleHint> lifecycle_hints(LifecycleEvent event);
 };

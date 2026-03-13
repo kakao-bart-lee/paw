@@ -49,6 +49,10 @@
 - 현재 모바일 DB는 build unblock을 위해 `bundled sqlite`를 사용하며,
   SQLCipher 재도입은 secure-storage 설계와 함께 후속 phase에서 진행
 
+세부 플랫폼 경계 계약:
+
+- `docs/native-platform-contract.md`
+
 ## 디자인 분위기 가이드
 
 디자인의 분위기 통일 기준은 아래 문서를 사용합니다.

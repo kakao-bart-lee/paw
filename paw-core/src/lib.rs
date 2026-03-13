@@ -6,6 +6,7 @@ pub mod crypto;
 pub mod db;
 pub mod events;
 pub mod http;
+pub mod platform;
 pub mod search;
 pub mod sync;
 pub mod ws;
@@ -34,6 +35,15 @@ pub use http::{
     RefreshTokenResponse, RegisterDeviceRequest, RemoveMemberResponse, RequestOtpResponse,
     SendMessageRequest, SendMessageResponse, UpdateMeRequest, UploadKeysRequest, UserProfile,
     VerifyOtpResponse as HttpVerifyOtpResponse,
+};
+pub use platform::{
+    lifecycle_hints_for, DeviceKeyMaterial, DeviceKeyStore, InMemoryDeviceKeyStore,
+    InMemoryLifecycleBridge, InMemorySecureTokenVault, LifecycleBridge, LifecycleEvent,
+    LifecycleHint, LifecycleState, NoopPushRegistrar, PushPlatform, PushRegistrar,
+    PushRegistrationError, PushRegistrationErrorCode, PushRegistrationState,
+    PushRegistrationStatus, PushTokenRegistration, SecureStorageAvailability,
+    SecureStorageCapabilities, SecureStorageError, SecureStorageErrorCode, SecureStorageProvider,
+    SecureTokenVault,
 };
 pub use search::{SearchResult, SearchService};
 pub use sync::{
@@ -67,6 +77,18 @@ pub fn empty_runtime_snapshot() -> RuntimeSnapshot {
 
 pub fn core_event_json(event: CoreEvent) -> String {
     serde_json::to_string(&event).expect("core event should serialize")
+}
+
+pub fn memory_fallback_secure_storage_capabilities() -> SecureStorageCapabilities {
+    SecureStorageCapabilities::memory_fallback()
+}
+
+pub fn empty_push_registration_state() -> PushRegistrationState {
+    PushRegistrationState::unregistered()
+}
+
+pub fn lifecycle_hints(event: LifecycleEvent) -> Vec<LifecycleHint> {
+    lifecycle_hints_for(&event)
 }
 
 uniffi::include_scaffolding!("paw_core");
