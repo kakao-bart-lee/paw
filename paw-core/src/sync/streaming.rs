@@ -39,6 +39,23 @@ pub struct FinalizedStreamMessage {
     pub duration_ms: u64,
 }
 
+impl PartialEq for FinalizedStreamMessage {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.conversation_id == other.conversation_id
+            && self.sender_id == other.sender_id
+            && self.content == other.content
+            && std::mem::discriminant(&self.format) == std::mem::discriminant(&other.format)
+            && self.seq == other.seq
+            && self.created_at == other.created_at
+            && self.tool_calls == other.tool_calls
+            && self.tokens == other.tokens
+            && self.duration_ms == other.duration_ms
+    }
+}
+
+impl Eq for FinalizedStreamMessage {}
+
 #[derive(Clone, Debug, Default)]
 pub struct StreamingState {
     active: BTreeMap<Uuid, StreamingSession>,

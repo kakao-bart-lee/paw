@@ -127,6 +127,14 @@ impl WsService {
         self.connect(server_url, access_token).await.map(Some)
     }
 
+    pub async fn connect_with_access_token(
+        &mut self,
+        access_token: impl Into<String>,
+    ) -> Result<Url, WsServiceError> {
+        let server_url = self.server_url.clone();
+        self.connect(server_url, access_token).await
+    }
+
     pub async fn handle_server_message(
         &mut self,
         msg: &ServerMessage,

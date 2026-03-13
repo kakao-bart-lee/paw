@@ -1,6 +1,7 @@
 #![allow(clippy::empty_line_after_doc_comments)]
 
 pub mod auth;
+pub mod core;
 pub mod crypto;
 pub mod db;
 pub mod http;
@@ -13,6 +14,9 @@ pub use auth::{
     AuthUserProfile, InMemoryTokenStore, NoopSessionTransport, RegisterDeviceResponse,
     SessionEvent, SessionExpiryReason, SessionTransport, StoredTokens, TokenStore,
     VerifyOtpResponse,
+};
+pub use core::{
+    CoreRuntime, CoreRuntimeError, RuntimeBootstrapReport, RuntimeEffect, RuntimeInitStep,
 };
 pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
