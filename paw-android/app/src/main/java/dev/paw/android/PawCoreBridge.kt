@@ -1,18 +1,17 @@
 package dev.paw.android
 
 import uniffi.paw_core.AuthStateView
+import uniffi.paw_core.ConnectionSnapshot
 import uniffi.paw_core.ConnectionStateView
-import uniffi.paw_core.LifecycleEvent
+import uniffi.paw_core.DeviceKeyMaterial
 import uniffi.paw_core.LifecycleHint
 import uniffi.paw_core.LifecycleState
 import uniffi.paw_core.PushRegistrationState
 import uniffi.paw_core.RuntimeSnapshot
 import uniffi.paw_core.SecureStorageCapabilities
+import uniffi.paw_core.SecureStorageProvider
 import uniffi.paw_core.`emptyPushRegistrationState`
 import uniffi.paw_core.`emptyRuntimeSnapshot`
-import uniffi.paw_core.`initialAuthStateView`
-import uniffi.paw_core.`lifecycleHints`
-import uniffi.paw_core.`memoryFallbackSecureStorageCapabilities`
 import uniffi.paw_core.ping
 
 data class PawBootstrapPreview(
@@ -23,6 +22,9 @@ data class PawBootstrapPreview(
     val push: PushRegistrationState,
     val activeLifecycleHints: List<LifecycleHint>,
     val backgroundLifecycleHints: List<LifecycleHint>,
+    val lastLifecycleState: LifecycleState,
+    val bootstrapMessage: String,
+    val deviceKeyReady: Boolean,
 )
 
 object PawCoreBridge {
@@ -34,70 +36,58 @@ object PawCoreBridge {
         "bridge call failed (${error::class.simpleName}: ${error.message})"
     }
 
-    fun loadBootstrapPreview(): PawBootstrapPreview = try {
-        PawBootstrapPreview(
-            bridgeStatus = describePing(),
-            auth = `initialAuthStateView`(),
-            runtime = `emptyRuntimeSnapshot`(),
-            storage = `memoryFallbackSecureStorageCapabilities`(),
-            push = `emptyPushRegistrationState`(),
-            activeLifecycleHints = lifecycleHintsFor(LifecycleState.ACTIVE),
-            backgroundLifecycleHints = lifecycleHintsFor(LifecycleState.BACKGROUND),
-        )
-    } catch (error: Throwable) {
-        PawBootstrapPreview(
-            bridgeStatus = "preview fallback (${error::class.simpleName}: ${error.message})",
-            auth = AuthStateView(
-                step = uniffi.paw_core.AuthStepView.AUTH_METHOD_SELECT,
-                phone = "",
-                deviceName = "",
-                username = "",
-                discoverableByPhone = false,
-                hasSessionToken = false,
-                hasAccessToken = false,
-                hasRefreshToken = false,
-                isLoading = false,
-                error = null,
-            ),
-            runtime = RuntimeSnapshot(
-                connection = uniffi.paw_core.ConnectionSnapshot(
-                    state = ConnectionStateView.DISCONNECTED,
-                    attempts = 0u,
-                    pendingReconnectDelayMs = null,
-                    pendingReconnectUri = null,
-                ),
-                cursors = emptyList(),
-                activeStreams = emptyList(),
-            ),
-            storage = SecureStorageCapabilities(
-                provider = uniffi.paw_core.SecureStorageProvider.MEMORY_FALLBACK,
-                availability = uniffi.paw_core.SecureStorageAvailability.DEGRADED,
-                supportsTokens = true,
-                supportsDeviceKeys = true,
-                supportsBiometricGate = false,
-            ),
-            push = PushRegistrationState(
-                status = uniffi.paw_core.PushRegistrationStatus.UNREGISTERED,
-                token = null,
-                platform = null,
-                lastError = null,
-                lastUpdatedMs = 0,
-            ),
-            activeLifecycleHints = listOf(LifecycleHint.RECONNECT_SOCKET, LifecycleHint.REFRESH_PUSH_TOKEN),
-            backgroundLifecycleHints = listOf(
-                LifecycleHint.PAUSE_REALTIME,
-                LifecycleHint.FLUSH_ACKS,
-                LifecycleHint.PERSIST_DRAFTS,
-            ),
-        )
-    }
+    fun blankAuthState(): AuthStateView = AuthStateView(
+        step = uniffi.paw_core.AuthStepView.AUTH_METHOD_SELECT,
+        phone = "",
+        deviceName = "",
+        username = "",
+        discoverableByPhone = false,
+        hasSessionToken = false,
+        hasAccessToken = false,
+        hasRefreshToken = false,
+        isLoading = false,
+        error = null,
+    )
 
-    private fun lifecycleHintsFor(state: LifecycleState): List<LifecycleHint> =
-        `lifecycleHints`(
-            LifecycleEvent(
-                state = state,
-                timestampMs = System.currentTimeMillis(),
-                userInitiated = false,
-            )
-        )
+    fun blankRuntimeSnapshot(): RuntimeSnapshot = `emptyRuntimeSnapshot`().copy(
+        connection = ConnectionSnapshot(
+            state = ConnectionStateView.DISCONNECTED,
+            attempts = 0u,
+            pendingReconnectDelayMs = null,
+            pendingReconnectUri = null,
+        ),
+        cursors = emptyList(),
+        activeStreams = emptyList(),
+    )
+
+    fun preview(
+        auth: AuthStateView = blankAuthState(),
+        runtime: RuntimeSnapshot = blankRuntimeSnapshot(),
+        storage: SecureStorageCapabilities,
+        push: PushRegistrationState = `emptyPushRegistrationState`(),
+        activeLifecycleHints: List<LifecycleHint>,
+        backgroundLifecycleHints: List<LifecycleHint>,
+        lastLifecycleState: LifecycleState,
+        bootstrapMessage: String,
+        deviceKeyMaterial: DeviceKeyMaterial?,
+    ): PawBootstrapPreview = PawBootstrapPreview(
+        bridgeStatus = describePing(),
+        auth = auth,
+        runtime = runtime,
+        storage = storage,
+        push = push,
+        activeLifecycleHints = activeLifecycleHints,
+        backgroundLifecycleHints = backgroundLifecycleHints,
+        lastLifecycleState = lastLifecycleState,
+        bootstrapMessage = bootstrapMessage,
+        deviceKeyReady = deviceKeyMaterial != null,
+    )
+
+    fun disconnectedStoragePreview(): SecureStorageCapabilities = SecureStorageCapabilities(
+        provider = SecureStorageProvider.MEMORY_FALLBACK,
+        availability = uniffi.paw_core.SecureStorageAvailability.DEGRADED,
+        supportsTokens = true,
+        supportsDeviceKeys = true,
+        supportsBiometricGate = false,
+    )
 }
