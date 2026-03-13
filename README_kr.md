@@ -221,6 +221,26 @@ make migrate-add name=create_something
 
 ### 5.6 Flutter 클라이언트 실행
 
+서버와 클라이언트를 한 번에 띄우려면:
+
+```bash
+./scripts/run-local-dev.sh
+```
+
+기본 디바이스는 `chrome`이며, 다른 디바이스를 지정할 수도 있습니다.
+
+```bash
+./scripts/run-local-dev.sh macos
+```
+
+전체를 멈추고 의존 컨테이너까지 내리려면:
+
+```bash
+./scripts/stop-local-dev.sh
+```
+
+클라이언트만 따로 실행하려면:
+
 ```bash
 cd paw-client
 flutter pub get

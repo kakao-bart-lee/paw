@@ -42,6 +42,12 @@ Paw is a secure, agent-first messaging platform designed for the modern AI era. 
 2. Run `docker-compose up -d` to start dependencies (PostgreSQL, MinIO, NATS).
 3. Run `cargo run --package paw-server` to start the server.
 
+### Local Dev (server + client)
+
+1. Run `./scripts/run-local-dev.sh` from the repo root.
+2. Optionally pass a Flutter device, for example `./scripts/run-local-dev.sh macos`.
+3. Stop everything with `./scripts/stop-local-dev.sh`.
+
 ### Client
 
 1. Navigate to `paw-client`.
