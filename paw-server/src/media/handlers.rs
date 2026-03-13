@@ -1,15 +1,15 @@
 use axum::{
-    Extension, Json,
     extract::{Multipart, Path, State},
-    http::{StatusCode, header},
+    http::{header, StatusCode},
     response::{IntoResponse, Response},
+    Extension, Json,
 };
 use serde_json::json;
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::auth::AppState;
 use crate::auth::middleware::UserId;
+use crate::auth::AppState;
 
 const MAX_FILE_SIZE: usize = 50 * 1024 * 1024; // 50 MB
 pub(crate) const MEDIA_CACHE_CONTROL_HEADER_VALUE: &str = "public, max-age=31536000, immutable";
@@ -121,7 +121,11 @@ pub async fn upload(
     let file_size = data.len() as i64;
     let media_type = media_type_from_mime(&content_type);
 
-    if let Err(e) = state.media_service.upload(&s3_key, data, &content_type).await {
+    if let Err(e) = state
+        .media_service
+        .upload(&s3_key, data, &content_type)
+        .await
+    {
         tracing::error!(error = %e, "S3 upload failed");
         return error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -171,12 +175,11 @@ pub async fn get_url(
     Extension(_user_id): Extension<UserId>,
     Path(media_id): Path<Uuid>,
 ) -> Response {
-    let record = sqlx::query_scalar::<_, String>(
-        "SELECT s3_key FROM media_attachments WHERE id = $1",
-    )
-    .bind(media_id)
-    .fetch_optional(state.db.as_ref())
-    .await;
+    let record =
+        sqlx::query_scalar::<_, String>("SELECT s3_key FROM media_attachments WHERE id = $1")
+            .bind(media_id)
+            .fetch_optional(state.db.as_ref())
+            .await;
 
     let s3_key = match record {
         Ok(Some(key)) => key,

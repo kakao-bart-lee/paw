@@ -48,7 +48,7 @@ pub async fn request_id_middleware(mut request: Request<Body>, next: Next) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{Router, routing::get};
+    use axum::{routing::get, Router};
     use tower::ServiceExt;
 
     async fn ok() -> &'static str {

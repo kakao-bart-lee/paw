@@ -1,7 +1,7 @@
 use axum::extract::ws::Message;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 
 pub type WsSender = mpsc::UnboundedSender<Message>;
@@ -27,10 +27,17 @@ mod tests {
         hub.register(user_id, tx1).await;
         hub.register(user_id, tx2).await;
 
-        hub.send_to_user(user_id, "{\"v\":1,\"type\":\"ping\"}").await;
+        hub.send_to_user(user_id, "{\"v\":1,\"type\":\"ping\"}")
+            .await;
 
-        let msg1 = rx1.recv().await.expect("first connection should receive message");
-        let msg2 = rx2.recv().await.expect("second connection should receive message");
+        let msg1 = rx1
+            .recv()
+            .await
+            .expect("first connection should receive message");
+        let msg2 = rx2
+            .recv()
+            .await
+            .expect("second connection should receive message");
 
         assert!(matches!(msg1, Message::Text(_)));
         assert!(matches!(msg2, Message::Text(_)));
@@ -101,7 +108,12 @@ impl Hub {
         }
     }
 
-    pub async fn send_to_conversation(&self, _conversation_id: Uuid, user_ids: Vec<Uuid>, msg: &str) {
+    pub async fn send_to_conversation(
+        &self,
+        _conversation_id: Uuid,
+        user_ids: Vec<Uuid>,
+        msg: &str,
+    ) {
         for user_id in user_ids {
             self.send_to_user_nonblocking(user_id, msg).await;
         }

@@ -1,6 +1,6 @@
 use crate::channels::models::{ChannelRecord, ChannelSummary};
 use crate::db::DbPool;
-use anyhow::{Context, anyhow};
+use anyhow::{anyhow, Context};
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
@@ -37,14 +37,19 @@ pub async fn create_channel(
     name: &str,
     is_public: bool,
 ) -> anyhow::Result<ChannelRecord> {
-    let mut tx = pool.begin().await.context("begin channel create transaction")?;
+    let mut tx = pool
+        .begin()
+        .await
+        .context("begin channel create transaction")?;
     let channel_id = Uuid::new_v4();
 
     insert_channel_conversation(&mut tx, channel_id, owner_id, name).await?;
     let channel = insert_channel(&mut tx, channel_id, owner_id, name, is_public).await?;
     insert_owner_membership(&mut tx, channel_id, owner_id).await?;
 
-    tx.commit().await.context("commit channel create transaction")?;
+    tx.commit()
+        .await
+        .context("commit channel create transaction")?;
     Ok(channel)
 }
 
@@ -87,11 +92,12 @@ pub async fn subscribe(
     channel_id: Uuid,
     user_id: Uuid,
 ) -> Result<bool, SubscribeError> {
-    let channel = sqlx::query_as::<_, (Uuid, bool)>("SELECT owner_id, is_public FROM channels WHERE id = $1")
-        .bind(channel_id)
-        .fetch_optional(pool.as_ref())
-        .await
-        .map_err(|_| SubscribeError::NotFound)?;
+    let channel =
+        sqlx::query_as::<_, (Uuid, bool)>("SELECT owner_id, is_public FROM channels WHERE id = $1")
+            .bind(channel_id)
+            .fetch_optional(pool.as_ref())
+            .await
+            .map_err(|_| SubscribeError::NotFound)?;
 
     let Some((owner_id, is_public)) = channel else {
         return Err(SubscribeError::NotFound);
@@ -186,11 +192,12 @@ pub async fn access_for_user(
     channel_id: Uuid,
     user_id: Uuid,
 ) -> anyhow::Result<ChannelAccess> {
-    let channel = sqlx::query_as::<_, (Uuid, bool)>("SELECT owner_id, is_public FROM channels WHERE id = $1")
-        .bind(channel_id)
-        .fetch_optional(pool.as_ref())
-        .await
-        .context("load channel for access check")?;
+    let channel =
+        sqlx::query_as::<_, (Uuid, bool)>("SELECT owner_id, is_public FROM channels WHERE id = $1")
+            .bind(channel_id)
+            .fetch_optional(pool.as_ref())
+            .await
+            .context("load channel for access check")?;
 
     let Some((owner_id, _)) = channel else {
         return Ok(ChannelAccess::NotFound);

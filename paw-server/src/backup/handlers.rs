@@ -1,16 +1,16 @@
 use axum::{
-    Json,
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
-use crate::auth::AppState;
-use crate::auth::middleware::UserId;
 use super::models::{BackupSettings, ListBackupsResponse, RestoreBackupResponse};
 use super::service;
+use crate::auth::middleware::UserId;
+use crate::auth::AppState;
 
 fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
     (
@@ -64,12 +64,13 @@ pub async fn restore_backup(
     Path(backup_id): Path<Uuid>,
 ) -> Response {
     match service::restore_backup(&state.db, &state.media_service, user_id, backup_id).await {
-        Ok(Some(download_url)) => {
-            Json(RestoreBackupResponse { download_url }).into_response()
-        }
-        Ok(None) => {
-            error(StatusCode::NOT_FOUND, "backup_not_found", "Backup not found").into_response()
-        }
+        Ok(Some(download_url)) => Json(RestoreBackupResponse { download_url }).into_response(),
+        Ok(None) => error(
+            StatusCode::NOT_FOUND,
+            "backup_not_found",
+            "Backup not found",
+        )
+        .into_response(),
         Err(err) => {
             tracing::error!(%err, %user_id, %backup_id, "backup restore failed");
             error(
@@ -89,9 +90,12 @@ pub async fn delete_backup(
 ) -> Response {
     match service::delete_backup(&state.db, &state.media_service, user_id, backup_id).await {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => {
-            error(StatusCode::NOT_FOUND, "backup_not_found", "Backup not found").into_response()
-        }
+        Ok(false) => error(
+            StatusCode::NOT_FOUND,
+            "backup_not_found",
+            "Backup not found",
+        )
+        .into_response(),
         Err(err) => {
             tracing::error!(%err, %user_id, %backup_id, "backup delete failed");
             error(

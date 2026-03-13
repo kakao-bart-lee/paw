@@ -1,22 +1,18 @@
 use axum::{
-    Json,
     extract::{Path, Query, State, WebSocketUpgrade},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Extension,
+    Extension, Json,
 };
 use futures_util::{SinkExt, StreamExt};
-use paw_proto::{AgentStreamMsg, PROTOCOL_VERSION, ServerMessage, StreamEndMsg};
+use paw_proto::{AgentStreamMsg, ServerMessage, StreamEndMsg, PROTOCOL_VERSION};
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use crate::auth::AppState;
-use crate::auth::middleware::UserId;
-use crate::messages::service::{Membership, check_member};
 use super::models::{
     AgentProfile, InstallAgentResponse, InstalledAgentsResponse, InviteAgentRequest,
     InviteAgentResponse, MarketplaceSearchQuery, MarketplaceSearchResponse, PublishAgentRequest,
@@ -24,6 +20,9 @@ use super::models::{
     UninstallAgentResponse,
 };
 use super::service;
+use crate::auth::middleware::UserId;
+use crate::auth::AppState;
+use crate::messages::service::{check_member, Membership};
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
 const MAX_STREAM_BYTES: usize = 1_048_576;
@@ -145,7 +144,14 @@ pub async fn invite_agent_handler(
         }
     }
 
-    match service::invite_agent_to_conversation(&state.db, conversation_id, payload.agent_id, user_id).await {
+    match service::invite_agent_to_conversation(
+        &state.db,
+        conversation_id,
+        payload.agent_id,
+        user_id,
+    )
+    .await
+    {
         Ok(true) => Ok(Json(InviteAgentResponse { invited: true })),
         Ok(false) => Err((
             StatusCode::CONFLICT,
@@ -179,7 +185,9 @@ pub async fn remove_agent_handler(
     Extension(UserId(user_id)): Extension<UserId>,
     Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<RemoveAgentResponse>, (StatusCode, Json<Value>)> {
-    match service::remove_agent_from_conversation(&state.db, conversation_id, agent_id, user_id).await {
+    match service::remove_agent_from_conversation(&state.db, conversation_id, agent_id, user_id)
+        .await
+    {
         Ok(true) => Ok(Json(RemoveAgentResponse { removed: true })),
         Ok(false) => Err((
             StatusCode::NOT_FOUND,
@@ -249,7 +257,9 @@ pub async fn marketplace_agent_detail_handler(
         Some(d) => Ok(Json(serde_json::to_value(d).unwrap())),
         None => Err((
             StatusCode::NOT_FOUND,
-            Json(json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" })),
+            Json(
+                json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" }),
+            ),
         )),
     }
 }
@@ -270,7 +280,9 @@ pub async fn install_agent_handler(
         )),
         Err(err) if err.to_string() == "agent_not_found" => Err((
             StatusCode::NOT_FOUND,
-            Json(json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" })),
+            Json(
+                json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" }),
+            ),
         )),
         Err(err) => {
             tracing::error!("install agent failed: {err}");
@@ -300,7 +312,9 @@ pub async fn uninstall_agent_handler(
             tracing::error!("uninstall agent failed: {err}");
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "uninstall_failed", "message": "Failed to uninstall agent" })),
+                Json(
+                    json!({ "error": "uninstall_failed", "message": "Failed to uninstall agent" }),
+                ),
             ))
         }
     }
@@ -352,7 +366,9 @@ pub async fn publish_agent_handler(
         })),
         Ok(false) => Err((
             StatusCode::NOT_FOUND,
-            Json(json!({ "error": "agent_not_found_or_not_owner", "message": "Agent not found or you are not the owner" })),
+            Json(
+                json!({ "error": "agent_not_found_or_not_owner", "message": "Agent not found or you are not the owner" }),
+            ),
         )),
         Err(err) => {
             tracing::error!("publish agent failed: {err}");
@@ -451,34 +467,32 @@ async fn handle_agent_socket(
 
         while let Some(Ok(msg)) = ws_rx.next().await {
             match msg {
-                Message::Text(text) => {
-                    match serde_json::from_str::<AgentStreamMsg>(&text) {
-                        Ok(stream_msg) => {
-                            if let Err(e) = relay_agent_stream_message(
-                                &state,
-                                agent_id,
-                                &mut stream_states,
-                                stream_msg,
-                            )
-                            .await
-                            {
-                                tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
-                            }
-                        }
-                        Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
-                            Ok(agent_msg) => {
-                                tracing::info!(
-                                    "agent {agent_id} response for conv {}: {} bytes",
-                                    agent_msg.conversation_id,
-                                    agent_msg.content.len()
-                                );
-                            }
-                            Err(e) => {
-                                tracing::warn!("invalid agent message from {agent_id}: {e}");
-                            }
+                Message::Text(text) => match serde_json::from_str::<AgentStreamMsg>(&text) {
+                    Ok(stream_msg) => {
+                        if let Err(e) = relay_agent_stream_message(
+                            &state,
+                            agent_id,
+                            &mut stream_states,
+                            stream_msg,
+                        )
+                        .await
+                        {
+                            tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
                         }
                     }
-                }
+                    Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
+                        Ok(agent_msg) => {
+                            tracing::info!(
+                                "agent {agent_id} response for conv {}: {} bytes",
+                                agent_msg.conversation_id,
+                                agent_msg.content.len()
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!("invalid agent message from {agent_id}: {e}");
+                        }
+                    },
+                },
                 Message::Close(_) => break,
                 _ => {}
             }
@@ -602,7 +616,9 @@ async fn relay_stream_frame(
     };
 
     let elapsed = now.duration_since(current.started_at);
-    if elapsed > MAX_STREAM_DURATION || current.bytes_sent.saturating_add(payload_len) > MAX_STREAM_BYTES {
+    if elapsed > MAX_STREAM_DURATION
+        || current.bytes_sent.saturating_add(payload_len) > MAX_STREAM_BYTES
+    {
         stream_states.remove(&stream_id);
 
         let end_payload = serde_json::to_string(&ServerMessage::StreamEnd(StreamEndMsg {
@@ -644,7 +660,10 @@ fn require_v(v: u8) -> anyhow::Result<()> {
     }
 }
 
-async fn conversation_members(state: &AppState, conversation_id: Uuid) -> anyhow::Result<Vec<Uuid>> {
+async fn conversation_members(
+    state: &AppState,
+    conversation_id: Uuid,
+) -> anyhow::Result<Vec<Uuid>> {
     let rows: Vec<sqlx::postgres::PgRow> =
         sqlx::query("SELECT user_id FROM conversation_members WHERE conversation_id = $1")
             .bind(conversation_id)

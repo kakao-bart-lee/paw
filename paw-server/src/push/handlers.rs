@@ -1,12 +1,15 @@
-use crate::auth::{AppState, middleware::{DeviceId, UserId}};
+use crate::auth::{
+    middleware::{DeviceId, UserId},
+    AppState,
+};
 use crate::push::{models, service};
 use axum::{
-    Json,
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub async fn register_push_token(
@@ -70,9 +73,10 @@ pub async fn unregister_push_token(
     };
 
     match service::unregister_push_token(&state.db, device_id).await {
-        Ok(removed) => {
-            Json(models::UnregisterPushTokenResponse { unregistered: removed }).into_response()
-        }
+        Ok(removed) => Json(models::UnregisterPushTokenResponse {
+            unregistered: removed,
+        })
+        .into_response(),
         Err(err) => {
             tracing::error!(%err, %user_id, %device_id, "failed to unregister push token");
             error(
@@ -136,7 +140,9 @@ pub async fn unmute_conversation(
     Path(conversation_id): Path<Uuid>,
 ) -> Response {
     match service::unmute_conversation(&state.db, user_id, conversation_id).await {
-        Ok(removed) => Json(models::UnmuteConversationResponse { unmuted: removed }).into_response(),
+        Ok(removed) => {
+            Json(models::UnmuteConversationResponse { unmuted: removed }).into_response()
+        }
         Err(err) => {
             tracing::error!(%err, %user_id, %conversation_id, "failed to unmute conversation");
             error(

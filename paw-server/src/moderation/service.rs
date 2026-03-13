@@ -11,15 +11,14 @@ pub fn content_matches_keywords(content: &str, keywords: &[String]) -> bool {
 }
 
 pub async fn check_spam(content: &str, db: &DbPool) -> bool {
-    let keywords: Vec<String> = match sqlx::query_scalar::<_, String>(
-        "SELECT keyword FROM spam_keywords",
-    )
-    .fetch_all(db.as_ref())
-    .await
-    {
-        Ok(kws) => kws,
-        Err(_) => return false,
-    };
+    let keywords: Vec<String> =
+        match sqlx::query_scalar::<_, String>("SELECT keyword FROM spam_keywords")
+            .fetch_all(db.as_ref())
+            .await
+        {
+            Ok(kws) => kws,
+            Err(_) => return false,
+        };
 
     content_matches_keywords(content, &keywords)
 }
@@ -45,11 +44,7 @@ pub async fn create_report(
     .context("create report")
 }
 
-pub async fn block_user(
-    db: &DbPool,
-    blocker_id: Uuid,
-    blocked_id: Uuid,
-) -> anyhow::Result<bool> {
+pub async fn block_user(db: &DbPool, blocker_id: Uuid, blocked_id: Uuid) -> anyhow::Result<bool> {
     let result = sqlx::query(
         "INSERT INTO user_blocks (blocker_id, blocked_id)
          VALUES ($1, $2)
@@ -64,19 +59,13 @@ pub async fn block_user(
     Ok(result.rows_affected() > 0)
 }
 
-pub async fn unblock_user(
-    db: &DbPool,
-    blocker_id: Uuid,
-    blocked_id: Uuid,
-) -> anyhow::Result<bool> {
-    let result = sqlx::query(
-        "DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2",
-    )
-    .bind(blocker_id)
-    .bind(blocked_id)
-    .execute(db.as_ref())
-    .await
-    .context("unblock user")?;
+pub async fn unblock_user(db: &DbPool, blocker_id: Uuid, blocked_id: Uuid) -> anyhow::Result<bool> {
+    let result = sqlx::query("DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2")
+        .bind(blocker_id)
+        .bind(blocked_id)
+        .execute(db.as_ref())
+        .await
+        .context("unblock user")?;
 
     Ok(result.rows_affected() > 0)
 }
@@ -139,14 +128,12 @@ pub async fn list_pending_reports(db: &DbPool) -> anyhow::Result<Vec<Report>> {
 }
 
 pub async fn is_admin(db: &DbPool, user_id: Uuid) -> anyhow::Result<bool> {
-    sqlx::query_scalar::<_, bool>(
-        "SELECT COALESCE(is_admin, false) FROM users WHERE id = $1",
-    )
-    .bind(user_id)
-    .fetch_optional(db.as_ref())
-    .await
-    .context("check admin status")
-    .map(|opt| opt.unwrap_or(false))
+    sqlx::query_scalar::<_, bool>("SELECT COALESCE(is_admin, false) FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(db.as_ref())
+        .await
+        .context("check admin status")
+        .map(|opt| opt.unwrap_or(false))
 }
 
 #[cfg(test)]

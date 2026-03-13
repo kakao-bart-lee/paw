@@ -1,5 +1,5 @@
 pub mod api;
-pub use api::{AccountKeys, create_account, decrypt, encrypt};
+pub use api::{create_account, decrypt, encrypt, AccountKeys};
 
 mod frb_generated;
 

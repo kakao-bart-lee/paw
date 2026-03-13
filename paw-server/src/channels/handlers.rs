@@ -1,18 +1,20 @@
-use crate::auth::{AppState, middleware::UserId};
+use crate::auth::{middleware::UserId, AppState};
 use crate::channels::models::{
-    CreateChannelRequest, CreateChannelResponse, GetChannelMessagesQuery, GetChannelMessagesResponse,
-    ListChannelsQuery, ListChannelsResponse, SendChannelMessageRequest, SubscribeResponse,
-    UnsubscribeResponse,
+    CreateChannelRequest, CreateChannelResponse, GetChannelMessagesQuery,
+    GetChannelMessagesResponse, ListChannelsQuery, ListChannelsResponse, SendChannelMessageRequest,
+    SubscribeResponse, UnsubscribeResponse,
 };
-use crate::channels::service::{self, ChannelAccess, SendPermission, SubscribeError, UnsubscribeError};
+use crate::channels::service::{
+    self, ChannelAccess, SendPermission, SubscribeError, UnsubscribeError,
+};
 use crate::messages::service as message_service;
 use axum::{
-    Json,
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub async fn create_channel(
@@ -22,8 +24,12 @@ pub async fn create_channel(
 ) -> Response {
     let name = payload.name.trim();
     if name.is_empty() {
-        return error(StatusCode::BAD_REQUEST, "invalid_channel_name", "Channel name is required")
-            .into_response();
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_channel_name",
+            "Channel name is required",
+        )
+        .into_response();
     }
 
     let is_public = payload.is_public.unwrap_or(true);
@@ -56,7 +62,8 @@ pub async fn list_channels(
     Extension(UserId(user_id)): Extension<UserId>,
     Query(query): Query<ListChannelsQuery>,
 ) -> Response {
-    let channels = match service::list_public_channels(&state.db, user_id, query.q.as_deref()).await {
+    let channels = match service::list_public_channels(&state.db, user_id, query.q.as_deref()).await
+    {
         Ok(channels) => channels,
         Err(err) => {
             tracing::error!(%err, user_id = %user_id, "failed to list channels");
@@ -79,9 +86,12 @@ pub async fn subscribe_channel(
 ) -> Response {
     match service::subscribe(&state.db, channel_id, user_id).await {
         Ok(subscribed) => Json(SubscribeResponse { subscribed }).into_response(),
-        Err(SubscribeError::NotFound) => {
-            error(StatusCode::NOT_FOUND, "channel_not_found", "Channel not found").into_response()
-        }
+        Err(SubscribeError::NotFound) => error(
+            StatusCode::NOT_FOUND,
+            "channel_not_found",
+            "Channel not found",
+        )
+        .into_response(),
         Err(SubscribeError::Forbidden) => error(
             StatusCode::FORBIDDEN,
             "forbidden",
@@ -98,9 +108,12 @@ pub async fn unsubscribe_channel(
 ) -> Response {
     match service::unsubscribe(&state.db, channel_id, user_id).await {
         Ok(unsubscribed) => Json(UnsubscribeResponse { unsubscribed }).into_response(),
-        Err(UnsubscribeError::NotFound) => {
-            error(StatusCode::NOT_FOUND, "channel_not_found", "Channel not found").into_response()
-        }
+        Err(UnsubscribeError::NotFound) => error(
+            StatusCode::NOT_FOUND,
+            "channel_not_found",
+            "Channel not found",
+        )
+        .into_response(),
         Err(UnsubscribeError::CannotUnsubscribeOwner) => error(
             StatusCode::FORBIDDEN,
             "forbidden",
@@ -117,8 +130,12 @@ pub async fn send_channel_message(
     Json(payload): Json<SendChannelMessageRequest>,
 ) -> Response {
     if payload.content.trim().is_empty() {
-        return error(StatusCode::BAD_REQUEST, "invalid_content", "Message content is required")
-            .into_response();
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_content",
+            "Message content is required",
+        )
+        .into_response();
     }
 
     let format = payload.format.to_ascii_lowercase();
@@ -142,8 +159,12 @@ pub async fn send_channel_message(
             .into_response();
         }
         Ok(SendPermission::NotFound) => {
-            return error(StatusCode::NOT_FOUND, "channel_not_found", "Channel not found")
-                .into_response();
+            return error(
+                StatusCode::NOT_FOUND,
+                "channel_not_found",
+                "Channel not found",
+            )
+            .into_response();
         }
         Err(err) => {
             tracing::error!(%err, channel_id = %channel_id, user_id = %user_id, "failed to validate channel sender");
@@ -156,7 +177,14 @@ pub async fn send_channel_message(
         }
     }
 
-    match message_service::get_idempotent_message(&state.db, channel_id, user_id, payload.idempotency_key).await {
+    match message_service::get_idempotent_message(
+        &state.db,
+        channel_id,
+        user_id,
+        payload.idempotency_key,
+    )
+    .await
+    {
         Ok(Some(existing)) => return Json(existing).into_response(),
         Ok(None) => {}
         Err(err) => {
@@ -183,8 +211,13 @@ pub async fn send_channel_message(
         Ok(created) => Json(created).into_response(),
         Err(err) => {
             tracing::warn!(%err, channel_id = %channel_id, owner_id = %user_id, "channel message insert failed, checking idempotency replay");
-            match message_service::get_idempotent_message(&state.db, channel_id, user_id, payload.idempotency_key)
-                .await
+            match message_service::get_idempotent_message(
+                &state.db,
+                channel_id,
+                user_id,
+                payload.idempotency_key,
+            )
+            .await
             {
                 Ok(Some(existing)) => Json(existing).into_response(),
                 _ => error(
@@ -215,8 +248,12 @@ pub async fn get_channel_messages(
             .into_response();
         }
         Ok(ChannelAccess::NotFound) => {
-            return error(StatusCode::NOT_FOUND, "channel_not_found", "Channel not found")
-                .into_response();
+            return error(
+                StatusCode::NOT_FOUND,
+                "channel_not_found",
+                "Channel not found",
+            )
+            .into_response();
         }
         Err(err) => {
             tracing::error!(%err, channel_id = %channel_id, user_id = %user_id, "failed to validate channel access");
@@ -232,18 +269,19 @@ pub async fn get_channel_messages(
     let after_seq = query.after_seq.unwrap_or(0);
     let limit = query.limit.unwrap_or(50).clamp(1, 50);
 
-    let mut messages = match message_service::get_messages(&state.db, channel_id, after_seq, limit + 1).await {
-        Ok(rows) => rows,
-        Err(err) => {
-            tracing::error!(%err, channel_id = %channel_id, "failed to fetch channel messages");
-            return error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "channel_message_history_failed",
-                "Could not fetch channel message history",
-            )
-            .into_response();
-        }
-    };
+    let mut messages =
+        match message_service::get_messages(&state.db, channel_id, after_seq, limit + 1).await {
+            Ok(rows) => rows,
+            Err(err) => {
+                tracing::error!(%err, channel_id = %channel_id, "failed to fetch channel messages");
+                return error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "channel_message_history_failed",
+                    "Could not fetch channel message history",
+                )
+                .into_response();
+            }
+        };
 
     let has_more = messages.len() as i64 > limit;
     if has_more {

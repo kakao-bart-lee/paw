@@ -1,6 +1,6 @@
 use crate::db::DbPool;
 use crate::ws::hub::Hub;
-use paw_proto::{MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION, ServerMessage};
+use paw_proto::{MessageFormat, MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION};
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -37,7 +37,10 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
         };
 
         let Some(message) = payload_to_message(&payload) else {
-            tracing::warn!(payload = notification.payload(), "pg_notify payload missing fields");
+            tracing::warn!(
+                payload = notification.payload(),
+                "pg_notify payload missing fields"
+            );
             continue;
         };
 
@@ -61,7 +64,10 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
     }
 }
 
-async fn conversation_members(pool: &sqlx::PgPool, conversation_id: Uuid) -> anyhow::Result<Vec<Uuid>> {
+async fn conversation_members(
+    pool: &sqlx::PgPool,
+    conversation_id: Uuid,
+) -> anyhow::Result<Vec<Uuid>> {
     let rows = sqlx::query("SELECT user_id FROM conversation_members WHERE conversation_id = $1")
         .bind(conversation_id)
         .fetch_all(pool)

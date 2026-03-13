@@ -1,7 +1,7 @@
 use crate::db::DbPool;
 use crate::keys::models::{KeyBundle, OneTimeKeyResponse, UploadKeysRequest};
 use anyhow::Context;
-use base64::{Engine as _, engine::general_purpose::STANDARD};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use sqlx::Row;
 use thiserror::Error;
 use uuid::Uuid;
@@ -36,7 +36,10 @@ pub async fn upload_keys(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let mut tx = pool.begin().await.context("begin keys upload transaction")?;
+    let mut tx = pool
+        .begin()
+        .await
+        .context("begin keys upload transaction")?;
 
     sqlx::query(
         "INSERT INTO prekey_bundles (user_id, device_id, identity_key, signed_prekey, signed_prekey_sig)
@@ -71,7 +74,9 @@ pub async fn upload_keys(
         .with_context(|| format!("insert one-time prekey key_id={key_id}"))?;
     }
 
-    tx.commit().await.context("commit keys upload transaction")?;
+    tx.commit()
+        .await
+        .context("commit keys upload transaction")?;
     Ok(())
 }
 

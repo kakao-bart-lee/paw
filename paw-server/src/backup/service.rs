@@ -19,14 +19,12 @@ pub async fn initiate_backup(
         .presigned_put_url(&s3_key, Duration::from_secs(PRESIGNED_URL_EXPIRY_SECS))
         .await?;
 
-    sqlx::query(
-        "INSERT INTO backups (id, user_id, s3_key) VALUES ($1, $2, $3)",
-    )
-    .bind(backup_id)
-    .bind(user_id)
-    .bind(&s3_key)
-    .execute(db.as_ref())
-    .await?;
+    sqlx::query("INSERT INTO backups (id, user_id, s3_key) VALUES ($1, $2, $3)")
+        .bind(backup_id)
+        .bind(user_id)
+        .bind(&s3_key)
+        .execute(db.as_ref())
+        .await?;
 
     Ok(InitiateBackupResponse {
         backup_id,
@@ -35,10 +33,7 @@ pub async fn initiate_backup(
     })
 }
 
-pub async fn list_backups(
-    db: &DbPool,
-    user_id: Uuid,
-) -> Result<Vec<BackupEntry>, anyhow::Error> {
+pub async fn list_backups(db: &DbPool, user_id: Uuid) -> Result<Vec<BackupEntry>, anyhow::Error> {
     let rows = sqlx::query_as::<_, (Uuid, i64, chrono::DateTime<chrono::Utc>)>(
         "SELECT id, size_bytes, created_at FROM backups WHERE user_id = $1 ORDER BY created_at DESC",
     )
@@ -116,12 +111,11 @@ pub async fn get_backup_settings(
     db: &DbPool,
     user_id: Uuid,
 ) -> Result<BackupSettings, anyhow::Error> {
-    let frequency = sqlx::query_scalar::<_, String>(
-        "SELECT frequency FROM backup_settings WHERE user_id = $1",
-    )
-    .bind(user_id)
-    .fetch_optional(db.as_ref())
-    .await?;
+    let frequency =
+        sqlx::query_scalar::<_, String>("SELECT frequency FROM backup_settings WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_optional(db.as_ref())
+            .await?;
 
     let frequency = match frequency.as_deref() {
         Some("daily") => BackupFrequency::Daily,
