@@ -152,6 +152,11 @@ class ApiClient {
     return _decodeJsonObject(response);
   }
 
+  Future<Map<String, dynamic>> getUserById(String userId) async {
+    final response = await _get('/users/$userId');
+    return _decodeJsonObject(response);
+  }
+
   Future<Map<String, dynamic>?> searchUser(String phone) async {
     final uri = _buildUri('/users/search', queryParameters: {'phone': phone});
     final response = await _runRequest(() => http.get(uri, headers: _headers));

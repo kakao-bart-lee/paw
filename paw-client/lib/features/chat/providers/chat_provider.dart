@@ -135,7 +135,6 @@ class ConversationsNotifier extends Notifier<List<Conversation>> {
     ref.read(conversationsErrorProvider.notifier).state = null;
 
     if (apiClient == null || apiClient.accessToken == null) {
-      state = const [];
       ref.read(conversationsLoadStateProvider.notifier).state =
           ResourceLoadState.ready;
       return;

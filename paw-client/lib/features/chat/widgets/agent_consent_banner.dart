@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/theme/app_theme.dart';
 import '../services/agent_consent_service.dart';
 
 class AgentConsentBanner extends StatefulWidget {
-  final List<String> agentNames;
-  final String? conversationId;
-
   const AgentConsentBanner({
     super.key,
     required this.agentNames,
     this.conversationId,
   });
+
+  final List<String> agentNames;
+  final String? conversationId;
 
   @override
   State<AgentConsentBanner> createState() => _AgentConsentBannerState();
@@ -18,7 +20,7 @@ class AgentConsentBanner extends StatefulWidget {
 
 class _AgentConsentBannerState extends State<AgentConsentBanner> {
   final AgentConsentService _consentService = AgentConsentService();
-  
+
   bool _isLoading = true;
   bool _needsConsent = false;
   bool _isDeclined = false;
@@ -32,7 +34,7 @@ class _AgentConsentBannerState extends State<AgentConsentBanner> {
   @override
   void didUpdateWidget(covariant AgentConsentBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.agentNames != widget.agentNames || 
+    if (oldWidget.agentNames != widget.agentNames ||
         oldWidget.conversationId != widget.conversationId) {
       _checkConsentState();
     }
@@ -59,18 +61,17 @@ class _AgentConsentBannerState extends State<AgentConsentBanner> {
       }
     }
 
-    if (mounted) {
-      setState(() {
-        _needsConsent = anyNeedsConsent;
-        _isDeclined = !anyNeedsConsent && allDeclined && widget.agentNames.isNotEmpty;
-        _isLoading = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _needsConsent = anyNeedsConsent;
+      _isDeclined =
+          !anyNeedsConsent && allDeclined && widget.agentNames.isNotEmpty;
+      _isLoading = false;
+    });
   }
 
   Future<void> _handleConsent(bool allow) async {
     final convId = widget.conversationId ?? 'default_conv';
-    
     for (final agent in widget.agentNames) {
       final consent = await _consentService.getConsent(convId, agent);
       if (consent == null) {
@@ -78,122 +79,98 @@ class _AgentConsentBannerState extends State<AgentConsentBanner> {
       }
     }
 
-    if (mounted) {
-      setState(() {
-        _needsConsent = false;
-        if (!allow) {
-          _isDeclined = true;
-        }
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _needsConsent = false;
+      if (!allow) {
+        _isDeclined = true;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const SizedBox(height: 36);
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
+        child: SizedBox(height: 52),
+      );
     }
-
-    if (_isDeclined) {
-      return const SizedBox.shrink();
-    }
+    if (_isDeclined) return const SizedBox.shrink();
 
     final names = widget.agentNames.join(', ');
 
-    if (_needsConsent) {
-      return Container(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Container(
         width: double.infinity,
-        color: const Color(0xFF1E2A3A),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.agentBubbleDark,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.warning.withValues(alpha: 0.24)),
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Text('🤖', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primarySoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: AppTheme.primary,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '$names이(가) 이 대화에 참여하도록 허용하시겠습니까?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                    _needsConsent
+                        ? '$names이(가) 이 대화에 참여하도록 허용하시겠습니까?'
+                        : '$names이(가) 이 대화를 읽고 있습니다',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              _needsConsent
+                  ? '허용 전에는 에이전트가 메시지를 읽거나 응답을 제안하지 않습니다.'
+                  : '권한과 접근 범위는 설정에서 언제든 조정할 수 있습니다.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: () => _handleConsent(false),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                if (_needsConsent) ...[
+                  TextButton(
+                    onPressed: () => _handleConsent(false),
+                    child: const Text('거부'),
                   ),
-                  child: const Text('거부'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => _handleConsent(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFB300),
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => _handleConsent(true),
+                    child: const Text('허용'),
                   ),
-                  child: const Text('허용', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
+                ] else
+                  TextButton(
+                    onPressed: () => context.push('/settings'),
+                    child: const Text('에이전트 관리'),
+                  ),
               ],
             ),
           ],
         ),
-      );
-    }
-
-    return Container(
-      height: 36,
-      width: double.infinity,
-      color: const Color(0xFF1E2A3A), // Dark blue-gray from decisions.md
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('🤖', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              '$names이(가) 이 대화를 읽고 있습니다',
-              style: const TextStyle(
-                color: Color(0xFFFFB300), // Amber text
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              context.push('/settings');
-            },
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(0, 0),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
-              '에이전트 관리',
-              style: TextStyle(
-                color: Color(0xFFFFB300),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

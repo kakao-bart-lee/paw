@@ -1,206 +1,240 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/markdown_message.dart';
+import '../../../core/widgets/messenger_avatar.dart';
 import '../models/message.dart';
-import 'read_receipt_indicator.dart';
 import 'media_message.dart';
+import 'read_receipt_indicator.dart';
 import 'tool_indicator.dart';
 
 class MessageBubble extends StatelessWidget {
-  final Message message;
+  const MessageBubble({super.key, required this.message});
 
-  const MessageBubble({
-    super.key,
-    required this.message,
-  });
+  final Message message;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isMe = message.isMe;
     final isAgent = message.isAgent;
+    final theme = Theme.of(context);
+    final bubbleColor = isMe
+        ? AppTheme.sentBubbleDark
+        : isAgent
+        ? AppTheme.agentBubbleDark
+        : AppTheme.receivedBubbleDark;
 
-    Color bubbleColor;
-    if (isMe) {
-      bubbleColor = AppTheme.sentBubbleDark;
-    } else if (isAgent) {
-      bubbleColor = AppTheme.agentBubbleDark;
-    } else {
-      bubbleColor = AppTheme.receivedBubbleDark;
-    }
-
-    final alignment = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final textColor = isMe ? AppTheme.background : theme.colorScheme.onSurface;
     final borderRadius = BorderRadius.only(
-      topLeft: const Radius.circular(18),
-      topRight: const Radius.circular(18),
-      bottomLeft: Radius.circular(isMe ? 18 : 4),
-      bottomRight: Radius.circular(isMe ? 4 : 18),
+      topLeft: const Radius.circular(24),
+      topRight: const Radius.circular(24),
+      bottomLeft: Radius.circular(isMe ? 24 : 8),
+      bottomRight: Radius.circular(isMe ? 8 : 24),
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        crossAxisAlignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (isAgent)
+          if (!isMe) ...[
             Padding(
-              padding: const EdgeInsets.only(bottom: 4, left: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🤖', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 4),
-                  Text(
-                    'AI Agent',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
+              padding: const EdgeInsets.only(right: 10, bottom: 22),
+              child: MessengerAvatar(
+                name: isAgent ? 'AI' : '상대방',
+                size: 32,
+                isAgent: isAgent,
+                showPresence: false,
+              ),
+            ),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                if (isAgent)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6, left: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 13,
+                          color: AppTheme.primary.withValues(alpha: 0.9),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'AI 응답',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          Row(
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (isMe) _buildTimestamp(theme),
-              if (isMe) const SizedBox(width: 8),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: alignment,
-                  children: [
-                    if (isAgent && message.toolCalls.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: message.toolCalls
-                              .map((tc) => ToolIndicator(
-                                    toolName: tc.tool,
-                                    label: tc.label,
-                                    isComplete: true,
-                                  ))
-                              .toList(),
-                        ),
-                      ),
-                    Container(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.75,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: bubbleColor,
-                        borderRadius: borderRadius,
-                      ),
-                      child: message.mediaId != null
-                          ? MediaMessage(
-                              mediaId: message.mediaId!,
-                              contentType: message.mediaType ?? 'application/octet-stream',
-                              fileName: message.mediaFileName,
-                              sizeBytes: message.mediaSizeBytes,
-                              isMe: isMe,
-                            )
-                          : message.format == MessageFormat.markdown
-                              ? MarkdownMessage(content: message.content, isMe: isMe)
-                              : Text(
-                                  message.content,
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: isMe ? Colors.white : theme.colorScheme.onSurface,
-                                  ),
-                                ),
+                if (isAgent && message.toolCalls.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: message.toolCalls
+                          .map(
+                            (tc) => ToolIndicator(
+                              toolName: tc.tool,
+                              label: tc.label,
+                              isComplete: true,
+                            ),
+                          )
+                          .toList(),
                     ),
-                    if (isAgent && message.blocks.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.75,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: alignment,
-                            children: message.blocks.map((block) {
-                              if (block is CardBlock) {
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      if (block.imageUrl != null)
-                                        Image.network(
-                                          block.imageUrl!,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          height: 150,
-                                          errorBuilder: (context, error, stackTrace) =>
-                                              const SizedBox(height: 150, child: Center(child: Icon(Icons.error))),
-                                        ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              block.title,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                            ),
-                                            if (block.description != null) ...[
-                                              const SizedBox(height: 4),
-                                              Text(block.description!),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              } else if (block is ActionButtonsBlock) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: block.buttons.map((btn) {
-                                      return OutlinedButton(
-                                        onPressed: () {
-                                          // Action URL handling would go here
-                                        },
-                                        child: Text(btn.label),
-                                      );
-                                    }).toList(),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            }).toList(),
+                  ),
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: borderRadius,
+                    border: Border.all(
+                      color: isAgent
+                          ? AppTheme.primary.withValues(alpha: 0.14)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: message.mediaId != null
+                      ? MediaMessage(
+                          mediaId: message.mediaId!,
+                          contentType:
+                              message.mediaType ?? 'application/octet-stream',
+                          fileName: message.mediaFileName,
+                          sizeBytes: message.mediaSizeBytes,
+                          isMe: isMe,
+                        )
+                      : message.format == MessageFormat.markdown
+                      ? MarkdownMessage(content: message.content, isMe: isMe)
+                      : Text(
+                          message.content,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: textColor,
                           ),
                         ),
-                      ),
-                  ],
                 ),
-              ),
-              if (!isMe) const SizedBox(width: 8),
-              if (!isMe) _buildTimestamp(theme),
-            ],
-          ),
-          if (isMe)
-            const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: ReadReceiptIndicator(status: ReadReceiptStatus.sent),
-            ),
-        ],
-      ),
-    );
-  }
+                if (isAgent && message.blocks.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: message.blocks.map((block) {
+                          if (block is CardBlock) {
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (block.imageUrl != null)
+                                    Image.network(
+                                      block.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: 150,
+                                      errorBuilder: (_, __, ___) =>
+                                          const SizedBox(
+                                            height: 150,
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.error_outline_rounded,
+                                              ),
+                                            ),
+                                          ),
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          block.title,
+                                          style: theme.textTheme.titleMedium,
+                                        ),
+                                        if (block.description != null) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            block.description!,
+                                            style: theme.textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
 
-  Widget _buildTimestamp(ThemeData theme) {
-    return Text(
-      DateFormat('a h:mm', 'ko_KR').format(message.createdAt),
-      style: theme.textTheme.labelSmall?.copyWith(
-        fontSize: 10,
+                          if (block is ActionButtonsBlock) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: block.buttons
+                                    .map(
+                                      (btn) => OutlinedButton(
+                                        onPressed: () {},
+                                        child: Text(btn.label),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            );
+                          }
+
+                          return const SizedBox.shrink();
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        DateFormat('a h:mm', 'ko_KR').format(message.createdAt),
+                        style: theme.textTheme.labelSmall,
+                      ),
+                      if (isMe) ...[
+                        const SizedBox(width: 6),
+                        const ReadReceiptIndicator(
+                          status: ReadReceiptStatus.sent,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 enum E2eeBannerType { active, available, agentPresent }
 
 class E2eeBanner extends StatelessWidget {
-  final E2eeBannerType type;
-  final VoidCallback? onActivate;
-  final String? agentName;
-
   const E2eeBanner({
     super.key,
     required this.type,
@@ -14,73 +12,73 @@ class E2eeBanner extends StatelessWidget {
     this.agentName,
   });
 
+  final E2eeBannerType type;
+  final VoidCallback? onActivate;
+  final String? agentName;
+
   @override
   Widget build(BuildContext context) {
-    Color backgroundColor;
-    Color textColor;
-    String text;
-    IconData icon;
+    final (icon, title, color, background) = switch (type) {
+      E2eeBannerType.active => (
+        Icons.lock_rounded,
+        '종단간 암호화됨 · Signal Protocol',
+        AppTheme.primary,
+        AppTheme.primarySoft,
+      ),
+      E2eeBannerType.available => (
+        Icons.lock_open_rounded,
+        'E2EE 활성화하시겠습니까?',
+        AppTheme.mutedText,
+        AppTheme.surface3,
+      ),
+      E2eeBannerType.agentPresent => (
+        Icons.auto_awesome_rounded,
+        '${agentName ?? 'Agent'}이(가) 이 대화를 읽고 있습니다',
+        AppTheme.warning,
+        const Color(0xFF2B2416),
+      ),
+    };
 
-    switch (type) {
-      case E2eeBannerType.active:
-        backgroundColor = const Color(0xFF1B3A2D);
-        textColor = const Color(0xFF4CAF50);
-        text = '종단간 암호화됨 · Signal Protocol';
-        icon = Icons.lock;
-        break;
-      case E2eeBannerType.available:
-        backgroundColor = const Color(0xFF1E1E1E);
-        textColor = Colors.grey;
-        text = 'E2EE 활성화하시겠습니까?';
-        icon = Icons.lock_open;
-        break;
-      case E2eeBannerType.agentPresent:
-        backgroundColor = const Color(0xFF2D2200);
-        textColor = const Color(0xFFFFB300);
-        text = '${agentName ?? 'Agent'}이(가) 이 대화를 읽고 있습니다';
-        icon = Icons.smart_toy;
-        break;
-    }
-
-    return Container(
-      height: 36,
-      width: double.infinity,
-      color: backgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: textColor, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (type == E2eeBannerType.available && onActivate != null) ...[
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.24)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 16),
             const SizedBox(width: 8),
-            TextButton(
-              onPressed: onActivate,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+            Expanded(
               child: Text(
-                '활성화',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  decoration: TextDecoration.underline,
-                ),
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: color),
               ),
             ),
+            if (type == E2eeBannerType.available && onActivate != null)
+              TextButton(
+                onPressed: onActivate,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.strongText,
+                  backgroundColor: AppTheme.surface4,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('활성화'),
+              ),
           ],
-        ],
+        ),
       ),
     );
   }

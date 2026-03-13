@@ -18,7 +18,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     if (_phoneNumber.isEmpty) return;
 
     await ref.read(authNotifierProvider.notifier).requestOtp(_phoneNumber);
-    
+
     if (mounted) {
       final state = ref.read(authNotifierProvider);
       if (state.step == AuthStep.otpVerify) {
@@ -39,8 +39,22 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 48),
-              const Center(
-                child: Text('🐾', style: TextStyle(fontSize: 64)),
+              const Center(child: Text('🐾', style: TextStyle(fontSize: 64))),
+              const SizedBox(height: 20),
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'Paw',
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'AI-Native Messenger',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
               Text(
@@ -51,8 +65,8 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
               Text(
                 '안전한 로그인을 위해 인증번호를 보내드립니다.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 32),
               PhoneInputField(
