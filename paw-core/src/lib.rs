@@ -48,4 +48,25 @@ pub fn ping() -> String {
     "paw-core-ok".to_string()
 }
 
+pub fn initial_auth_state_view() -> AuthStateView {
+    AuthStateView::from(&auth::AuthState::initial())
+}
+
+pub fn empty_runtime_snapshot() -> RuntimeSnapshot {
+    RuntimeSnapshot {
+        connection: ConnectionSnapshot {
+            state: ConnectionStateView::Disconnected,
+            attempts: 0,
+            pending_reconnect_delay_ms: None,
+            pending_reconnect_uri: None,
+        },
+        cursors: Vec::new(),
+        active_streams: Vec::new(),
+    }
+}
+
+pub fn core_event_json(event: CoreEvent) -> String {
+    serde_json::to_string(&event).expect("core event should serialize")
+}
+
 uniffi::include_scaffolding!("paw_core");

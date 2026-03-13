@@ -1,0 +1,32 @@
+dictionary AccountKeys {
+  bytes identity_key;
+  bytes identity_secret;
+  bytes signed_prekey;
+  bytes signed_prekey_secret;
+};
+
+typedef enum AuthStepView;
+typedef record AuthStateView;
+typedef enum ConnectionStateView;
+typedef record ConnectionSnapshot;
+typedef record ConversationCursorView;
+typedef record ToolCallView;
+typedef record StreamingSessionView;
+typedef record MessageRecordView;
+typedef record FinalizedStreamMessageView;
+typedef record SyncRequestView;
+typedef record AckRequestView;
+typedef enum RuntimeInitStepView;
+typedef record RuntimeBootstrapReportView;
+typedef record RuntimeSnapshot;
+typedef enum CoreEvent;
+
+namespace paw_core {
+  string ping();
+  AccountKeys create_account();
+  bytes encrypt(bytes their_signed_prekey, bytes plaintext);
+  bytes decrypt(bytes my_signed_prekey_secret, bytes ciphertext);
+  AuthStateView initial_auth_state_view();
+  RuntimeSnapshot empty_runtime_snapshot();
+  string core_event_json(CoreEvent event);
+};

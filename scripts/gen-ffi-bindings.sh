@@ -18,6 +18,7 @@ OUT_SWIFT="paw-core/generated/swift"
 
 mkdir -p "$OUT_KOTLIN" "$OUT_SWIFT"
 
+cargo build -p paw-core --lib
 cargo run -p paw-core --bin gen-bindings -- kotlin "$OUT_KOTLIN"
 cargo run -p paw-core --bin gen-bindings -- swift "$OUT_SWIFT"
 

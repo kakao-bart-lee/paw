@@ -156,7 +156,7 @@ make e2e-real
 - 신규 파일
   - `paw-core/Cargo.toml`
   - `paw-core/src/lib.rs`
-  - `paw-core/uniffi/paw_core.udl`
+  - `paw-core/src/paw_core.udl`
   - `paw-core/build.rs`
 
 #### 1-2. 최소 브리지 계약 정의

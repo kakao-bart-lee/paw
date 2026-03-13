@@ -3407,6 +3407,7 @@ dependencies = [
  "async-trait",
  "axum",
  "camino",
+ "cargo_metadata",
  "chrono",
  "futures-util",
  "hkdf",

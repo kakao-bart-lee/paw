@@ -8,7 +8,7 @@ use crate::{
     ws::{WsConnectionState, WsService},
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum AuthStepView {
     AuthMethodSelect,
     PhoneInput,
@@ -18,7 +18,7 @@ pub enum AuthStepView {
     Authenticated,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct AuthStateView {
     pub step: AuthStepView,
     pub phone: String,
@@ -32,7 +32,7 @@ pub struct AuthStateView {
     pub error: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum ConnectionStateView {
     Disconnected,
     Connecting,
@@ -40,27 +40,27 @@ pub enum ConnectionStateView {
     Retrying,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ConnectionSnapshot {
     pub state: ConnectionStateView,
-    pub attempts: usize,
+    pub attempts: u32,
     pub pending_reconnect_delay_ms: Option<u64>,
     pub pending_reconnect_uri: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ConversationCursorView {
     pub conversation_id: String,
     pub last_seq: i64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ToolCallView {
     pub tool: String,
     pub label: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct StreamingSessionView {
     pub stream_id: String,
     pub conversation_id: String,
@@ -73,7 +73,7 @@ pub struct StreamingSessionView {
     pub tool_history: Vec<ToolCallView>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct MessageRecordView {
     pub id: String,
     pub conversation_id: String,
@@ -86,7 +86,7 @@ pub struct MessageRecordView {
     pub is_agent: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct FinalizedStreamMessageView {
     pub id: String,
     pub conversation_id: String,
@@ -100,19 +100,19 @@ pub struct FinalizedStreamMessageView {
     pub duration_ms: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct SyncRequestView {
     pub conversation_id: String,
     pub last_seq: i64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct AckRequestView {
     pub conversation_id: String,
     pub last_seq: i64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum RuntimeInitStepView {
     DatabaseOpened,
     TokensRestored,
@@ -120,7 +120,7 @@ pub enum RuntimeInitStepView {
     WsConnected,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct RuntimeBootstrapReportView {
     pub steps: Vec<RuntimeInitStepView>,
     pub has_tokens: bool,
@@ -128,14 +128,14 @@ pub struct RuntimeBootstrapReportView {
     pub connected_uri: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct RuntimeSnapshot {
     pub connection: ConnectionSnapshot,
     pub cursors: Vec<ConversationCursorView>,
     pub active_streams: Vec<StreamingSessionView>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 #[serde(tag = "type", content = "payload")]
 pub enum CoreEvent {
     AuthStateChanged(AuthStateView),
@@ -194,7 +194,7 @@ impl From<&WsService> for ConnectionSnapshot {
         let pending = value.pending_reconnect();
         Self {
             state: value.connection_state().into(),
-            attempts: value.attempts(),
+            attempts: value.attempts() as u32,
             pending_reconnect_delay_ms: pending.map(|plan| plan.delay.as_millis() as u64),
             pending_reconnect_uri: pending.map(|plan| plan.uri.to_string()),
         }

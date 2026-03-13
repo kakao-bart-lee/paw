@@ -9,6 +9,7 @@ crate-type = ["cdylib", "staticlib", "lib"]
 [dependencies]
 uniffi = { workspace = true, features = ["bindgen"] }
 camino = "1"
+cargo_metadata = "0.15.4"
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
