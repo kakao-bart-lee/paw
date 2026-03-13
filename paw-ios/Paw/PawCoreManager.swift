@@ -186,12 +186,13 @@ final class PawCoreManager: ObservableObject {
 
         let hasDeviceKey = deviceKeyStore.hasDeviceKey()
         let tokens = tokenVault.loadTokens()
+        let shell = Self.makeShellState(authenticated: tokens.accessToken != nil, username: nil)
         self.preview = PawBootstrapPreview(
             bridgeStatus: "Keychain + APNs adapters wired",
             auth: PawCoreManager.makeAuthPreview(tokens: tokens),
             runtime: PawRuntimePreview(
                 connectionState: tokens.accessToken == nil ? "Disconnected" : "Ready",
-                cursorCount: 0,
+                cursorCount: shell.conversations.count,
                 activeStreamCount: 0
             ),
             storage: tokenVault.storagePreview(hasDeviceKey: hasDeviceKey),
@@ -200,7 +201,12 @@ final class PawCoreManager: ObservableObject {
                 activeHints: Self.lifecycleHints(for: "Active"),
                 backgroundHints: Self.lifecycleHints(for: "Background"),
                 currentState: "Launching"
-            )
+            ),
+            conversations: shell.conversations,
+            selectedConversationID: shell.selectedConversationID,
+            messages: shell.messages,
+            composerText: shell.composerText,
+            shellBanner: shell.banner
         )
     }
 
@@ -208,9 +214,15 @@ final class PawCoreManager: ObservableObject {
         "PawCore/Artifacts"
     }
 
+    var selectedConversation: PawConversationPreview? {
+        guard let id = preview.selectedConversationID else { return nil }
+        return preview.conversations.first(where: { $0.id == id })
+    }
+
     func startPhoneInput() {
         preview.auth.step = .phoneInput
         preview.auth.error = nil
+        updateShellBannerForCurrentState()
     }
 
     func submitPhone(_ phone: String = "+82 10-5555-0101", discoverableByPhone: Bool = true) {
@@ -218,6 +230,7 @@ final class PawCoreManager: ObservableObject {
         preview.auth.discoverableByPhone = discoverableByPhone
         preview.auth.step = .otpVerify
         preview.auth.error = nil
+        updateShellBannerForCurrentState()
     }
 
     func verifyOtp(_ code: String = "123456") {
@@ -242,6 +255,7 @@ final class PawCoreManager: ObservableObject {
         preview.auth.step = .deviceName
         preview.runtime.connectionState = "Bootstrapping"
         preview.auth.error = nil
+        updateShellBannerForCurrentState()
     }
 
     func submitDeviceName(_ deviceName: String = "Haruna's iPhone") {
@@ -252,6 +266,7 @@ final class PawCoreManager: ObservableObject {
             _ = deviceKeyStore.saveDeviceKey(Data(deviceName.utf8))
             preview.storage.hasDeviceKey = deviceKeyStore.hasDeviceKey()
         }
+        updateShellBannerForCurrentState()
     }
 
     func submitUsername(_ username: String = "haruna") {
@@ -259,6 +274,7 @@ final class PawCoreManager: ObservableObject {
         preview.auth.step = .authenticated
         preview.runtime.connectionState = "Connected"
         preview.auth.error = nil
+        hydrateChatShell(username: username)
     }
 
     func logout() {
@@ -267,14 +283,17 @@ final class PawCoreManager: ObservableObject {
         preview.auth = Self.makeAuthPreview(tokens: PawStoredTokens(sessionToken: nil, accessToken: nil, refreshToken: nil))
         preview.runtime.connectionState = "Disconnected"
         preview.push = pushRegistrar.currentState()
+        hydrateChatShell(username: nil)
     }
 
     func registerForPush(token: String = "apns-demo-token") {
         preview.push = pushRegistrar.register(token: token)
+        updateShellBannerForCurrentState()
     }
 
     func unregisterPush() {
         preview.push = pushRegistrar.unregister()
+        updateShellBannerForCurrentState()
     }
 
     func applyLifecycle(state: String) {
@@ -286,9 +305,131 @@ final class PawCoreManager: ObservableObject {
         case "Background":
             preview.lifecycle.backgroundHints = Self.lifecycleHints(for: state)
             preview.runtime.connectionState = "Background"
+            preview.runtime.activeStreamCount = 0
         default:
             break
         }
+        updateShellBannerForCurrentState()
+    }
+
+    func selectConversation(_ id: String) {
+        guard preview.auth.hasAccessToken else {
+            preview.auth.error = "Authenticate first to open conversations"
+            updateShellBannerForCurrentState()
+            return
+        }
+        guard preview.conversations.contains(where: { $0.id == id }) else {
+            return
+        }
+        preview.selectedConversationID = id
+        preview.messages = Self.baseMessages(for: id, username: effectiveUsername)
+        updateConversationMetadata(for: id, unreadCount: 0)
+        preview.runtime.cursorCount = preview.conversations.count
+        updateShellBannerForCurrentState()
+    }
+
+    func selectNextConversation() {
+        guard let selectedConversationID else {
+            selectConversation(preview.conversations.first?.id ?? "")
+            return
+        }
+        guard let index = preview.conversations.firstIndex(where: { $0.id == selectedConversationID }) else {
+            return
+        }
+        let next = preview.conversations[(index + 1) % preview.conversations.count]
+        selectConversation(next.id)
+    }
+
+    func sendChatMessage(_ text: String? = nil) {
+        guard preview.auth.hasAccessToken, let conversationID = preview.selectedConversationID else {
+            preview.auth.error = "Finish auth flow before using chat shell"
+            updateShellBannerForCurrentState()
+            return
+        }
+
+        let outgoing = (text ?? preview.composerText).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !outgoing.isEmpty else {
+            preview.auth.error = "Composer is empty"
+            return
+        }
+
+        preview.auth.error = nil
+        preview.messages.append(
+            PawMessagePreview(
+                id: "msg-\(preview.messages.count + 1)-me",
+                conversationID: conversationID,
+                author: effectiveUsername,
+                body: outgoing,
+                role: .me,
+                timestampLabel: Self.timestampLabel(from: now())
+            )
+        )
+        preview.runtime.activeStreamCount = 1
+        preview.runtime.connectionState = preview.lifecycle.currentState == "Background" ? "Background" : "Connected"
+
+        let reply = agentReply(for: outgoing)
+        preview.messages.append(
+            PawMessagePreview(
+                id: "msg-\(preview.messages.count + 1)-agent",
+                conversationID: conversationID,
+                author: "Paw Agent",
+                body: reply,
+                role: .agent,
+                timestampLabel: Self.timestampLabel(from: now())
+            )
+        )
+        preview.runtime.activeStreamCount = 0
+        preview.composerText = "Show sync + streaming status"
+        updateConversationMetadata(for: conversationID, subtitle: reply, unreadCount: 0)
+        updateShellBannerForCurrentState()
+    }
+
+    private var selectedConversationID: String? {
+        preview.selectedConversationID
+    }
+
+    private var effectiveUsername: String {
+        preview.auth.username.isEmpty ? "haruna" : preview.auth.username
+    }
+
+    private func hydrateChatShell(username: String?) {
+        let shell = Self.makeShellState(authenticated: preview.auth.hasAccessToken, username: username ?? Self.nilIfEmpty(preview.auth.username))
+        preview.conversations = shell.conversations
+        preview.selectedConversationID = shell.selectedConversationID
+        preview.messages = shell.messages
+        preview.composerText = shell.composerText
+        preview.shellBanner = shell.banner
+        preview.runtime.cursorCount = shell.conversations.count
+        preview.runtime.activeStreamCount = 0
+    }
+
+    private func updateConversationMetadata(for conversationID: String, subtitle: String? = nil, unreadCount: Int? = nil) {
+        preview.conversations = preview.conversations.map { conversation in
+            guard conversation.id == conversationID else { return conversation }
+            return PawConversationPreview(
+                id: conversation.id,
+                title: conversation.title,
+                subtitle: subtitle ?? conversation.subtitle,
+                unreadCount: unreadCount ?? conversation.unreadCount,
+                accent: conversation.accent
+            )
+        }
+    }
+
+    private func agentReply(for outgoing: String) -> String {
+        let pushState = preview.push.status == "Registered" ? "APNs active" : "APNs pending"
+        let lifecycle = preview.lifecycle.currentState
+        return "Runtime live: \(preview.runtime.connectionState), \(pushState), lifecycle=\(lifecycle). Echoing \"\(outgoing)\" into the iOS shell."
+    }
+
+    private func updateShellBannerForCurrentState() {
+        if !preview.auth.hasAccessToken {
+            preview.shellBanner = "Authenticate to unlock conversations + chat runtime shell."
+            return
+        }
+
+        let conversation = selectedConversation?.title ?? "No conversation"
+        preview.shellBanner = "\(conversation) · \(preview.runtime.connectionState) · push \(preview.push.status.lowercased())"
     }
 
     private static func makeAuthPreview(tokens: PawStoredTokens) -> PawAuthPreview {
@@ -306,6 +447,41 @@ final class PawCoreManager: ObservableObject {
         )
     }
 
+    private static func makeShellState(authenticated: Bool, username: String?) -> (conversations: [PawConversationPreview], selectedConversationID: String?, messages: [PawMessagePreview], composerText: String, banner: String) {
+        let resolvedUsername = nilIfEmpty(username) ?? "haruna"
+        let conversations = [
+            PawConversationPreview(id: "conv-bootstrap", title: "Bootstrap Crew", subtitle: authenticated ? "Runtime snapshot restored from Keychain." : "Sign in to hydrate bootstrap thread.", unreadCount: authenticated ? 0 : 2, accent: "primary"),
+            PawConversationPreview(id: "conv-agent", title: "Agent Ops", subtitle: authenticated ? "Streaming shell ready for agent replies." : "Agent shell locked until auth completes.", unreadCount: authenticated ? 1 : 0, accent: "accent")
+        ]
+        let selectedConversationID = conversations.first?.id
+        let messages = baseMessages(for: selectedConversationID ?? "conv-bootstrap", username: resolvedUsername, authenticated: authenticated)
+        let composerText = authenticated ? "Summarize bootstrap status" : "Authenticate to enable chat"
+        let banner = authenticated ? "\(conversations[0].title) · Ready · push pending" : "Authenticate to unlock conversations + chat runtime shell."
+        return (conversations, selectedConversationID, messages, composerText, banner)
+    }
+
+    private static func baseMessages(for conversationID: String, username: String, authenticated: Bool = true) -> [PawMessagePreview] {
+        switch conversationID {
+        case "conv-agent":
+            return [
+                PawMessagePreview(id: "agent-1", conversationID: conversationID, author: "Paw Agent", body: authenticated ? "Streaming slot is warm. Ask for runtime state when ready." : "Finish auth to open the agent runtime shell.", role: .agent, timestampLabel: "now"),
+                PawMessagePreview(id: "agent-2", conversationID: conversationID, author: username, body: authenticated ? "Show me the iOS bootstrap summary." : "Waiting for OTP verification.", role: .me, timestampLabel: "now")
+            ]
+        default:
+            return [
+                PawMessagePreview(id: "bootstrap-1", conversationID: conversationID, author: "System", body: authenticated ? "Stored access token restored from Keychain and runtime snapshot is live." : "No stored token found. Auth flow starts from phone input.", role: .peer, timestampLabel: "now"),
+                PawMessagePreview(id: "bootstrap-2", conversationID: conversationID, author: "Paw Agent", body: authenticated ? "APNs + lifecycle hints are bound to the shell cards below." : "Complete auth to hydrate conversations and chat runtime.", role: .agent, timestampLabel: "now")
+            ]
+        }
+    }
+
+    private static func timestampLabel(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
     nonisolated static func lifecycleHints(for state: String) -> [String] {
         switch state {
         case "Launching", "Active":
@@ -317,5 +493,12 @@ final class PawCoreManager: ObservableObject {
         default:
             []
         }
+    }
+}
+
+private extension PawCoreManager {
+    static func nilIfEmpty(_ value: String?) -> String? {
+        guard let value, !value.isEmpty else { return nil }
+        return value
     }
 }

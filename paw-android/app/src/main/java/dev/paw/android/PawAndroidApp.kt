@@ -2,12 +2,14 @@ package dev.paw.android
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,10 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.paw.android.runtime.AndroidChatMessage
 import dev.paw.android.ui.theme.PawAgentBubble
 import dev.paw.android.ui.theme.PawAndroidTheme
 import dev.paw.android.ui.theme.PawBackground
@@ -129,10 +133,72 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                     }
 
                     if (uiState.preview.auth.step == AuthStepView.AUTHENTICATED) {
+                        ChatShellCard(uiState, viewModel)
                         Button(onClick = viewModel::logout) {
                             Text("로그아웃")
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatShellCard(uiState: PawBootstrapUiState, viewModel: PawBootstrapViewModel) {
+    MoodCard(
+        title = "Conversations / chat runtime",
+        subtitle = "real authenticated shell backed by /conversations + /messages",
+        background = PawSurface1,
+    ) {
+        MetadataLine("conversation count", uiState.chat.conversations.size.toString())
+        MetadataLine("selected", uiState.chat.selectedConversationId ?: "-")
+        MetadataLine("runtime cursors", uiState.preview.runtime.cursors.joinToString { "${it.conversationId.take(8)}:${it.lastSeq}" }.ifBlank { "-" })
+
+        uiState.chat.conversationsError?.let { MetadataLine("conversation error", it) }
+        uiState.chat.messagesError?.let { MetadataLine("message error", it) }
+
+        if (uiState.chat.conversationsLoading) {
+            CircularProgressIndicator(modifier = Modifier.padding(top = 12.dp))
+        } else if (uiState.chat.conversations.isEmpty()) {
+            Text("아직 표시할 대화가 없습니다. 인증 상태는 live 이지만 대화 목록은 비어 있습니다.", color = PawMutedText, modifier = Modifier.padding(top = 12.dp))
+        } else {
+            Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                uiState.chat.conversations.forEach { conversation ->
+                    ConversationRow(
+                        name = conversation.name,
+                        selected = conversation.id == uiState.chat.selectedConversationId,
+                        preview = conversation.lastMessage ?: "최근 메시지 없음",
+                        unreadCount = conversation.unreadCount,
+                        onClick = { viewModel.selectConversation(conversation.id) },
+                    )
+                }
+            }
+        }
+
+        if (uiState.chat.selectedConversationId != null) {
+            Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (uiState.chat.messagesLoading) {
+                    CircularProgressIndicator()
+                } else if (uiState.chat.messages.isEmpty()) {
+                    Text("메시지가 없습니다.", color = PawMutedText)
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        uiState.chat.messages.forEach { message ->
+                            ChatBubble(message)
+                        }
+                    }
+                }
+
+                AuthField("메시지", uiState.chat.messageDraft, viewModel::onMessageDraftChanged)
+                Button(onClick = viewModel::sendMessage, enabled = !uiState.chat.sendingMessage) {
+                    Text(if (uiState.chat.sendingMessage) "전송 중…" else "메시지 보내기")
                 }
             }
         }
@@ -243,4 +309,44 @@ private fun MetadataLine(label: String, value: String) {
 @Composable
 private fun AuthStepChip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
+}
+
+@Composable
+private fun ConversationRow(
+    name: String,
+    selected: Boolean,
+    preview: String,
+    unreadCount: Int,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .border(1.dp, if (selected) PawPrimary else PawOutline, RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = if (selected) PawPrimarySoft else PawReceivedBubble),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(name, color = PawStrongText, fontWeight = FontWeight.SemiBold)
+            Text(preview, color = PawMutedText, style = MaterialTheme.typography.bodySmall)
+            Text("unread $unreadCount", color = PawPrimary, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun ChatBubble(message: AndroidChatMessage) {
+    val background = when {
+        message.isMe -> PawSentBubble
+        message.isAgent -> PawAgentBubble
+        else -> PawReceivedBubble
+    }
+    MoodCard(
+        title = if (message.isMe) "You" else if (message.isAgent) "Agent" else message.senderId.take(8),
+        subtitle = "seq ${message.seq}",
+        background = background,
+    ) {
+        Text(message.content, color = PawStrongText)
+    }
 }

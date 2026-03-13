@@ -8,16 +8,22 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.paw.android.runtime.AndroidDeviceKeyStore
+import dev.paw.android.runtime.AndroidChatMessage
+import dev.paw.android.runtime.AndroidChatShellState
+import dev.paw.android.runtime.AndroidConversationItem
 import dev.paw.android.runtime.AndroidSecureTokenVault
 import dev.paw.android.runtime.FirebasePushRegistrar
 import dev.paw.android.runtime.PawAndroidConfig
 import dev.paw.android.runtime.PawApiClient
 import dev.paw.android.runtime.PawLifecycleBridge
 import dev.paw.android.runtime.StoredTokens
+import dev.paw.android.runtime.runtimeSnapshotWithChat
+import dev.paw.android.runtime.selectConversationId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Base64
+import java.util.UUID
 import uniffi.paw_core.AuthStateView
 import uniffi.paw_core.AuthStepView
 import uniffi.paw_core.ConnectionSnapshot
@@ -29,6 +35,7 @@ import uniffi.paw_core.RuntimeSnapshot
 
 data class PawBootstrapUiState(
     val preview: PawBootstrapPreview,
+    val chat: AndroidChatShellState = AndroidChatShellState(),
     val phoneInput: String = "",
     val otpInput: String = "",
     val deviceNameInput: String = defaultDeviceName(),
@@ -98,6 +105,10 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
         uiState = uiState.copy(discoverableByPhone = value)
     }
 
+    fun onMessageDraftChanged(value: String) {
+        uiState = uiState.copy(chat = uiState.chat.copy(messageDraft = value))
+    }
+
     fun showPhoneOtp() = updateAuthState { current ->
         current.copy(step = AuthStepView.PHONE_INPUT, error = null)
     }
@@ -109,6 +120,86 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
     fun refresh() {
         viewModelScope.launch {
             bootstrap(forceRefresh = true)
+        }
+    }
+
+    fun selectConversation(conversationId: String) {
+        uiState = uiState.copy(
+            chat = uiState.chat.copy(
+                selectedConversationId = conversationId,
+                messages = emptyList(),
+                messagesError = null,
+            ),
+        )
+        viewModelScope.launch {
+            loadMessages(conversationId)
+        }
+    }
+
+    fun sendMessage() {
+        val conversationId = uiState.chat.selectedConversationId ?: return
+        val draft = uiState.chat.messageDraft.trim()
+        if (draft.isBlank()) {
+            uiState = uiState.copy(chat = uiState.chat.copy(messagesError = "메시지를 입력하세요."))
+            return
+        }
+
+        val optimistic = AndroidChatMessage(
+            id = UUID.randomUUID().toString(),
+            conversationId = conversationId,
+            senderId = "me",
+            content = draft,
+            format = "plain",
+            seq = (uiState.chat.messages.maxOfOrNull { it.seq } ?: 0L) + 1,
+            createdAt = System.currentTimeMillis().toString(),
+            isMe = true,
+            isAgent = false,
+        )
+        uiState = uiState.copy(
+            chat = uiState.chat.copy(
+                messageDraft = "",
+                sendingMessage = true,
+                messagesError = null,
+                messages = uiState.chat.messages + optimistic,
+            ),
+        )
+        syncChatRuntime()
+
+        viewModelScope.launch {
+            runCatching { apiClient.sendMessage(conversationId, draft) }
+                .onSuccess { response ->
+                    val confirmed = optimistic.copy(
+                        id = response.id.ifBlank { optimistic.id },
+                        seq = if (response.seq > 0) response.seq else optimistic.seq,
+                        createdAt = response.createdAt.ifBlank { optimistic.createdAt },
+                    )
+                    uiState = uiState.copy(
+                        chat = uiState.chat.copy(
+                            sendingMessage = false,
+                            messages = uiState.chat.messages.map { message ->
+                                if (message.id == optimistic.id) confirmed else message
+                            },
+                            conversations = uiState.chat.conversations.map { conversation ->
+                                if (conversation.id == conversationId) {
+                                    conversation.copy(lastMessage = draft)
+                                } else {
+                                    conversation
+                                }
+                            },
+                        ),
+                    )
+                    syncChatRuntime()
+                }
+                .onFailure { error ->
+                    uiState = uiState.copy(
+                        chat = uiState.chat.copy(
+                            sendingMessage = false,
+                            messages = uiState.chat.messages.filterNot { it.id == optimistic.id },
+                            messagesError = error.message ?: "메시지를 전송하지 못했습니다.",
+                        ),
+                    )
+                    syncChatRuntime()
+                }
         }
     }
 
@@ -198,6 +289,7 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
                 bootstrapMessage = "Device registered and bootstrap is live.",
                 deviceKeyMaterial = ensureDeviceKeyMaterial(),
             )
+            loadChatShell()
             currentAuth()
         }
     }
@@ -214,6 +306,7 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
             val resolvedUsername = updated.optString("username").ifBlank { username }
             val discoverable = updated.optBoolean("discoverable_by_phone", uiState.discoverableByPhone)
             uiState = uiState.copy(usernameInput = resolvedUsername, discoverableByPhone = discoverable, stagedSessionToken = null)
+            loadChatShell()
             currentAuth().copy(
                 step = AuthStepView.AUTHENTICATED,
                 username = resolvedUsername,
@@ -228,6 +321,9 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
         updateAuthState { current ->
             current.copy(step = AuthStepView.AUTHENTICATED, isLoading = false, error = null)
         }
+        viewModelScope.launch {
+            loadChatShell()
+        }
     }
 
     fun logout() {
@@ -237,6 +333,7 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
             tokenVault.clear()
             apiClient.setAccessToken(null)
             uiState = uiState.copy(
+                chat = AndroidChatShellState(),
                 usernameInput = "",
                 otpInput = "",
                 stagedSessionToken = null,
@@ -301,6 +398,11 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
             bootstrapMessage = message,
             deviceKeyMaterial = deviceKeys,
         )
+        if (auth.step == AuthStepView.AUTHENTICATED || auth.step == AuthStepView.USERNAME_SETUP) {
+            loadChatShell()
+        } else {
+            uiState = uiState.copy(chat = AndroidChatShellState())
+        }
     }
 
     private fun executeAuthUpdate(
@@ -361,7 +463,11 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
         uiState = uiState.copy(
             preview = PawCoreBridge.preview(
                 auth = auth,
-                runtime = runtime,
+                runtime = runtimeSnapshotWithChat(
+                    base = runtime,
+                    selectedConversationId = uiState.chat.selectedConversationId,
+                    messages = uiState.chat.messages,
+                ),
                 storage = storage,
                 push = push,
                 activeLifecycleHints = lifecycleBridge.activeHints.value,
@@ -386,6 +492,79 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
     private fun ensureDeviceKeyMaterial(): DeviceKeyMaterial = deviceKeyStore.loadOrCreate()
 
     private suspend fun refreshPush(accessToken: String?): PushRegistrationState = pushRegistrar.register(accessToken)
+
+    private suspend fun loadChatShell() {
+        if (!currentAuth().hasAccessToken) {
+            uiState = uiState.copy(chat = AndroidChatShellState())
+            syncChatRuntime()
+            return
+        }
+
+        uiState = uiState.copy(chat = uiState.chat.copy(conversationsLoading = true, conversationsError = null))
+        runCatching { apiClient.getConversations() }
+            .onSuccess { conversations ->
+                val selectedConversationId = selectConversationId(
+                    current = uiState.chat.selectedConversationId,
+                    conversations = conversations,
+                )
+                uiState = uiState.copy(
+                    chat = uiState.chat.copy(
+                        conversations = conversations,
+                        selectedConversationId = selectedConversationId,
+                        conversationsLoading = false,
+                        conversationsError = null,
+                    ),
+                )
+                syncChatRuntime()
+                selectedConversationId?.let { loadMessages(it) }
+            }
+            .onFailure { error ->
+                uiState = uiState.copy(
+                    chat = uiState.chat.copy(
+                        conversationsLoading = false,
+                        conversationsError = error.message ?: "대화를 불러오지 못했습니다.",
+                    ),
+                )
+                syncChatRuntime()
+            }
+    }
+
+    private suspend fun loadMessages(conversationId: String) {
+        uiState = uiState.copy(chat = uiState.chat.copy(messagesLoading = true, messagesError = null))
+        runCatching { apiClient.getMessages(conversationId) }
+            .onSuccess { messages ->
+                uiState = uiState.copy(
+                    chat = uiState.chat.copy(
+                        selectedConversationId = conversationId,
+                        messages = messages,
+                        messagesLoading = false,
+                        messagesError = null,
+                    ),
+                )
+                syncChatRuntime()
+            }
+            .onFailure { error ->
+                uiState = uiState.copy(
+                    chat = uiState.chat.copy(
+                        selectedConversationId = conversationId,
+                        messages = emptyList(),
+                        messagesLoading = false,
+                        messagesError = error.message ?: "메시지를 불러오지 못했습니다.",
+                    ),
+                )
+                syncChatRuntime()
+            }
+    }
+
+    private fun syncChatRuntime() {
+        updatePreview(
+            auth = uiState.preview.auth,
+            runtime = uiState.preview.runtime,
+            push = uiState.preview.push,
+            bootstrapMessage = uiState.preview.bootstrapMessage,
+            deviceKeyMaterial = deviceKeyStore.load(),
+        )
+    }
 
     private fun connectionSnapshot(connected: Boolean): RuntimeSnapshot = PawCoreBridge.blankRuntimeSnapshot().copy(
         connection = ConnectionSnapshot(

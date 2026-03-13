@@ -2,11 +2,19 @@ package dev.paw.android.runtime
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.UUID
+
+data class SendMessageResult(
+    val id: String,
+    val seq: Long,
+    val createdAt: String,
+)
 
 class PawApiClient(
     private val baseUrl: String,
@@ -51,6 +59,58 @@ class PawApiClient(
             .put("username", username)
             .put("discoverable_by_phone", discoverableByPhone),
     )
+
+    suspend fun getConversations(): List<AndroidConversationItem> {
+        val payload = requestJson(method = "GET", path = "/conversations")
+        val rows = payload.optJSONArray("conversations") ?: JSONArray()
+        return List(rows.length()) { index ->
+            val row = rows.optJSONObject(index) ?: JSONObject()
+            AndroidConversationItem(
+                id = row.optString("id"),
+                name = row.optString("name").ifBlank { "Conversation ${index + 1}" },
+                lastMessage = row.optString("last_message").takeIf { it.isNotBlank() },
+                unreadCount = row.optInt("unread_count", 0),
+            )
+        }
+    }
+
+    suspend fun getMessages(conversationId: String): List<AndroidChatMessage> {
+        val payload = requestJson(method = "GET", path = "/conversations/$conversationId/messages")
+        val rows = payload.optJSONArray("messages") ?: JSONArray()
+        return List(rows.length()) { index ->
+            val row = rows.optJSONObject(index) ?: JSONObject()
+            AndroidChatMessage(
+                id = row.optString("id").ifBlank { "msg-$index" },
+                conversationId = row.optString("conversation_id").ifBlank { conversationId },
+                senderId = row.optString("sender_id").ifBlank { "unknown" },
+                content = row.optString("content"),
+                format = row.optString("format").ifBlank { "plain" },
+                seq = row.optLong("seq", 0L),
+                createdAt = row.optString("created_at"),
+                isMe = false,
+                isAgent = false,
+            )
+        }.sortedBy { it.seq }
+    }
+
+    suspend fun sendMessage(
+        conversationId: String,
+        content: String,
+    ): SendMessageResult {
+        val payload = requestJson(
+            method = "POST",
+            path = "/conversations/$conversationId/messages",
+            body = JSONObject()
+                .put("content", content)
+                .put("format", "plain")
+                .put("idempotency_key", UUID.randomUUID().toString()),
+        )
+        return SendMessageResult(
+            id = payload.optString("id"),
+            seq = payload.optLong("seq", 0L),
+            createdAt = payload.optString("created_at"),
+        )
+    }
 
     suspend fun registerPush(token: String) {
         requestJson(

@@ -58,6 +58,8 @@ final class PawTests: XCTestCase {
         XCTAssertEqual(manager.preview.auth.step, .authenticated)
         XCTAssertTrue(manager.preview.auth.hasAccessToken)
         XCTAssertEqual(manager.preview.runtime.connectionState, "Ready")
+        XCTAssertEqual(manager.preview.shellBanner, "Bootstrap Crew · Ready · push pending")
+        XCTAssertEqual(manager.preview.conversations.count, 2)
     }
 
     @MainActor
@@ -87,5 +89,55 @@ final class PawTests: XCTestCase {
         XCTAssertEqual(manager.preview.push.status, "Registered")
         XCTAssertEqual(manager.preview.runtime.connectionState, "Connected")
         XCTAssertEqual(vault.loadTokens().accessToken, "access-ios-demo")
+        XCTAssertEqual(manager.selectedConversation?.id, "conv-bootstrap")
+        XCTAssertEqual(manager.preview.messages.first?.author, "System")
+    }
+
+    @MainActor
+    func testChatShellUnlocksAfterAuthAndAppendsAgentReply() {
+        let store = PawInMemorySecureStore()
+        let manager = PawCoreManager(
+            tokenVault: PawKeychainTokenVault(secureStore: store),
+            deviceKeyStore: PawKeychainDeviceKeyStore(secureStore: store),
+            pushRegistrar: PawApnsPushRegistrar(secureStore: store),
+            now: { Date(timeIntervalSince1970: 1_710_000_000) }
+        )
+
+        manager.sendChatMessage()
+        XCTAssertEqual(manager.preview.auth.error, "Finish auth flow before using chat shell")
+
+        manager.submitPhone()
+        manager.verifyOtp()
+        manager.submitDeviceName()
+        manager.submitUsername("chatuser")
+        manager.selectConversation("conv-agent")
+        manager.sendChatMessage("How is runtime?")
+
+        XCTAssertEqual(manager.preview.selectedConversationID, "conv-agent")
+        XCTAssertEqual(manager.preview.runtime.activeStreamCount, 0)
+        XCTAssertEqual(manager.preview.messages.last?.author, "Paw Agent")
+        XCTAssertTrue(manager.preview.messages.last?.body.contains("Runtime live") == true)
+        XCTAssertEqual(manager.preview.conversations.first(where: { $0.id == "conv-agent" })?.unreadCount, 0)
+    }
+
+    @MainActor
+    func testLogoutRelocksConversationShell() {
+        let store = PawInMemorySecureStore()
+        let manager = PawCoreManager(
+            tokenVault: PawKeychainTokenVault(secureStore: store),
+            deviceKeyStore: PawKeychainDeviceKeyStore(secureStore: store),
+            pushRegistrar: PawApnsPushRegistrar(secureStore: store)
+        )
+
+        manager.submitPhone()
+        manager.verifyOtp()
+        manager.submitDeviceName()
+        manager.submitUsername()
+        manager.logout()
+
+        XCTAssertFalse(manager.preview.auth.hasAccessToken)
+        XCTAssertEqual(manager.preview.runtime.connectionState, "Disconnected")
+        XCTAssertEqual(manager.preview.shellBanner, "Authenticate to unlock conversations + chat runtime shell.")
+        XCTAssertEqual(manager.preview.messages.first?.body, "No stored token found. Auth flow starts from phone input.")
     }
 }

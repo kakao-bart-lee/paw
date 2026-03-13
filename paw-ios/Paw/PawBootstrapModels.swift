@@ -16,6 +16,11 @@ struct PawBootstrapPreview {
     var storage: PawStoragePreview
     var push: PawPushPreview
     var lifecycle: PawLifecyclePreview
+    var conversations: [PawConversationPreview]
+    var selectedConversationID: String?
+    var messages: [PawMessagePreview]
+    var composerText: String
+    var shellBanner: String
 }
 
 struct PawAuthPreview {
@@ -55,6 +60,29 @@ struct PawLifecyclePreview {
     var activeHints: [String]
     var backgroundHints: [String]
     var currentState: String
+}
+
+struct PawConversationPreview: Identifiable, Equatable {
+    let id: String
+    var title: String
+    var subtitle: String
+    var unreadCount: Int
+    var accent: String
+}
+
+struct PawMessagePreview: Identifiable, Equatable {
+    enum Role: String {
+        case me
+        case peer
+        case agent
+    }
+
+    let id: String
+    let conversationID: String
+    var author: String
+    var body: String
+    var role: Role
+    var timestampLabel: String
 }
 
 struct PawStoredTokens: Equatable {
