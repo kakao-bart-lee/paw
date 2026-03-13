@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/platform/desktop_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -17,11 +19,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool previews = true;
   bool readReceipts = true;
   bool typingIndicators = true;
-  bool biometricLock = true;
   bool darkMode = true;
 
   @override
   Widget build(BuildContext context) {
+    final isDesktopClient = DesktopService().isDesktop;
+    final sessionSecurityTitle = isDesktopClient ? '데스크톱 세션' : '웹 세션';
+    final sessionSecuritySubtitle = isDesktopClient
+        ? '앱 잠금은 네이티브 모바일 앱에서 제공됩니다'
+        : '브라우저와 운영체제의 보안 설정을 따릅니다';
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -149,12 +156,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: '연결된 기기와 최근 세션 확인',
                 onTap: () {},
               ),
-              _SettingsToggleRow(
-                icon: Icons.fingerprint,
-                title: '생체 잠금',
-                subtitle: 'Face ID 또는 지문으로 앱 잠금',
-                value: biometricLock,
-                onChanged: (value) => setState(() => biometricLock = value),
+              _SettingsActionRow(
+                icon: isDesktopClient
+                    ? Icons.desktop_windows_outlined
+                    : Icons.web_asset_rounded,
+                title: sessionSecurityTitle,
+                subtitle: sessionSecuritySubtitle,
+                onTap: () {},
               ),
               _SettingsToggleRow(
                 icon: Icons.dark_mode_outlined,
@@ -166,6 +174,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
+          if (!kIsWeb && isDesktopClient)
+            const _SettingsSection(
+              title: '데스크톱',
+              children: [
+                _SettingsInfoRow(
+                  icon: Icons.keyboard_command_key_rounded,
+                  title: '키보드 단축키',
+                  subtitle: 'macOS 데스크톱 gate에서 단축키 등록 상태를 점검합니다',
+                  last: true,
+                ),
+              ],
+            ),
           _SettingsSection(
             title: 'AI & Agent',
             children: [
@@ -200,6 +220,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SettingsInfoRow extends StatelessWidget {
+  const _SettingsInfoRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.last = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.surface3,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.outline),
+                ),
+                child: Icon(icon, color: AppTheme.mutedText),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!last)
+          const Divider(height: 1, indent: 16, endIndent: 16),
+      ],
     );
   }
 }

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   apiBaseUrl,
-  enableFlutterAccessibility,
+  gotoChatWithBootstrapTokens,
   loginViaRealOtp,
   startFailureCollection,
 } from './real-helpers';
@@ -15,7 +15,7 @@ test.describe('real server failure paths', () => {
   }) => {
     const failures = startFailureCollection(page);
 
-    await loginViaRealOtp(page);
+    const auth = await loginViaRealOtp(page);
 
     await page.route(`${apiBaseUrl}/users/me`, async (route) => {
       await route.fulfill({
@@ -33,7 +33,10 @@ test.describe('real server failure paths', () => {
       (response) =>
         response.url() === `${apiBaseUrl}/users/me` && response.status() == 401,
     );
-    await page.goto('/#/profile/me', { waitUntil: 'networkidle' });
+    await gotoChatWithBootstrapTokens(page, {
+      accessToken: auth.accessToken,
+      refreshToken: auth.refreshToken,
+    });
     await unauthorizedResponse;
     await expect(page).toHaveURL(/#\/auth\/phone$/);
 
@@ -45,7 +48,7 @@ test.describe('real server failure paths', () => {
   }) => {
     const failures = startFailureCollection(page);
 
-    await loginViaRealOtp(page);
+    const auth = await loginViaRealOtp(page);
 
     await page.route(`${apiBaseUrl}/conversations`, async (route) => {
       await route.fulfill({
@@ -63,8 +66,14 @@ test.describe('real server failure paths', () => {
         response.url() === `${apiBaseUrl}/conversations` &&
         response.status() === 503,
     );
-    await page.goto('/#/chat', { waitUntil: 'networkidle' });
+    await gotoChatWithBootstrapTokens(page, {
+      accessToken: auth.accessToken,
+      refreshToken: auth.refreshToken,
+    });
     await unavailableResponse;
+    await expect(
+      page.getByText(/temporarily unavailable|대화 목록을 불러오지 못했습니다\./),
+    ).toBeVisible();
 
     expect(failures, JSON.stringify(failures, null, 2)).toEqual([]);
   });

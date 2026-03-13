@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -236,12 +235,12 @@ class ApiClient {
   ) async {
     try {
       return await requestFn().timeout(const Duration(seconds: 15));
-    } on SocketException catch (e) {
-      throw ApiException.network(e.message);
     } on TimeoutException {
       throw ApiException.timeout();
-    } on HttpException catch (e) {
+    } on http.ClientException catch (e) {
       throw ApiException.network(e.message);
+    } catch (e) {
+      throw ApiException.network(e.toString());
     }
   }
 

@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 export PATH="/opt/homebrew/bin:$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"
 
+source ./scripts/local-env.sh
+
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "missing required command: $1" >&2
@@ -18,7 +20,7 @@ need_cmd docker
 need_cmd node
 need_cmd npm
 need_cmd python3
-need_cmd flutter
+FLUTTER_BIN="$(resolve_flutter_bin)"
 
 if [ ! -f .env ]; then
   cp .env.example .env
@@ -34,7 +36,7 @@ echo "fetching Rust dependencies"
 cargo fetch
 
 echo "installing Flutter dependencies"
-(cd paw-client && flutter pub get)
+(cd paw-client && "$FLUTTER_BIN" pub get)
 
 echo "installing TypeScript SDK dependencies"
 (cd adapters/paw-sdk-ts && npm install)
@@ -59,6 +61,6 @@ echo "local bootstrap complete"
 echo "next:"
 echo "  1. ./scripts/run-local-dev.sh          # server + client together"
 echo "  2. ./scripts/run-local-stack.sh        # server only"
-echo "  3. cd paw-client && flutter run       # client only"
+echo "  3. cd paw-client && $FLUTTER_BIN run  # client only"
 echo "  4. ./scripts/stop-local-dev.sh        # stop everything"
 echo "  note: if you still have an old .env, scripts auto-normalize legacy local ports"

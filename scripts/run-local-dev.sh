@@ -30,6 +30,7 @@ source .env
 set +a
 source ./scripts/local-env.sh
 normalize_legacy_local_env
+FLUTTER_BIN="$(resolve_flutter_bin)"
 
 PAW_API_BASE_URL="${SERVER_URL:-http://127.0.0.1:38173}"
 
@@ -62,4 +63,4 @@ fi
 echo "[local-dev] server ready at $PAW_API_BASE_URL"
 echo "[local-dev] launching Flutter client on device: $CLIENT_DEVICE"
 cd paw-client
-flutter run -d "$CLIENT_DEVICE" --dart-define=SERVER_URL="$PAW_API_BASE_URL"
+"$FLUTTER_BIN" run -d "$CLIENT_DEVICE" --dart-define=SERVER_URL="$PAW_API_BASE_URL"

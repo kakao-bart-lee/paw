@@ -49,3 +49,48 @@ normalize_legacy_local_env() {
     echo "[local-env] consider refreshing .env from .env.example"
   fi
 }
+
+resolve_flutter_bin() {
+  if [[ -n "${FLUTTER_BIN:-}" && -x "${FLUTTER_BIN}" ]]; then
+    printf '%s\n' "${FLUTTER_BIN}"
+    return 0
+  fi
+
+  if command -v flutter >/dev/null 2>&1; then
+    command -v flutter
+    return 0
+  fi
+
+  local candidate=""
+  local -a candidates=()
+
+  if [[ -n "${FLUTTER_ROOT:-}" ]]; then
+    candidates+=("${FLUTTER_ROOT}/bin/flutter")
+  fi
+
+  candidates+=(
+    "/opt/homebrew/share/flutter/bin/flutter"
+    "$HOME/develop/flutter/bin/flutter"
+    "$HOME/development/flutter/bin/flutter"
+  )
+
+  local old_nullglob
+  old_nullglob="$(shopt -p nullglob || true)"
+  shopt -s nullglob
+  candidates+=("/opt/homebrew/Caskroom/flutter"/*/flutter/bin/flutter)
+  if [[ -n "$old_nullglob" ]]; then
+    eval "$old_nullglob"
+  else
+    shopt -u nullglob
+  fi
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "[local-env] flutter not found. Set FLUTTER_BIN or add flutter to PATH." >&2
+  return 1
+}

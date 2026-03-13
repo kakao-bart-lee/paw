@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 
+const double kWideShellBreakpoint = 960;
+
 class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
@@ -10,20 +12,20 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final isDesktop = MediaQuery.sizeOf(context).width >= 960;
-    final showMobileNav = !isDesktop && !_isDetailRoute(location);
+    final isWideLayout = MediaQuery.sizeOf(context).width >= kWideShellBreakpoint;
+    final showCompactNav = !isWideLayout && !_isDetailRoute(location);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Row(
         children: [
-          if (isDesktop)
+          if (isWideLayout)
             _DesktopSidebar(selectedIndex: _selectedIndex(location)),
           Expanded(child: child),
         ],
       ),
-      bottomNavigationBar: showMobileNav
-          ? _MobileNav(
+      bottomNavigationBar: showCompactNav
+          ? _CompactNav(
               selectedIndex: _selectedIndex(location),
               onSelect: (index) => _onDestinationSelected(context, index),
             )
@@ -57,8 +59,8 @@ class MainShell extends StatelessWidget {
   }
 }
 
-class _MobileNav extends StatelessWidget {
-  const _MobileNav({required this.selectedIndex, required this.onSelect});
+class _CompactNav extends StatelessWidget {
+  const _CompactNav({required this.selectedIndex, required this.onSelect});
 
   final int selectedIndex;
   final ValueChanged<int> onSelect;

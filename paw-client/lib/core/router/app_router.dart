@@ -67,13 +67,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const UsernameSetupScreen(),
       ),
 
-      // Search route (outside shell — no bottom nav)
+      // Search route (outside shell navigation)
       GoRoute(
         path: '/search',
         builder: (context, state) => const SearchScreen(),
       ),
 
-      // Profile routes (outside shell — no bottom nav)
+      // Profile routes (outside shell navigation)
       GoRoute(
         path: '/group/:id/info',
         builder: (context, state) =>
@@ -93,7 +93,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             UserProfileScreen(userId: state.pathParameters['userId']!),
       ),
 
-      // Main shell with bottom navigation
+      // Main shell with adaptive compact/wide navigation
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [

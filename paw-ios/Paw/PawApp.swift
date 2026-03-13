@@ -25,15 +25,6 @@ private extension PawApp {
         let deviceKeyStore = PawKeychainDeviceKeyStore(secureStore: store)
         let pushRegistrar = PawApnsPushRegistrar(secureStore: store)
 
-        if environment["PAW_UI_TEST_PRELOAD_AUTH"] == "1" {
-            _ = tokenVault.save(tokens: PawStoredTokens(
-                sessionToken: "session-ui-test",
-                accessToken: "access-ui-test",
-                refreshToken: "refresh-ui-test"
-            ))
-            _ = deviceKeyStore.saveDeviceKey(Data("ui-test-device".utf8))
-        }
-
         return PawCoreManager(
             tokenVault: tokenVault,
             deviceKeyStore: deviceKeyStore,
