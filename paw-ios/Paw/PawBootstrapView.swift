@@ -11,9 +11,9 @@ struct PawBootstrapView: View {
                 background: PawTheme.surface2
             ) {
                 metadataLine("bridge", coreManager.preview.bridgeStatus)
-                metadataLine("connection", coreManager.preview.runtime.connectionState)
+                metadataLine("connection", coreManager.preview.runtime.connectionState, identifier: PawAccessibility.connectionState)
                 metadataLine("storage", coreManager.preview.storage.provider)
-                metadataLine("push", coreManager.preview.push.status)
+                metadataLine("push", coreManager.preview.push.status, identifier: PawAccessibility.pushStatus)
             }
 
             shellCard(
@@ -22,29 +22,29 @@ struct PawBootstrapView: View {
                 background: PawTheme.primarySoft
             ) {
                 HStack(spacing: 8) {
-                    authChip(title: "시작", selected: coreManager.preview.auth.step == .authMethodSelect) {
+                    authChip(title: "시작", selected: coreManager.preview.auth.step == .authMethodSelect, identifier: PawAccessibility.authButton(.authMethodSelect)) {
                         coreManager.logout()
                     }
-                    authChip(title: "전화", selected: coreManager.preview.auth.step == .phoneInput) {
+                    authChip(title: "전화", selected: coreManager.preview.auth.step == .phoneInput, identifier: PawAccessibility.authButton(.phoneInput)) {
                         coreManager.startPhoneInput()
                     }
-                    authChip(title: "OTP", selected: coreManager.preview.auth.step == .otpVerify) {
+                    authChip(title: "OTP", selected: coreManager.preview.auth.step == .otpVerify, identifier: PawAccessibility.authButton(.otpVerify)) {
                         coreManager.submitPhone()
                     }
-                    authChip(title: "기기", selected: coreManager.preview.auth.step == .deviceName) {
+                    authChip(title: "기기", selected: coreManager.preview.auth.step == .deviceName, identifier: PawAccessibility.authButton(.deviceName)) {
                         coreManager.verifyOtp()
                     }
-                    authChip(title: "유저", selected: coreManager.preview.auth.step == .usernameSetup) {
+                    authChip(title: "유저", selected: coreManager.preview.auth.step == .usernameSetup, identifier: PawAccessibility.authButton(.usernameSetup)) {
                         coreManager.submitDeviceName()
                     }
-                    authChip(title: "완료", selected: coreManager.preview.auth.step == .authenticated) {
+                    authChip(title: "완료", selected: coreManager.preview.auth.step == .authenticated, identifier: PawAccessibility.authButton(.authenticated)) {
                         coreManager.submitUsername()
                     }
                 }
-                metadataLine("current step", coreManager.preview.auth.step.rawValue)
-                metadataLine("phone", coreManager.preview.auth.phone.ifEmpty("(pending)"))
-                metadataLine("device", coreManager.preview.auth.deviceName.ifEmpty("(pending)"))
-                metadataLine("username", coreManager.preview.auth.username.ifEmpty("(pending)"))
+                metadataLine("current step", coreManager.preview.auth.step.rawValue, identifier: PawAccessibility.currentAuthStep)
+                metadataLine("phone", coreManager.preview.auth.phone.ifEmpty("(pending)"), identifier: PawAccessibility.phoneValue)
+                metadataLine("device", coreManager.preview.auth.deviceName.ifEmpty("(pending)"), identifier: PawAccessibility.deviceValue)
+                metadataLine("username", coreManager.preview.auth.username.ifEmpty("(pending)"), identifier: PawAccessibility.usernameValue)
                 metadataLine("discoverable", coreManager.preview.auth.discoverableByPhone.description)
                 metadataLine("has access token", coreManager.preview.auth.hasAccessToken.description)
                 if let error = coreManager.preview.auth.error {
@@ -58,7 +58,7 @@ struct PawBootstrapView: View {
                     subtitle: "real bootstrap state gates the list",
                     background: PawTheme.surface1
                 ) {
-                    metadataLine("shell", coreManager.preview.shellBanner)
+                    metadataLine("shell", coreManager.preview.shellBanner, identifier: PawAccessibility.shellBanner)
                     metadataLine("selected", coreManager.selectedConversation?.title ?? "(locked)")
                     ForEach(coreManager.preview.conversations) { conversation in
                         conversationRow(conversation, selected: coreManager.preview.selectedConversationID == conversation.id)
@@ -72,15 +72,18 @@ struct PawBootstrapView: View {
                 ) {
                     metadataLine("cursors", "\(coreManager.preview.runtime.cursorCount)")
                     metadataLine("active streams", "\(coreManager.preview.runtime.activeStreamCount)")
-                    metadataLine("composer", coreManager.preview.composerText)
-                    ForEach(coreManager.preview.messages) { message in
-                        messageBubble(message)
+                    metadataLine("composer", coreManager.preview.composerText, identifier: PawAccessibility.composer)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(coreManager.preview.messages) { message in
+                            messageBubble(message)
+                        }
                     }
+                    .accessibilityIdentifier(PawAccessibility.messageList)
                     HStack(spacing: 8) {
-                        authChip(title: "질문 보내기", selected: false) {
+                        authChip(title: "질문 보내기", selected: false, identifier: PawAccessibility.sendMessageButton) {
                             coreManager.sendChatMessage()
                         }
-                        authChip(title: "다음 대화", selected: false) {
+                        authChip(title: "다음 대화", selected: false, identifier: PawAccessibility.nextConversationButton) {
                             coreManager.selectNextConversation()
                         }
                     }
@@ -94,10 +97,10 @@ struct PawBootstrapView: View {
                     background: PawTheme.sentBubble
                 ) {
                     HStack(spacing: 8) {
-                        authChip(title: "Active", selected: coreManager.preview.lifecycle.currentState == "Active") {
+                        authChip(title: "Active", selected: coreManager.preview.lifecycle.currentState == "Active", identifier: PawAccessibility.activeLifecycleButton) {
                             coreManager.applyLifecycle(state: "Active")
                         }
-                        authChip(title: "Background", selected: coreManager.preview.lifecycle.currentState == "Background") {
+                        authChip(title: "Background", selected: coreManager.preview.lifecycle.currentState == "Background", identifier: PawAccessibility.backgroundLifecycleButton) {
                             coreManager.applyLifecycle(state: "Background")
                         }
                     }
@@ -110,15 +113,15 @@ struct PawBootstrapView: View {
                     background: PawTheme.agentBubble
                 ) {
                     HStack(spacing: 8) {
-                        authChip(title: "APNs 등록", selected: coreManager.preview.push.status == "Registered") {
+                        authChip(title: "APNs 등록", selected: coreManager.preview.push.status == "Registered", identifier: PawAccessibility.registerPushButton) {
                             coreManager.registerForPush()
                         }
-                        authChip(title: "APNs 해제", selected: coreManager.preview.push.status == "Unregistered") {
+                        authChip(title: "APNs 해제", selected: coreManager.preview.push.status == "Unregistered", identifier: PawAccessibility.unregisterPushButton) {
                             coreManager.unregisterPush()
                         }
                     }
                     metadataLine("device key", coreManager.preview.storage.hasDeviceKey.description)
-                    metadataLine("push token", coreManager.preview.push.token ?? "(unregistered)")
+                    metadataLine("push token", coreManager.preview.push.token ?? "(unregistered)", identifier: PawAccessibility.pushToken)
                     metadataLine("platform", coreManager.preview.push.platform)
                 }
             }
@@ -155,7 +158,7 @@ struct PawBootstrapView: View {
     }
 
     @ViewBuilder
-    private func metadataLine(_ label: String, _ value: String) -> some View {
+    private func metadataLine(_ label: String, _ value: String, identifier: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(PawTypography.labelSmall)
@@ -163,11 +166,12 @@ struct PawBootstrapView: View {
             Text(value)
                 .font(PawTypography.bodySmall)
                 .foregroundStyle(PawTheme.strongText)
+                .applyAccessibilityIdentifier(identifier)
         }
     }
 
     @ViewBuilder
-    private func authChip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    private func authChip(title: String, selected: Bool, identifier: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(PawTypography.labelSmall)
@@ -178,6 +182,7 @@ struct PawBootstrapView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
     }
 
     @ViewBuilder
@@ -219,6 +224,7 @@ struct PawBootstrapView: View {
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(PawAccessibility.conversationRow(conversation.id))
     }
 
     @ViewBuilder
@@ -245,6 +251,7 @@ struct PawBootstrapView: View {
                     .stroke(PawTheme.outline, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .accessibilityIdentifier(PawAccessibility.messageBubble(message.id))
             if message.role != .me {
                 Spacer(minLength: 24)
             }
@@ -270,6 +277,17 @@ struct PawBootstrapView: View {
             PawTheme.accent
         default:
             PawTheme.outline
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func applyAccessibilityIdentifier(_ identifier: String?) -> some View {
+        if let identifier {
+            accessibilityIdentifier(identifier)
+        } else {
+            self
         }
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -58,6 +59,7 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
             Scaffold(containerColor = PawBackground) { innerPadding ->
                 Column(
                     modifier = Modifier
+                        .testTag(PawTestTags.SCREEN_ROOT)
                         .fillMaxSize()
                         .background(brush = Brush.verticalGradient(colors = listOf(PawSurface1, PawBackground)))
                         .padding(innerPadding)
@@ -65,7 +67,12 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text("Paw Android", style = MaterialTheme.typography.headlineMedium, color = PawStrongText)
+                    Text(
+                        "Paw Android",
+                        modifier = Modifier.testTag(PawTestTags.APP_TITLE),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = PawStrongText,
+                    )
                     Text(
                         text = "Keystore + FCM + real bootstrap/auth wiring 상태를 Android shell에서 바로 검증합니다.",
                         style = MaterialTheme.typography.bodyLarge,
@@ -92,11 +99,11 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                         background = PawPrimarySoft,
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AuthStepChip("초기", uiState.preview.auth.step == AuthStepView.AUTH_METHOD_SELECT, viewModel::backToAuthMethodSelect)
-                            AuthStepChip("전화 입력", uiState.preview.auth.step == AuthStepView.PHONE_INPUT, viewModel::showPhoneOtp)
-                            AuthStepChip("새로고침", false, viewModel::refresh)
+                            AuthStepChip("초기", PawTestTags.AUTH_CHIP_RESET, uiState.preview.auth.step == AuthStepView.AUTH_METHOD_SELECT, viewModel::backToAuthMethodSelect)
+                            AuthStepChip("전화 입력", PawTestTags.AUTH_CHIP_PHONE, uiState.preview.auth.step == AuthStepView.PHONE_INPUT, viewModel::showPhoneOtp)
+                            AuthStepChip("새로고침", PawTestTags.AUTH_CHIP_REFRESH, false, viewModel::refresh)
                         }
-                        MetadataLine("current step", uiState.preview.auth.step.name)
+                        MetadataLine("current step", uiState.preview.auth.step.name, PawTestTags.AUTH_STEP_VALUE)
                         MetadataLine("discoverable", uiState.preview.auth.discoverableByPhone.toString())
                         MetadataLine("has access token", uiState.preview.auth.hasAccessToken.toString())
                         uiState.preview.auth.error?.takeIf { it.isNotBlank() }?.let {
@@ -134,7 +141,7 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
 
                     if (uiState.preview.auth.step == AuthStepView.AUTHENTICATED) {
                         ChatShellCard(uiState, viewModel)
-                        Button(onClick = viewModel::logout) {
+                        Button(onClick = viewModel::logout, modifier = Modifier.testTag(PawTestTags.LOGOUT_BUTTON)) {
                             Text("로그아웃")
                         }
                     }
@@ -196,8 +203,12 @@ private fun ChatShellCard(uiState: PawBootstrapUiState, viewModel: PawBootstrapV
                     }
                 }
 
-                AuthField("메시지", uiState.chat.messageDraft, viewModel::onMessageDraftChanged)
-                Button(onClick = viewModel::sendMessage, enabled = !uiState.chat.sendingMessage) {
+                AuthField("메시지", uiState.chat.messageDraft, viewModel::onMessageDraftChanged, testTag = PawTestTags.CHAT_MESSAGE_INPUT)
+                Button(
+                    onClick = viewModel::sendMessage,
+                    enabled = !uiState.chat.sendingMessage,
+                    modifier = Modifier.testTag(PawTestTags.CHAT_SEND_MESSAGE),
+                ) {
                     Text(if (uiState.chat.sendingMessage) "전송 중…" else "메시지 보내기")
                 }
             }
@@ -209,39 +220,59 @@ private fun ChatShellCard(uiState: PawBootstrapUiState, viewModel: PawBootstrapV
 private fun AuthStepPanel(uiState: PawBootstrapUiState, viewModel: PawBootstrapViewModel) {
     when (uiState.preview.auth.step) {
         AuthStepView.AUTH_METHOD_SELECT -> {
-            Button(onClick = viewModel::showPhoneOtp, modifier = Modifier.padding(top = 12.dp)) {
+            Button(
+                onClick = viewModel::showPhoneOtp,
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .testTag(PawTestTags.AUTH_CONTINUE_PHONE),
+            ) {
                 Text("전화번호로 계속")
             }
         }
         AuthStepView.PHONE_INPUT -> {
-            AuthField("전화번호", uiState.phoneInput, viewModel::onPhoneChanged)
-            Button(onClick = viewModel::requestOtp, modifier = Modifier.padding(top = 12.dp)) {
+            AuthField("전화번호", uiState.phoneInput, viewModel::onPhoneChanged, testTag = PawTestTags.AUTH_PHONE_INPUT)
+            Button(
+                onClick = viewModel::requestOtp,
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .testTag(PawTestTags.AUTH_REQUEST_OTP),
+            ) {
                 Text("OTP 요청")
             }
         }
         AuthStepView.OTP_VERIFY -> {
-            AuthField("OTP 코드", uiState.otpInput, viewModel::onOtpChanged, true)
-            Button(onClick = viewModel::verifyOtp, modifier = Modifier.padding(top = 12.dp)) {
+            AuthField("OTP 코드", uiState.otpInput, viewModel::onOtpChanged, secret = true, testTag = PawTestTags.AUTH_OTP_INPUT)
+            Button(
+                onClick = viewModel::verifyOtp,
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .testTag(PawTestTags.AUTH_VERIFY_OTP),
+            ) {
                 Text("OTP 확인")
             }
         }
         AuthStepView.DEVICE_NAME -> {
-            AuthField("디바이스 이름", uiState.deviceNameInput, viewModel::onDeviceNameChanged)
-            Button(onClick = viewModel::registerDevice, modifier = Modifier.padding(top = 12.dp)) {
+            AuthField("디바이스 이름", uiState.deviceNameInput, viewModel::onDeviceNameChanged, testTag = PawTestTags.AUTH_DEVICE_NAME_INPUT)
+            Button(
+                onClick = viewModel::registerDevice,
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .testTag(PawTestTags.AUTH_REGISTER_DEVICE),
+            ) {
                 Text("디바이스 등록")
             }
         }
         AuthStepView.USERNAME_SETUP -> {
-            AuthField("username", uiState.usernameInput, viewModel::onUsernameChanged)
+            AuthField("username", uiState.usernameInput, viewModel::onUsernameChanged, testTag = PawTestTags.AUTH_USERNAME_INPUT)
             Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("전화번호 검색 허용", color = PawMutedText)
                 Switch(checked = uiState.discoverableByPhone, onCheckedChange = viewModel::onDiscoverableChanged)
             }
             Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = viewModel::completeUsernameSetup) {
+                Button(onClick = viewModel::completeUsernameSetup, modifier = Modifier.testTag(PawTestTags.AUTH_COMPLETE_USERNAME)) {
                     Text("완료")
                 }
-                Button(onClick = viewModel::skipUsernameSetup) {
+                Button(onClick = viewModel::skipUsernameSetup, modifier = Modifier.testTag(PawTestTags.AUTH_SKIP_USERNAME)) {
                     Text("건너뛰기")
                 }
             }
@@ -259,11 +290,13 @@ private fun AuthField(
     value: String,
     onValueChange: (String) -> Unit,
     secret: Boolean = false,
+    testTag: String? = null,
 ) {
     OutlinedTextField(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 12.dp),
+            .padding(top = 12.dp)
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -299,16 +332,26 @@ private fun MoodCard(
 }
 
 @Composable
-private fun MetadataLine(label: String, value: String) {
+private fun MetadataLine(label: String, value: String, valueTestTag: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = PawPrimary)
-        Text(value, style = MaterialTheme.typography.bodySmall, color = PawStrongText)
+        Text(
+            value,
+            modifier = if (valueTestTag != null) Modifier.testTag(valueTestTag) else Modifier,
+            style = MaterialTheme.typography.bodySmall,
+            color = PawStrongText,
+        )
     }
 }
 
 @Composable
-private fun AuthStepChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
+private fun AuthStepChip(label: String, testTag: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        modifier = Modifier.testTag(testTag),
+        label = { Text(label) },
+    )
 }
 
 @Composable

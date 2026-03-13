@@ -16,6 +16,8 @@
 		A00000000000000000000042 /* PawTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000043 /* PawTypography.swift */; };
 		A00000000000000000000044 /* PawBootstrapModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000045 /* PawBootstrapModels.swift */; };
 		A00000000000000000000046 /* PawBootstrapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000047 /* PawBootstrapView.swift */; };
+		A00000000000000000000048 /* PawAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000049 /* PawAccessibility.swift */; };
+		A0000000000000000000004A /* PawUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004B /* PawUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,11 +32,15 @@
 		A00000000000000000000043 /* PawTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTypography.swift; sourceTree = "<group>"; };
 		A00000000000000000000045 /* PawBootstrapModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawBootstrapModels.swift; sourceTree = "<group>"; };
 		A00000000000000000000047 /* PawBootstrapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawBootstrapView.swift; sourceTree = "<group>"; };
+		A00000000000000000000049 /* PawAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawAccessibility.swift; sourceTree = "<group>"; };
+		A0000000000000000000004B /* PawUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawUITests.swift; sourceTree = "<group>"; };
+		A0000000000000000000004C /* PawUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PawUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A00000000000000000000016 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		A00000000000000000000017 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A0000000000000000000004D /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -43,6 +49,7 @@
 			children = (
 				A00000000000000000000019 /* Paw */,
 				A0000000000000000000001A /* PawTests */,
+				A0000000000000000000004E /* PawUITests */,
 				A0000000000000000000001B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -59,6 +66,7 @@
 				A00000000000000000000043 /* PawTypography.swift */,
 				A00000000000000000000045 /* PawBootstrapModels.swift */,
 				A00000000000000000000047 /* PawBootstrapView.swift */,
+				A00000000000000000000049 /* PawAccessibility.swift */,
 				A00000000000000000000006 /* Assets.xcassets */,
 			);
 		};
@@ -70,11 +78,20 @@
 				A00000000000000000000008 /* PawTests.swift */,
 			);
 		};
+		A0000000000000000000004E /* PawUITests */ = {
+			isa = PBXGroup;
+			path = PawUITests;
+			sourceTree = "<group>";
+			children = (
+				A0000000000000000000004B /* PawUITests.swift */,
+			);
+		};
 		A0000000000000000000001B /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000007 /* Paw.app */,
 				A00000000000000000000009 /* PawTests.xctest */,
+				A0000000000000000000004C /* PawUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,6 +130,22 @@
 			productReference = A00000000000000000000009 /* PawTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		A0000000000000000000004F /* PawUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000053 /* Build configuration list for PBXNativeTarget "PawUITests" */;
+			buildPhases = (
+				A00000000000000000000050 /* Sources */,
+				A0000000000000000000004D /* Frameworks */,
+			);
+			buildRules = ();
+			dependencies = (
+				A00000000000000000000051 /* PBXTargetDependency */,
+			);
+			name = PawUITests;
+			productName = PawUITests;
+			productReference = A0000000000000000000004C /* PawUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -147,6 +180,7 @@
 			targets = (
 				A00000000000000000000001 /* Paw */,
 				A00000000000000000000002 /* PawTests */,
+				A0000000000000000000004F /* PawUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -174,6 +208,7 @@
 				A00000000000000000000042 /* PawTypography.swift in Sources */,
 				A00000000000000000000044 /* PawBootstrapModels.swift in Sources */,
 				A00000000000000000000046 /* PawBootstrapView.swift in Sources */,
+				A00000000000000000000048 /* PawAccessibility.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -185,14 +220,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A00000000000000000000050 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000004A /* PawUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
 		A00000000000000000000026 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A00000000000000000000001 /* Paw */; targetProxy = A00000000000000000000029 /* PBXContainerItemProxy */; };
+		A00000000000000000000051 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A00000000000000000000001 /* Paw */; targetProxy = A00000000000000000000052 /* PBXContainerItemProxy */; };
 /* End PBXTargetDependency section */
 
 /* Begin PBXContainerItemProxy section */
 		A00000000000000000000029 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000027 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000001;
+			remoteInfo = Paw;
+		};
+		A00000000000000000000052 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A00000000000000000000027 /* Project object */;
 			proxyType = 1;
@@ -347,6 +398,40 @@
 			};
 			name = Release;
 		};
+		A00000000000000000000054 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.paw.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Paw;
+			};
+			name = Debug;
+		};
+		A00000000000000000000055 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.paw.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Paw;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -373,6 +458,15 @@
 			buildConfigurations = (
 				A0000000000000000000002E /* Debug */,
 				A0000000000000000000002F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000053 /* Build configuration list for PBXNativeTarget "PawUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000054 /* Debug */,
+				A00000000000000000000055 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
