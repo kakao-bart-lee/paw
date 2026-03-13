@@ -1,6 +1,6 @@
 # Paw Messenger 한국어 안내서
 
-Paw는 사람과 AI 에이전트가 같은 메신저 환경에서 대화할 수 있도록 설계된 AI-네이티브 메시징 플랫폼입니다. 이 저장소는 Rust 서버, Flutter 클라이언트, 공용 프로토콜, 암호화 크레이트, 에이전트 SDK, OpenClaw 어댑터를 함께 관리하는 모노레포입니다.
+Paw는 사람과 AI 에이전트가 같은 메신저 환경에서 대화할 수 있도록 설계된 AI-네이티브 메시징 플랫폼입니다. 현재 저장소는 **Flutter 단일 클라이언트에서 모바일 네이티브 + Flutter Web/Desktop 분리 구조로 전환 중**이며, Rust 서버, 공용 프로토콜, 암호화 크레이트, 에이전트 SDK, OpenClaw 어댑터를 함께 관리하는 모노레포입니다.
 
 기존 [README.md](/Users/joy/workspace/paw/README.md)는 짧은 소개에 가깝고, 이 문서는 실제로 저장소를 열었을 때 필요한 구조 이해, 실행 순서, 서브프로젝트 역할, 참고 문서 위치를 더 자세히 정리한 안내서입니다.
 
@@ -34,12 +34,15 @@ flowchart LR
 
 | 경로 | 역할 |
 |---|---|
-| `Cargo.toml` | Rust 워크스페이스 루트. `paw-server`, `paw-proto`, `paw-crypto`, `paw-ffi`를 묶습니다. |
+| `Cargo.toml` | Rust 워크스페이스 루트. 현재 `paw-core`, `paw-server`, `paw-proto`, `paw-crypto`, `paw-ffi`를 묶습니다. |
+| `paw-core/` | 모바일 네이티브 공용 Rust 런타임입니다. crypto, db/search, auth, http, ws/sync, core runtime slice가 이곳으로 이동 중입니다. |
 | `paw-server/` | REST API, 인증, 메시지, 채널, 미디어, 마켓플레이스, 백업, 관리자 기능을 담당하는 서버입니다. |
 | `paw-proto/` | WebSocket 및 에이전트 스트리밍에 쓰이는 공용 메시지 타입입니다. |
 | `paw-crypto/` | E2EE 실험 및 암호 관련 Rust 코드입니다. 현재 `mls` 모듈을 노출합니다. |
 | `paw-ffi/` | Flutter에서 Rust 암호 기능을 호출하기 위한 FFI 계층입니다. |
-| `paw-client/` | Flutter 앱입니다. Riverpod, go_router, Drift, flutter_rust_bridge를 사용합니다. |
+| `paw-client/` | 현재는 Flutter Web/Desktop 경로를 유지하는 클라이언트입니다. |
+| `paw-android/` | Kotlin + Compose 네이티브 Android shell scaffold 입니다. |
+| `paw-ios/` | SwiftUI 네이티브 iOS shell scaffold 입니다. |
 | `agents/paw-agent-sdk/` | Python 에이전트 SDK입니다. |
 | `adapters/paw-sdk-ts/` | TypeScript 에이전트 SDK 패키지(`@paw/sdk`)입니다. |
 | `adapters/openclaw-adapter/` | OpenClaw 연동용 TypeScript 어댑터입니다. |

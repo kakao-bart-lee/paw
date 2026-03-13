@@ -20,8 +20,8 @@ Paw is an **AI-native messenger** optimized as the ideal OpenClaw integration ch
 │         ┌───────────────┼───────────────┐              │
 │         │               │               │              │
 │    ┌────▼────┐    ┌────▼────┐    ┌────▼────┐         │
-│    │ Flutter │    │ Python  │    │ OpenClaw│         │
-│    │ Client  │    │ SDK     │    │ Adapter │         │
+│    │ paw-core│    │ Python  │    │ OpenClaw│         │
+│    │ + Native│    │ SDK     │    │ Adapter │         │
 │    └─────────┘    └─────────┘    └─────────┘         │
 │                                                         │
 │  ┌──────────────────────────────────────────────────┐  │
@@ -43,7 +43,8 @@ Paw is an **AI-native messenger** optimized as the ideal OpenClaw integration ch
 | Component | Technology | Version | Purpose |
 |-----------|-----------|---------|---------|
 | **Server** | Rust + Axum | 1.x | High-performance async HTTP/WebSocket |
-| **Client** | Flutter | 3.27+ | Cross-platform (iOS, Android, Web) |
+| **Client (Web/Desktop)** | Flutter | 3.27+ | Transitional Web/Desktop client |
+| **Client (Mobile)** | Kotlin + SwiftUI + paw-core | current migration | Native mobile shells over shared Rust runtime |
 | **SDK** | Python | 3.10+ | Agent integration, scripting |
 | **Database** | PostgreSQL | 16 | Persistent storage, pg_notify for pub/sub |
 | **Storage** | MinIO (S3-compatible) | Latest | Media, attachments, file uploads |
@@ -60,7 +61,12 @@ paw/
 ├── Makefile                      # Dev commands (make dev, make test)
 ├── docker-compose.yml            # PostgreSQL + MinIO services
 ├── .env.example                  # Environment variables template
-├── .github/workflows/ci.yml      # GitHub Actions CI/CD
+├── .github/workflows/
+│   ├── core.yml
+│   ├── android.yml
+│   ├── ios.yml
+│   ├── flutter.yml
+│   └── server.yml
 │
 ├── paw-server/                   # Rust server (Axum)
 │   ├── Cargo.toml
@@ -87,7 +93,10 @@ paw/
 │   ├── e2ee-evaluation.md        # E2EE library comparison (T8)
 │   └── deployment.md             # Production setup (T9)
 │
-└── paw-client/                   # Flutter app (T4, not in this scaffold)
+├── paw-core/                     # Shared native runtime
+├── paw-android/                  # Android native shell scaffold
+├── paw-ios/                      # iOS native shell scaffold
+└── paw-client/                   # Flutter Web/Desktop path
     ├── pubspec.yaml
     ├── lib/
     │   ├── main.dart

@@ -1,0 +1,55 @@
+name: android
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "paw-android/**"
+      - "paw-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/build-core-android.sh"
+      - "scripts/gen-ffi-bindings.sh"
+  pull_request:
+    branches: [main]
+    paths:
+      - "paw-android/**"
+      - "paw-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/build-core-android.sh"
+      - "scripts/gen-ffi-bindings.sh"
+
+jobs:
+  android-shell:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Generate bindings
+        run: ./scripts/gen-ffi-bindings.sh
+
+      - name: Build paw-core Android artifacts
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
+        run: ./scripts/build-core-android.sh
+
+      - name: Assemble Debug
+        run: |
+          cd paw-android
+          ./gradlew :app:assembleDebug

@@ -31,7 +31,13 @@
 - **인증**: OTP + Ed25519 device keys (Signal 모델)
 - **암호화**: openmls (MIT), X25519-dalek, AES-GCM
 
-### 클라이언트 (paw-client)
+### 클라이언트 전환 상태
+- `paw-core`: 공유 Rust 런타임 (crypto, db/search, auth, http, ws/sync, core runtime slice)
+- `paw-android`: Kotlin + Compose shell scaffold
+- `paw-ios`: SwiftUI/Xcode shell scaffold
+- `paw-client`: Flutter Web/Desktop 경로 유지
+
+### Flutter 클라이언트 (paw-client)
 - **언어**: Dart 3.11.1
 - **프레임워크**: Flutter 3.41.4 stable
 - **상태관리**: Riverpod

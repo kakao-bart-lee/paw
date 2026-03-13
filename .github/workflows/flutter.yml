@@ -1,0 +1,41 @@
+name: flutter
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "paw-client/**"
+      - "Makefile"
+      - "scripts/run-playwright-smoke.sh"
+      - "scripts/run-real-web-e2e.sh"
+  pull_request:
+    branches: [main]
+    paths:
+      - "paw-client/**"
+      - "Makefile"
+      - "scripts/run-playwright-smoke.sh"
+      - "scripts/run-real-web-e2e.sh"
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.x"
+          channel: stable
+
+      - name: Get dependencies
+        run: cd paw-client && flutter pub get
+
+      - name: Analyze
+        run: cd paw-client && flutter analyze
+
+      - name: Test
+        run: cd paw-client && flutter test
+
+      - name: Build web
+        run: cd paw-client && flutter build web --release
