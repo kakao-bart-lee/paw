@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap-local local-stack dev stop server test lint fmt clean docker-up docker-down migrate migrate-add bindings core-android core-ios e2e-flutter e2e-playwright e2e-real e2e-real-flutter e2e-real-web
+.PHONY: help bootstrap-local local-stack dev stop server test lint fmt clean docker-up docker-down migrate migrate-add bindings core-android core-ios e2e-flutter e2e-playwright e2e-real e2e-real-flutter e2e-real-web e2e-core-phase3
 
 help:
 	@printf "%s\n" \
@@ -24,7 +24,8 @@ help:
 	"  make e2e-playwright   # run Playwright web smoke test" \
 	"  make e2e-real         # alias of e2e-real-flutter (current macOS Flutter real-server E2E)" \
 	"  make e2e-real-flutter # run current macOS Flutter real-server E2E" \
-	"  make e2e-real-web     # run real server + Flutter web full-loop E2E"
+	"  make e2e-real-web     # run real server + Flutter web full-loop E2E" \
+	"  make e2e-core-phase3  # run paw-core live Phase 3 smoke against local server"
 
 # Start full local development environment
 # usage: make dev [device=chrome]
@@ -103,3 +104,6 @@ e2e-real-flutter:
 
 e2e-real-web:
 	./scripts/run-real-web-e2e.sh
+
+e2e-core-phase3:
+	./scripts/run-paw-core-phase3-live-smoke.sh
