@@ -3,7 +3,10 @@
 pub mod auth;
 pub mod crypto;
 pub mod db;
+pub mod http;
 pub mod search;
+pub mod sync;
+pub mod ws;
 
 pub use auth::{
     AuthBackendError, AuthClient, AuthState, AuthStateMachine, AuthStateMachineError, AuthStep,
@@ -13,7 +16,22 @@ pub use auth::{
 };
 pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
+pub use http::{
+    AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,
+    ConversationListItem, CreateConversationResponse, ErrorPayload, GetMessagesResponse,
+    HttpClientError, KeyBundle, MediaAttachment, MessageRecord as HttpMessageRecord, OneTimeKey,
+    RefreshTokenResponse, RegisterDeviceRequest, RemoveMemberResponse, RequestOtpResponse,
+    SendMessageRequest, SendMessageResponse, UpdateMeRequest, UploadKeysRequest, UserProfile,
+    VerifyOtpResponse as HttpVerifyOtpResponse,
+};
 pub use search::{SearchResult, SearchService};
+pub use sync::{
+    ConversationSyncCursor, FinalizedStreamMessage, MessageSyncOutcome, StreamingSession,
+    StreamingState, SyncEngine, SyncRequest, SyncService, ToolCallRecord,
+};
+pub use ws::{
+    ReconnectPlan, ReconnectionManager, WsConnectionState, WsService, WsServiceError, WsTransport,
+};
 
 pub fn ping() -> String {
     "paw-core-ok".to_string()

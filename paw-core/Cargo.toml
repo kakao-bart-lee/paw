@@ -22,6 +22,8 @@ hkdf = "0.12"
 rand = "0.8"
 rusqlite = { version = "0.32", features = ["bundled-sqlcipher", "vtab", "chrono"] }
 async-trait = "0.1"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+url = "2"
 
 [dependencies.paw-proto]
 path = "../paw-proto"
@@ -31,3 +33,4 @@ uniffi = { version = "0.28", features = ["build"] }
 
 [dev-dependencies]
 tempfile = "3"
+axum = { workspace = true }
