@@ -1,0 +1,28 @@
+[package]
+name = "paw-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+uniffi = { workspace = true, features = ["bindgen"] }
+camino = "1"
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+x25519-dalek = { version = "2", features = ["static_secrets", "reusable_secrets"] }
+aes-gcm = "0.10"
+hkdf = "0.12"
+rand = "0.8"
+
+[dependencies.paw-proto]
+path = "../paw-proto"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }

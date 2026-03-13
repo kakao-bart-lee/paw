@@ -7,15 +7,11 @@ edition = "2021"
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(frb_expand)'] }
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib", "staticlib", "lib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.11.1"
-x25519-dalek = { version = "2", features = ["static_secrets", "reusable_secrets"] }
-aes-gcm = "0.10"
-hkdf = "0.12"
-sha2 = "0.10"
-rand = "0.8"
+paw-core = { path = "../paw-core" }
 zeroize = { version = "1", features = ["derive"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -16,7 +16,7 @@
 
 ## E2E 검증 실행
 
-클라이언트 핵심 플로우 검증은 아래 2단계로 운영합니다.
+현재 클라이언트 검증 명령은 Flutter 기준 경로와 Web 경로가 함께 존재합니다. 모바일 네이티브 앱이 아직 도입되지 않았으므로, 아래 명령의 현재 의미를 고정해 둡니다.
 
 1. Flutter 공식 Integration Test
 ```bash
@@ -35,7 +35,16 @@ make e2e-playwright
 make e2e-real
 ```
 
-`e2e-real`은 서버를 테스트 모드(OTP debug code 노출)로 올린 뒤 macOS `integration_test`를 실행합니다.
+`make e2e-real`은 **현재는 `make e2e-real-flutter`의 별칭(alias)** 이며, 서버를 테스트 모드(OTP debug code 노출)로 올린 뒤 macOS Flutter `integration_test`를 실행합니다.
+
+4. 실서버 Web full-loop E2E
+```bash
+make e2e-real-web
+```
+
+`e2e-real-web`은 서버와 Flutter web-server를 함께 기동한 뒤 Playwright real full-loop를 실행합니다.
+
+> 참고: Android/iOS 네이티브 검증 명령은 `paw-core`, `paw-android`, `paw-ios`가 실제로 추가된 뒤 별도 타깃으로 도입합니다.
 
 ## 클라이언트 정책 스냅샷
 
