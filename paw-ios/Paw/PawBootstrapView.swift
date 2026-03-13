@@ -42,9 +42,9 @@ struct PawBootstrapView: View {
                     }
                 }
                 metadataLine("current step", coreManager.preview.auth.step.rawValue, identifier: PawAccessibility.currentAuthStep)
-                metadataLine("phone", coreManager.preview.auth.phone.ifEmpty("(pending)"), identifier: PawAccessibility.phoneValue)
-                metadataLine("device", coreManager.preview.auth.deviceName.ifEmpty("(pending)"), identifier: PawAccessibility.deviceValue)
-                metadataLine("username", coreManager.preview.auth.username.ifEmpty("(pending)"), identifier: PawAccessibility.usernameValue)
+                metadataLine("phone", coreManager.preview.auth.phone.ifEmpty("(pending)"))
+                metadataLine("device", coreManager.preview.auth.deviceName.ifEmpty("(pending)"))
+                metadataLine("username", coreManager.preview.auth.username.ifEmpty("(pending)"))
                 metadataLine("discoverable", coreManager.preview.auth.discoverableByPhone.description)
                 metadataLine("has access token", coreManager.preview.auth.hasAccessToken.description)
                 if let error = coreManager.preview.auth.error {
@@ -121,7 +121,7 @@ struct PawBootstrapView: View {
                         }
                     }
                     metadataLine("device key", coreManager.preview.storage.hasDeviceKey.description)
-                    metadataLine("push token", coreManager.preview.push.token ?? "(unregistered)", identifier: PawAccessibility.pushToken)
+                    metadataLine("push token", coreManager.preview.push.token == nil ? "Absent" : "Present")
                     metadataLine("platform", coreManager.preview.push.platform)
                 }
             }
@@ -224,7 +224,6 @@ struct PawBootstrapView: View {
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier(PawAccessibility.conversationRow(conversation.id))
     }
 
     @ViewBuilder
@@ -251,7 +250,6 @@ struct PawBootstrapView: View {
                     .stroke(PawTheme.outline, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .accessibilityIdentifier(PawAccessibility.messageBubble(message.id))
             if message.role != .me {
                 Spacer(minLength: 24)
             }

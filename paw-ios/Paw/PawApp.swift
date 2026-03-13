@@ -14,6 +14,7 @@ struct PawApp: App {
 
 private extension PawApp {
     static func makeCoreManager() -> PawCoreManager {
+#if DEBUG
         let environment = ProcessInfo.processInfo.environment
         guard environment["PAW_UI_TEST_MODE"] == "1" else {
             return PawCoreManager()
@@ -38,5 +39,8 @@ private extension PawApp {
             deviceKeyStore: deviceKeyStore,
             pushRegistrar: pushRegistrar
         )
+#else
+        return PawCoreManager()
+#endif
     }
 }

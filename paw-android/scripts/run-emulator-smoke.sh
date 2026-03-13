@@ -17,8 +17,9 @@ pushd "${ROOT_DIR}" >/dev/null
 ./gradlew :app:assembleDebug :app:connectedDebugAndroidTest | tee "${REPORT_DIR}/connectedDebugAndroidTest.log"
 adb -s "${DEVICE_SERIAL}" install -r app/build/outputs/apk/debug/app-debug.apk | tee "${REPORT_DIR}/install.log"
 adb -s "${DEVICE_SERIAL}" shell am start -n dev.paw.android/dev.paw.android.MainActivity | tee "${REPORT_DIR}/am-start.log"
-adb -s "${DEVICE_SERIAL}" exec-out screencap -p > "${REPORT_DIR}/emulator-smoke.png"
-adb -s "${DEVICE_SERIAL}" shell dumpsys activity activities dev.paw.android > "${REPORT_DIR}/dumpsys-activity.txt"
+if [[ "${PAW_ANDROID_SMOKE_CAPTURE:-0}" == "1" ]]; then
+  adb -s "${DEVICE_SERIAL}" exec-out screencap -p > "${REPORT_DIR}/emulator-smoke.png"
+fi
 popd >/dev/null
 
 echo "Smoke artifacts written to ${REPORT_DIR}"

@@ -5,11 +5,7 @@ final class PawUITests: XCTestCase {
         static let title = "paw.title"
         static let currentAuthStep = "paw.auth.currentStep"
         static let shellBanner = "paw.conversations.banner"
-        static let phoneValue = "paw.auth.phone"
-        static let deviceValue = "paw.auth.device"
-        static let usernameValue = "paw.auth.username"
         static let pushStatus = "paw.push.status"
-        static let pushToken = "paw.push.token"
         static let connectionState = "paw.runtime.connectionState"
         static let authMethodSelect = "paw.auth.button.AuthMethodSelect"
         static let phoneInput = "paw.auth.button.PhoneInput"
@@ -42,7 +38,6 @@ final class PawUITests: XCTestCase {
 
         app.buttons[Identifier.otpVerify].tap()
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "OtpVerify")
-        XCTAssertEqual(app.staticTexts[Identifier.phoneValue].label, "+82 10-5555-0101")
 
         app.buttons[Identifier.deviceName].tap()
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "DeviceName")
@@ -50,18 +45,15 @@ final class PawUITests: XCTestCase {
 
         app.buttons[Identifier.usernameSetup].tap()
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "UsernameSetup")
-        XCTAssertEqual(app.staticTexts[Identifier.deviceValue].label, "Haruna's iPhone")
 
         app.buttons[Identifier.authenticated].tap()
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "Authenticated")
-        XCTAssertEqual(app.staticTexts[Identifier.usernameValue].label, "haruna")
         XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Bootstrap Crew · Ready"))
         XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Connected")
 
         revealIfNeeded(app.buttons[Identifier.registerPush], in: app)
         app.buttons[Identifier.registerPush].tap()
         XCTAssertEqual(app.staticTexts[Identifier.pushStatus].label, "Registered")
-        XCTAssertEqual(app.staticTexts[Identifier.pushToken].label, "apns-demo-token")
 
         revealIfNeeded(app.buttons[Identifier.nextConversation], in: app)
         app.buttons[Identifier.nextConversation].tap()

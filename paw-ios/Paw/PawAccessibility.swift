@@ -6,11 +6,7 @@ enum PawAccessibility {
     static let artifactsDirectory = "paw.bridge.artifacts"
     static let shellBanner = "paw.conversations.banner"
     static let currentAuthStep = "paw.auth.currentStep"
-    static let phoneValue = "paw.auth.phone"
-    static let deviceValue = "paw.auth.device"
-    static let usernameValue = "paw.auth.username"
     static let pushStatus = "paw.push.status"
-    static let pushToken = "paw.push.token"
     static let connectionState = "paw.runtime.connectionState"
     static let composer = "paw.runtime.composer"
     static let messageList = "paw.chat.messages"
@@ -23,10 +19,4 @@ enum PawAccessibility {
     static let backgroundLifecycleButton = "paw.lifecycle.background"
     static let registerPushButton = "paw.push.register"
     static let unregisterPushButton = "paw.push.unregister"
-    static func conversationRow(_ id: String) -> String {
-        "paw.conversation.\(id)"
-    }
-    static func messageBubble(_ id: String) -> String {
-        "paw.message.\(id)"
-    }
 }
