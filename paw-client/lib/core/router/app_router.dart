@@ -5,6 +5,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
 import '../../features/auth/screens/otp_verify_screen.dart';
 import '../../features/auth/screens/device_name_screen.dart';
+import '../../features/auth/screens/username_setup_screen.dart';
 import '../../features/chat/screens/conversations_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/screens/key_verification_screen.dart';
@@ -29,12 +30,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final path = state.uri.path;
       final isAuthenticated = authState.step == AuthStep.authenticated;
+      final needsUsernameSetup = authState.step == AuthStep.usernameSetup;
+      final isUsernameSetupPath = path == '/auth/username-setup';
 
-      if (!isAuthenticated && !isPublicPath(path)) {
-        return '/auth/phone';
+      if (needsUsernameSetup && !isUsernameSetupPath) {
+        return '/auth/username-setup';
       }
 
-      if (isAuthenticated && isPublicPath(path)) {
+      if (!isAuthenticated && !needsUsernameSetup && !isPublicPath(path)) {
+        return '/login';
+      }
+
+      if (isAuthenticated && isPublicPath(path) && !isUsernameSetupPath) {
         return '/chat';
       }
 
@@ -54,6 +61,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth/device-name',
         builder: (context, state) => const DeviceNameScreen(),
+      ),
+      GoRoute(
+        path: '/auth/username-setup',
+        builder: (context, state) => const UsernameSetupScreen(),
       ),
 
       // Search route (outside shell — no bottom nav)

@@ -337,6 +337,27 @@ async fn auth_verify_otp_invalid_code_format() {
 }
 
 #[tokio::test]
+#[ignore = "requires running paw-server"]
+async fn auth_dev_login_route_is_unavailable() {
+    let client = reqwest::Client::new();
+
+    let get_resp = client
+        .get("http://localhost:38173/auth/dev-login")
+        .send()
+        .await
+        .expect("server must be reachable");
+    assert_eq!(get_resp.status(), 404);
+
+    let post_resp = client
+        .post("http://localhost:38173/auth/dev-login")
+        .json(&serde_json::json!({ "phone": "+821012345678" }))
+        .send()
+        .await
+        .expect("server must be reachable");
+    assert_eq!(post_resp.status(), 404);
+}
+
+#[tokio::test]
 #[ignore = "requires running paw-server and PostgreSQL"]
 async fn auth_full_flow_request_verify_register() {
     let client = reqwest::Client::new();

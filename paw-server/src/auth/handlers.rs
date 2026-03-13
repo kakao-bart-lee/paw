@@ -1,11 +1,11 @@
-use axum::{Json, extract::State};
+use axum::{extract::State, Json};
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sqlx::Row;
 use uuid::Uuid;
 
-use super::{AppState, device, jwt, otp};
+use super::{device, jwt, otp, AppState};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestOtpRequest {
@@ -52,20 +52,19 @@ pub async fn request_otp(
     let code = otp::generate_otp();
     let expires_at = otp::otp_expires_at();
 
-    let insert_result = sqlx::query(
-        "INSERT INTO otp_codes (phone, code, expires_at) VALUES ($1, $2, $3)",
-    )
-    .bind(&payload.phone)
-    .bind(&code)
-    .bind(expires_at)
-    .execute(state.db.as_ref())
-    .await;
+    let insert_result =
+        sqlx::query("INSERT INTO otp_codes (phone, code, expires_at) VALUES ($1, $2, $3)")
+            .bind(&payload.phone)
+            .bind(&code)
+            .bind(expires_at)
+            .execute(state.db.as_ref())
+            .await;
 
     if insert_result.is_err() {
         return error_json("otp_store_failed", "Failed to create OTP");
     }
 
-    tracing::info!(phone = %payload.phone, otp_code = %code, "Generated OTP (Phase 1: console log)");
+    tracing::info!(phone = %payload.phone, "Generated OTP");
 
     let expose_otp = std::env::var("PAW_EXPOSE_OTP_FOR_E2E")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
@@ -91,6 +90,11 @@ pub async fn verify_otp(
         return error_json("invalid_code_format", "OTP must be a 6-digit code");
     }
 
+    let mut tx = match state.db.begin().await {
+        Ok(tx) => tx,
+        Err(_) => return error_json("transaction_start_failed", "Failed to verify OTP"),
+    };
+
     let otp_row = sqlx::query(
         "SELECT id, expires_at, used_at \
          FROM otp_codes \
@@ -100,7 +104,7 @@ pub async fn verify_otp(
     )
     .bind(&payload.phone)
     .bind(&payload.code)
-    .fetch_optional(state.db.as_ref())
+    .fetch_optional(&mut *tx)
     .await;
 
     let Some(otp_row) = (match otp_row {
@@ -118,10 +122,11 @@ pub async fn verify_otp(
         return error_json("invalid_otp", "Invalid or expired OTP");
     }
 
-    let mark_used = sqlx::query("UPDATE otp_codes SET used_at = NOW() WHERE id = $1 AND used_at IS NULL")
-        .bind(otp_id)
-        .execute(state.db.as_ref())
-        .await;
+    let mark_used =
+        sqlx::query("UPDATE otp_codes SET used_at = NOW() WHERE id = $1 AND used_at IS NULL")
+            .bind(otp_id)
+            .execute(&mut *tx)
+            .await;
 
     match mark_used {
         Ok(result) if result.rows_affected() == 1 => {}
@@ -129,19 +134,28 @@ pub async fn verify_otp(
     }
 
     let user_id = sqlx::query_scalar::<_, Uuid>(
-        "INSERT INTO users (phone, display_name) \
-         VALUES ($1, '') \
-         ON CONFLICT (phone) DO UPDATE SET updated_at = NOW() \
+        "INSERT INTO users (phone, display_name, phone_verified_at) \
+         VALUES ($1, '', NOW()) \
+         ON CONFLICT (phone) DO UPDATE SET \
+             updated_at = NOW(), \
+             phone_verified_at = NOW() \
          RETURNING id",
     )
     .bind(&payload.phone)
-    .fetch_one(state.db.as_ref())
+    .fetch_one(&mut *tx)
     .await;
 
     let user_id = match user_id {
         Ok(id) => id,
         Err(_) => return error_json("user_upsert_failed", "Failed to create user"),
     };
+
+    if tx.commit().await.is_err() {
+        return error_json(
+            "transaction_commit_failed",
+            "Failed to finalize OTP verification",
+        );
+    }
 
     let session_token = match jwt::issue_session_token(user_id, &state.jwt_secret) {
         Ok(token) => token,
@@ -192,7 +206,8 @@ pub async fn register_device(
         Err(_) => return error_json("device_register_failed", "Failed to register device"),
     };
 
-    let access_token = match jwt::issue_access_token(claims.sub, Some(device_id), &state.jwt_secret) {
+    let access_token = match jwt::issue_access_token(claims.sub, Some(device_id), &state.jwt_secret)
+    {
         Ok(token) => token,
         Err(_) => return error_json("access_issue_failed", "Failed to issue access token"),
     };
@@ -222,10 +237,11 @@ pub async fn refresh_token(
         Err(_) => return error_json("invalid_refresh_token", "Refresh token is invalid"),
     };
 
-    let access_token = match jwt::issue_access_token(claims.sub, claims.device_id, &state.jwt_secret) {
-        Ok(token) => token,
-        Err(_) => return error_json("access_issue_failed", "Failed to issue access token"),
-    };
+    let access_token =
+        match jwt::issue_access_token(claims.sub, claims.device_id, &state.jwt_secret) {
+            Ok(token) => token,
+            Err(_) => return error_json("access_issue_failed", "Failed to issue access token"),
+        };
 
     Json(json!({
         "access_token": access_token,

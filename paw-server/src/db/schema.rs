@@ -1,7 +1,7 @@
 //! Database schema documentation
 //!
 //! Tables:
-//! - users: User accounts (phone or email required)
+//! - users: User accounts (phone/email optionality, username, phone privacy flags)
 //! - devices: Ed25519 public keys per device (Signal model, NO SRP)
 //! - otp_codes: One-time passwords for authentication
 //! - conversations: 1:1 and group conversations (max 100 members)

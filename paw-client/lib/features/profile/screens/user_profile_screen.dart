@@ -36,7 +36,17 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
         result = await apiClient.getUserById(widget.userId);
       } on ApiException catch (error) {
         if (error.statusCode != 404) rethrow;
-        result = await apiClient.searchUser(widget.userId);
+
+        final rawLookup = widget.userId.trim();
+        final usernameLookup = rawLookup.startsWith('@')
+            ? rawLookup.substring(1)
+            : rawLookup;
+        final looksLikePhone = rawLookup.startsWith('+');
+
+        result = await apiClient.searchUser(
+          username: looksLikePhone ? null : usernameLookup,
+          phone: looksLikePhone ? rawLookup : null,
+        );
       }
 
       if (result == null) {
@@ -103,6 +113,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
         data: (user) {
           final displayName = (user['display_name'] as String?) ?? '';
           final avatarUrl = user['avatar_url'] as String?;
+          final username = (user['username'] as String?) ?? '';
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -126,6 +137,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       displayName.isNotEmpty ? displayName : '(이름 없음)',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
+                    if (username.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '@$username',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     Text(
                       '안전한 메시지 전송이 가능한 연락처',

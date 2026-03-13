@@ -144,10 +144,17 @@ class ApiClient {
   Future<Map<String, dynamic>> updateMe({
     String? displayName,
     String? avatarUrl,
+    String? username,
+    bool? discoverableByPhone,
   }) async {
     final response = await _patch(
       '/users/me',
-      body: {'display_name': displayName, 'avatar_url': avatarUrl},
+      body: {
+        'display_name': displayName,
+        'avatar_url': avatarUrl,
+        'username': username,
+        'discoverable_by_phone': discoverableByPhone,
+      },
     );
     return _decodeJsonObject(response);
   }
@@ -157,8 +164,15 @@ class ApiClient {
     return _decodeJsonObject(response);
   }
 
-  Future<Map<String, dynamic>?> searchUser(String phone) async {
-    final uri = _buildUri('/users/search', queryParameters: {'phone': phone});
+  Future<Map<String, dynamic>?> searchUser({
+    String? phone,
+    String? username,
+  }) async {
+    final queryParameters = <String, String>{
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (username != null && username.isNotEmpty) 'username': username,
+    };
+    final uri = _buildUri('/users/search', queryParameters: queryParameters);
     final response = await _runRequest(() => http.get(uri, headers: _headers));
 
     if (response.statusCode == 404) {

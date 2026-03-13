@@ -11,12 +11,21 @@ import '../../../core/http/api_client.dart';
 import '../../../core/observability/app_logger.dart';
 import '../../../core/ws/ws_service.dart';
 
-enum AuthStep { phoneInput, otpVerify, deviceName, authenticated }
+enum AuthStep {
+  authMethodSelect,
+  phoneInput,
+  otpVerify,
+  deviceName,
+  usernameSetup,
+  authenticated,
+}
 
 class AuthState {
   final AuthStep step;
   final String phone;
   final String deviceName;
+  final String username;
+  final bool discoverableByPhone;
   final String? sessionToken;
   final String? accessToken;
   final String? refreshToken;
@@ -24,9 +33,11 @@ class AuthState {
   final String? error;
 
   const AuthState({
-    this.step = AuthStep.phoneInput,
+    this.step = AuthStep.authMethodSelect,
     this.phone = '',
     this.deviceName = '',
+    this.username = '',
+    this.discoverableByPhone = false,
     this.sessionToken,
     this.accessToken,
     this.refreshToken,
@@ -35,9 +46,11 @@ class AuthState {
   });
 
   const AuthState.initial()
-    : step = AuthStep.phoneInput,
+    : step = AuthStep.authMethodSelect,
       phone = '',
       deviceName = '',
+      username = '',
+      discoverableByPhone = false,
       sessionToken = null,
       accessToken = null,
       refreshToken = null,
@@ -48,6 +61,8 @@ class AuthState {
     AuthStep? step,
     String? phone,
     String? deviceName,
+    String? username,
+    bool? discoverableByPhone,
     Object? sessionToken = _unset,
     Object? accessToken = _unset,
     Object? refreshToken = _unset,
@@ -58,6 +73,8 @@ class AuthState {
       step: step ?? this.step,
       phone: phone ?? this.phone,
       deviceName: deviceName ?? this.deviceName,
+      username: username ?? this.username,
+      discoverableByPhone: discoverableByPhone ?? this.discoverableByPhone,
       sessionToken: sessionToken == _unset
           ? this.sessionToken
           : sessionToken as String?,
@@ -137,6 +154,18 @@ class AuthNotifier extends Notifier<AuthState> {
     return const AuthState.initial();
   }
 
+  void showPhoneOtp() {
+    state = state.copyWith(step: AuthStep.phoneInput, error: null);
+  }
+
+  void backToAuthMethodSelect() {
+    state = state.copyWith(
+      step: AuthStep.authMethodSelect,
+      phone: '',
+      error: null,
+    );
+  }
+
   Future<void> _bootstrapWebSessionFromQuery() async {
     final apiClient = _apiClient;
     final wsService = _wsService;
@@ -153,7 +182,7 @@ class AuthNotifier extends Notifier<AuthState> {
     apiClient.setToken(accessToken);
 
     try {
-      await apiClient.getMe();
+      final me = await apiClient.getMe();
       await wsService?.connect(wsService.serverUrl, accessToken);
 
       AppLogger.event(
@@ -165,6 +194,8 @@ class AuthNotifier extends Notifier<AuthState> {
         step: AuthStep.authenticated,
         accessToken: accessToken,
         refreshToken: refreshToken,
+        username: (me['username'] as String?) ?? '',
+        discoverableByPhone: me['discoverable_by_phone'] == true,
         isLoading: false,
         error: null,
       );
@@ -193,7 +224,7 @@ class AuthNotifier extends Notifier<AuthState> {
     apiClient.setToken(storedTokens.accessToken);
 
     try {
-      await apiClient.getMe();
+      final me = await apiClient.getMe();
       await wsService?.connect(wsService.serverUrl, storedTokens.accessToken);
 
       AppLogger.event(
@@ -205,6 +236,8 @@ class AuthNotifier extends Notifier<AuthState> {
         step: AuthStep.authenticated,
         accessToken: storedTokens.accessToken,
         refreshToken: storedTokens.refreshToken,
+        username: (me['username'] as String?) ?? '',
+        discoverableByPhone: me['discoverable_by_phone'] == true,
         error: null,
       );
     } catch (error) {
@@ -298,7 +331,6 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     try {
-      // Ed25519 generation is handled later (T23). Stub format for now.
       const stubEd25519PubKeyBase64 =
           'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
       final result = await apiClient.registerDevice(
@@ -313,26 +345,39 @@ class AuthNotifier extends Notifier<AuthState> {
         throw Exception('Missing tokens from register-device response');
       }
 
+      apiClient.setToken(accessToken);
+      final me = await apiClient.getMe();
+      if (wsService != null) {
+        await wsService.connect(wsService.serverUrl, accessToken);
+      }
+
       await _tokenStorage.write(
         accessToken: accessToken,
         refreshToken: refreshToken,
       );
 
-      apiClient.setToken(accessToken);
-      if (wsService != null) {
-        await wsService.connect(wsService.serverUrl, accessToken);
-      }
       AppLogger.event('auth.login.success');
 
+      final username = (me['username'] as String?) ?? '';
+      final discoverableByPhone = me['discoverable_by_phone'] == true;
+
       state = state.copyWith(
-        step: AuthStep.authenticated,
+        step: username.isEmpty
+            ? AuthStep.usernameSetup
+            : AuthStep.authenticated,
         deviceName: name,
         accessToken: accessToken,
         refreshToken: refreshToken,
+        username: username,
+        discoverableByPhone: discoverableByPhone,
         isLoading: false,
         error: null,
       );
     } catch (error) {
+      await _tokenStorage.clear();
+      apiClient.clearToken();
+      await wsService?.disconnect();
+
       final uiError = AppErrorMapper.map(error);
       AppLogger.event(
         'auth.login.register_device.failed',
@@ -340,6 +385,54 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       state = state.copyWith(isLoading: false, error: uiError.message);
     }
+  }
+
+  Future<void> completeUsernameSetup({
+    required String username,
+    required bool discoverableByPhone,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    final apiClient = _apiClient;
+    if (apiClient == null || state.accessToken == null) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Authentication required',
+      );
+      return;
+    }
+
+    try {
+      final updated = await apiClient.updateMe(
+        username: username,
+        discoverableByPhone: discoverableByPhone,
+      );
+
+      state = state.copyWith(
+        step: AuthStep.authenticated,
+        username: (updated['username'] as String?) ?? username,
+        discoverableByPhone: updated['discoverable_by_phone'] == null
+            ? discoverableByPhone
+            : updated['discoverable_by_phone'] == true,
+        isLoading: false,
+        error: null,
+      );
+    } catch (error) {
+      final uiError = AppErrorMapper.map(error);
+      AppLogger.event(
+        'auth.login.username_setup.failed',
+        data: {'code': uiError.code.name, 'detail': uiError.message},
+      );
+      state = state.copyWith(isLoading: false, error: uiError.message);
+    }
+  }
+
+  void skipUsernameSetup() {
+    state = state.copyWith(
+      step: AuthStep.authenticated,
+      isLoading: false,
+      error: null,
+    );
   }
 
   Future<void> logout() async {

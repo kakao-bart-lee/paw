@@ -23,10 +23,20 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        username: { type: string }
+        phone: { type: string, nullable: true }
+        username: { type: string, nullable: true, description: "Public username (3-20 chars, lowercase/digits/_)" }
+        discoverable_by_phone: { type: boolean }
+        phone_verified_at: { type: string, format: date-time, nullable: true }
         display_name: { type: string }
         avatar_url: { type: string, format: uri, nullable: true }
         created_at: { type: string, format: date-time }
+    PublicUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string, nullable: true }
+        display_name: { type: string, nullable: true }
+        avatar_url: { type: string, format: uri, nullable: true }
 
     Conversation:
       type: object
@@ -162,7 +172,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
     patch:
-      summary: Update current user profile
+      summary: Update current user profile and hybrid-auth discoverability
       security: [{ bearerAuth: [] }]
       requestBody:
         content:
@@ -170,6 +180,12 @@ paths:
             schema:
               type: object
               properties:
+                username:
+                  type: string
+                  description: "3-20 chars, lowercase letters, digits, underscore"
+                discoverable_by_phone:
+                  type: boolean
+                  description: "Default false. Phone search only works when true and phone_verified_at is set."
                 display_name: { type: string }
                 avatar_url: { type: string, format: uri }
       responses:
@@ -178,24 +194,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
+        '400':
+          description: Invalid username
+        '409':
+          description: Username already taken
 
   /users/search:
     get:
-      summary: Search users
+      summary: Look up a user by username or by phone (phone requires opt-in)
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: q
+        - name: username
           in: query
-          required: true
+          required: false
           schema: { type: string }
+          description: Preferred username lookup path for hybrid auth.
+        - name: phone
+          in: query
+          required: false
+          schema: { type: string }
+          description: Only returns users with discoverable_by_phone=true and verified phone.
       responses:
         '200':
-          description: Search results
+          description: Matching public profile
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/User' }
+              schema: { $ref: '#/components/schemas/PublicUser' }
+        '400':
+          description: Missing or invalid lookup parameter
+        '404':
+          description: User not found
 
   /users/{user_id}:
     get:
@@ -211,7 +239,7 @@ paths:
           description: User profile
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema: { $ref: '#/components/schemas/PublicUser' }
 
   /conversations:
     get:

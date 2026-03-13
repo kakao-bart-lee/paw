@@ -45,8 +45,9 @@ class _DeviceNameScreenState extends ConsumerState<DeviceNameScreen> {
 
     if (mounted) {
       final state = ref.read(authNotifierProvider);
-      if (state.step == AuthStep.authenticated) {
-        // Navigate to main app shell
+      if (state.step == AuthStep.usernameSetup) {
+        context.go('/auth/username-setup');
+      } else if (state.step == AuthStep.authenticated) {
         context.go('/chat');
       }
     }

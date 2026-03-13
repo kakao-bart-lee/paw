@@ -32,13 +32,22 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            ref.read(authNotifierProvider.notifier).backToAuthMethodSelect();
+            context.go('/login');
+          },
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
               const Center(child: Text('🐾', style: TextStyle(fontSize: 64))),
               const SizedBox(height: 20),
               Center(
@@ -63,7 +72,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                '안전한 로그인을 위해 인증번호를 보내드립니다.',
+                '기존 OTP 로그인 흐름은 그대로 유지됩니다.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

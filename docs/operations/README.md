@@ -10,6 +10,7 @@
 4. [모니터링 및 관측성 (Monitoring & Observability)](monitoring.md) - 상태 확인 및 로그 관리
 5. [CDN 설정 (CDN Setup)](cdn-setup.md) - 미디어 캐싱 및 전송 최적화
 6. [Back Office 준비 문서](../backoffice/README.md) - 운영/CS/Admin 대비 요구사항 관리
+7. [Hybrid Auth 롤아웃 체크리스트](hybrid-auth-rollout.md) - username/optional phone/discoverability 검증 순서
 
 운영 중 인증 이슈를 추적할 때는 `monitoring.md`의 `x-request-id`/`auth failed` 표준 로그 규칙을 우선 적용하세요.
 

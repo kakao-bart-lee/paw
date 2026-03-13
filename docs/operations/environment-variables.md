@@ -41,6 +41,10 @@ Paw 서버의 동작을 제어하는 주요 환경 변수 목록입니다.
 |:---|:---:|:---:|:---|
 | `PAW_EXPOSE_OTP_FOR_E2E` | No | `false` | `true/1`이면 `/auth/request-otp` 응답에 `debug_code`를 포함. **테스트 전용**으로만 사용해야 함. |
 
+> 참고:
+> - hybrid auth(`username`, `discoverable_by_phone`)에는 별도 환경 변수가 없습니다. 전화번호 검색 공개 여부는 사용자 프로필 값으로만 제어됩니다.
+> - `PAW_EXPOSE_OTP_FOR_E2E`는 OTP 응답에만 영향을 주며, `/auth/dev-login` 같은 우회 엔드포인트를 활성화하지 않습니다.
+
 ## 로컬 개발용 .env 예시 (.env Example)
 
 로컬 개발 시 프로젝트 루트에 `.env` 파일을 생성하여 사용할 수 있습니다.

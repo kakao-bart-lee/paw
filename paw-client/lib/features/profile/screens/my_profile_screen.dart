@@ -55,7 +55,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authNotifierProvider, (_, next) {
       if (next.step != AuthStep.authenticated && context.mounted) {
-        context.go('/auth/phone');
+        context.go('/login');
       }
     });
 
@@ -70,6 +70,8 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
         data: (user) {
           final displayName = (user['display_name'] as String?) ?? '';
           final phone = (user['phone'] as String?) ?? '';
+          final username = (user['username'] as String?) ?? '';
+          final discoverableByPhone = user['discoverable_by_phone'] == true;
           final avatarUrl = user['avatar_url'] as String?;
 
           return ListView(
@@ -95,27 +97,55 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text(phone, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      username.isNotEmpty ? '@$username' : 'username 미설정',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    if (phone.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(phone, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                    const SizedBox(height: 12),
+                    Text(
+                      discoverableByPhone ? '전화번호 검색 허용됨' : '전화번호 검색 비공개',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     const SizedBox(height: 18),
-                    ElevatedButton.icon(
-                      onPressed: profileState.isSaving
-                          ? null
-                          : () => _showEditDialog(context, displayName),
-                      icon: const Icon(Icons.edit_rounded),
-                      label: const Text('이름 변경'),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: profileState.isSaving
+                              ? null
+                              : () => _showEditDialog(context, displayName),
+                          icon: const Icon(Icons.edit_rounded),
+                          label: const Text('이름 변경'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => context.push('/auth/username-setup'),
+                          icon: const Icon(Icons.alternate_email_rounded),
+                          label: Text(
+                            username.isEmpty ? 'username 설정' : 'username 수정',
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 18),
               Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppTheme.surface2,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppTheme.outline),
+                  borderRadius: BorderRadius.all(Radius.circular(24)),
+                  border: Border.fromBorderSide(
+                    BorderSide(color: AppTheme.outline),
+                  ),
                 ),
-                child: Column(
-                  children: const [
+                child: const Column(
+                  children: [
                     _ProfileInfoRow(
                       icon: Icons.lock_outline_rounded,
                       title: '기본 보안',

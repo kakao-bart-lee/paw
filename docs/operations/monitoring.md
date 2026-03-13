@@ -76,6 +76,22 @@ docker compose logs paw-server | grep "auth failed"
 - WS 상태 전이 (`ws.state.*`)
 - Sync 시작/완료 (`sync.start`, `sync.complete`)
 
+## 5-1. Hybrid Auth 롤아웃 중점 관찰
+
+username + 선택적 전화번호 공개 기능을 배포한 뒤에는 아래 항목을 추가로 확인하세요.
+
+- OTP 요청/검증 성공률이 배포 전과 유사한지
+- `/users/me` 응답에서 `phone` 누락/nullable 케이스가 클라이언트 오류로 이어지지 않는지
+- `/users/search`의 404 증가는 허용되지만, opt-in 사용자가 검색되지 않는 false negative 급증은 없는지
+- 개인정보 관점에서 `discoverable_by_phone=false` 계정이 검색 결과에 노출되지 않는지
+
+권장 grep:
+
+```bash
+docker compose logs paw-server | grep "/users/search"
+docker compose logs paw-server | grep "auth failed"
+```
+
 ## 6. 알림 권장 사항 (Alerting)
 
 다음 상황 발생 시 알림(Slack, Email 등)을 받도록 설정하는 것이 좋습니다:
