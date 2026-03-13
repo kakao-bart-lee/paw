@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::{
     auth::{AuthBackendError, AuthClient, AuthUserProfile, StoredTokens, TokenStore},
     db::{AppDatabase, DbError, MessageRecord},
+    events::{ConnectionSnapshot, ConversationCursorView, RuntimeSnapshot, StreamingSessionView},
     sync::{
         ConversationSyncCursor, FinalizedStreamMessage, MessageSyncOutcome, StreamingSession,
         StreamingState, SyncEngine, SyncRequest, SyncService,
@@ -94,6 +95,24 @@ impl CoreRuntime {
 
     pub fn db(&self) -> &Arc<AppDatabase> {
         &self.db
+    }
+
+    pub fn snapshot(&self) -> RuntimeSnapshot {
+        RuntimeSnapshot {
+            connection: ConnectionSnapshot::from(&self.ws_service),
+            cursors: self
+                .sync_engine
+                .cursors()
+                .iter()
+                .map(ConversationCursorView::from)
+                .collect(),
+            active_streams: self
+                .streaming
+                .active_sessions()
+                .iter()
+                .map(StreamingSessionView::from)
+                .collect(),
+        }
     }
 
     pub async fn bootstrap(

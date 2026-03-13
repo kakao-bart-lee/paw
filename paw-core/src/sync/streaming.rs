@@ -137,6 +137,10 @@ impl StreamingState {
     pub fn active_session(&self, stream_id: Uuid) -> Option<&StreamingSession> {
         self.active.get(&stream_id)
     }
+
+    pub fn active_sessions(&self) -> Vec<StreamingSession> {
+        self.active.values().cloned().collect()
+    }
 }
 
 #[cfg(test)]

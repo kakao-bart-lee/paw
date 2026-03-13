@@ -4,6 +4,7 @@ pub mod auth;
 pub mod core;
 pub mod crypto;
 pub mod db;
+pub mod events;
 pub mod http;
 pub mod search;
 pub mod sync;
@@ -20,6 +21,12 @@ pub use core::{
 };
 pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
+pub use events::{
+    AckRequestView, AuthStateView, AuthStepView, ConnectionSnapshot, ConnectionStateView,
+    ConversationCursorView, CoreEvent, FinalizedStreamMessageView, MessageRecordView,
+    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, StreamingSessionView,
+    SyncRequestView, ToolCallView,
+};
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,
     ConversationListItem, CreateConversationResponse, ErrorPayload, GetMessagesResponse,
