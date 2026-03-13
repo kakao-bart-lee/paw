@@ -1,14 +1,15 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap-local local-stack dev server test lint fmt clean docker-up docker-down migrate migrate-add e2e-flutter e2e-playwright e2e-real
+.PHONY: help bootstrap-local local-stack dev stop server test lint fmt clean docker-up docker-down migrate migrate-add e2e-flutter e2e-playwright e2e-real
 
 help:
 	@printf "%s\n" \
 	"Available targets:" \
 	"  make bootstrap-local  # install local dependencies and prepare the repo" \
-	"  make local-stack      # start postgres/minio, run migrations, start server" \
-	"  make dev              # docker-up + server" \
-	"  make server           # run paw-server" \
+	"  make dev              # start server + client together" \
+	"  make stop             # stop local server/client processes and docker services" \
+	"  make local-stack      # start postgres/minio, run migrations, start server only" \
+	"  make server           # run paw-server only" \
 	"  make test             # run Rust workspace tests" \
 	"  make lint             # run clippy" \
 	"  make fmt              # run rustfmt" \
@@ -20,8 +21,14 @@ help:
 	"  make e2e-playwright   # run Playwright web smoke test" \
 	"  make e2e-real         # run real server full-loop web E2E"
 
-# Start development server
-dev: docker-up server
+# Start full local development environment
+# usage: make dev [device=chrome]
+dev:
+	./scripts/run-local-dev.sh $(if $(device),$(device),chrome)
+
+# Stop full local development environment
+stop:
+	./scripts/stop-local-dev.sh
 
 # Bootstrap local development environment
 bootstrap-local:
@@ -31,7 +38,7 @@ bootstrap-local:
 local-stack:
 	./scripts/run-local-stack.sh
 
-# Start Rust server
+# Start Rust server only
 server:
 	@if [ -f .env ]; then \
 	  set -a; . ./.env; set +a; \
