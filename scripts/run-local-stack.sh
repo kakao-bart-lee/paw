@@ -14,6 +14,8 @@ set -a
 # shellcheck disable=SC1091
 source .env
 set +a
+source ./scripts/local-env.sh
+normalize_legacy_local_env
 
 ensure_sqlx_cli() {
   if cargo sqlx --help >/dev/null 2>&1; then
