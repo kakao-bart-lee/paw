@@ -111,20 +111,26 @@ paw-ios/
 ### 0-4. 빌드 스크립트
 
 **생성할 파일:**
-- `scripts/build-core-android.sh` — `cargo ndk -t arm64-v8a -t x86_64 -o paw-android/app/src/main/jniLibs build -p paw-core --release`
-- `scripts/build-core-ios.sh` — `cargo build -p paw-core --target aarch64-apple-ios --release` + `uniffi-bindgen generate` + XCFramework 패키징
+- `scripts/build-core-android.sh` — `cargo ndk -t arm64-v8a -t x86_64 -o paw-android/app/src/main/jniLibs build -p paw-core --release` + `uniffi-bindgen generate --language kotlin`로 Kotlin 바인딩 생성/배치
+- `scripts/build-core-ios.sh` — `cargo build -p paw-core --target aarch64-apple-ios --release` + `cargo build -p paw-core --target aarch64-apple-ios-sim --release` (Intel CI 필요 시 `x86_64-apple-ios` 포함) + `uniffi-bindgen generate --language swift` + XCFramework 패키징
+- `scripts/gen-ffi-bindings.sh` — UniFFI Kotlin/Swift 바인딩 생성 경로를 단일화하고, 생성 산출물 커밋 여부를 일관되게 관리
 
 **수정할 파일:**
 - `Makefile` — 다음 타겟 추가:
+  - `make bindings` → `./scripts/gen-ffi-bindings.sh`
   - `make core-android` → `./scripts/build-core-android.sh`
   - `make core-ios` → `./scripts/build-core-ios.sh`
-  - `make android` → core-android + `cd paw-android && ./gradlew assembleDebug`
-  - `make ios` → core-ios + `cd paw-ios && xcodebuild`
+  - `make android` → bindings + core-android + `cd paw-android && ./gradlew assembleDebug`
+  - `make ios` → bindings + core-ios + `cd paw-ios && xcodebuild`
+- `paw-client/flutter_rust_bridge.yaml` — `/Users/joy/...` 절대경로 제거, 상대경로 또는 생성 스크립트 기반으로 치환
+- `docs/operations/README.md` / `Makefile` — `e2e-real`이 현재 macOS Flutter integration_test 흐름인지, 이후 web/native 검증 체계에서 어떻게 재정의할지 명시
 
 ### 0-5. 검증
 - [ ] `cargo check -p paw-core` 성공
 - [ ] Android에서 UniFFI no-op 함수 호출 → 로그 출력 확인
-- [ ] iOS에서 UniFFI no-op 함수 호출 → 로그 출력 확인
+- [ ] iOS 기기 + 시뮬레이터에서 UniFFI no-op 함수 호출 → 로그 출력 확인
+- [ ] Kotlin/Swift 바인딩 생성이 로컬 절대경로 없이 재현 가능
+- [ ] `e2e-real` 명칭/실행 경로 불일치 해소 또는 문서화 완료
 
 ---
 
@@ -504,11 +510,11 @@ Flutter 네이티브 코드 정리, CI/CD 파이프라인 구축
 ### 7-2. CI/CD
 
 **생성할 파일:** `.github/workflows/`
-- `core.yml` — paw-core/** 변경 시: cargo test, cargo clippy, UniFFI 바인딩 생성
-- `android.yml` — paw-android/** 또는 paw-core/** 변경 시: core 빌드 + Gradle assembleRelease
-- `ios.yml` — paw-ios/** 또는 paw-core/** 변경 시: core 빌드 + xcodebuild archive
+- `core.yml` — paw-core/** 또는 paw-proto/** 변경 시: cargo test, cargo clippy, UniFFI 바인딩 생성
+- `android.yml` — paw-android/**, paw-core/**, 또는 paw-proto/** 변경 시: core 빌드 + Gradle assembleRelease
+- `ios.yml` — paw-ios/**, paw-core/**, 또는 paw-proto/** 변경 시: core 빌드 + xcodebuild archive
 - `web.yml` — paw-web/** 변경 시: flutter build web
-- `server.yml` — paw-server/** 변경 시 (기존 유지/수정)
+- `server.yml` — paw-server/** 또는 paw-proto/** 변경 시 (기존 유지/수정)
 
 ### 7-3. Makefile 최종 업데이트
 
