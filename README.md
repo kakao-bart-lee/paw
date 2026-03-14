@@ -126,6 +126,8 @@ The repo is split into dedicated workflows:
 - [Native core contract](docs/native-core-contract.md)
 - [Native platform contract](docs/native-platform-contract.md)
 - [Native mobile automation plan](docs/native-mobile-automation-plan.md)
+- [Native foundation closeout](docs/native-foundation-closeout.md)
+- [Native next steps](docs/native-next-steps.md)
 - [API Reference](docs/api/openapi.yaml)
 - [WebSocket Protocol](docs/protocol-v1.md)
 - [Architecture Deep Dive](docs/ARCHITECTURE.md)
