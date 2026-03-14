@@ -24,9 +24,9 @@ pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
 pub use events::{
     AckRequestView, AuthStateView, AuthStepView, ConnectionSnapshot, ConnectionStateView,
-    ConversationCursorView, CoreEvent, FinalizedStreamMessageView, MessageRecordView,
-    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, StreamingSessionView,
-    SyncRequestView, ToolCallView,
+    ConversationCursorView, CoreEvent, DeviceSyncAppliedView, DuplicateMessageView,
+    FinalizedStreamMessageView, GapDetectedView, MessageRecordView, RuntimeBootstrapReportView,
+    RuntimeInitStepView, RuntimeSnapshot, StreamingSessionView, SyncRequestView, ToolCallView,
 };
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,

@@ -420,4 +420,59 @@ mod tests {
         assert_eq!(plan.attempt, 1);
         assert_eq!(plan.uri.as_str(), "ws://localhost:38173/ws?token=token-123");
     }
+
+    #[tokio::test]
+    async fn hello_error_schedules_backoff_with_stored_token() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "https://paw.example",
+            transport,
+            ReconnectionManager::new(2, vec![Duration::from_secs(3)]),
+        );
+        service
+            .connect("https://paw.example", "token-123")
+            .await
+            .unwrap();
+
+        service
+            .handle_server_message(&ServerMessage::HelloError(HelloErrorMsg {
+                v: PROTOCOL_VERSION,
+                code: "invalid_version".into(),
+                message: "unsupported protocol".into(),
+            }))
+            .await
+            .unwrap();
+
+        let plan = service.pending_reconnect().expect("pending reconnect");
+        assert_eq!(service.connection_state(), WsConnectionState::Retrying);
+        assert_eq!(plan.delay, Duration::from_secs(3));
+        assert_eq!(plan.attempt, 1);
+        assert_eq!(plan.uri.as_str(), "wss://paw.example/ws?token=token-123");
+    }
+
+    #[tokio::test]
+    async fn disconnect_clears_pending_reconnect_and_resets_attempts() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "http://localhost:38173",
+            transport.clone(),
+            ReconnectionManager::new(3, vec![Duration::from_secs(1)]),
+        );
+        service
+            .connect("http://localhost:38173", "token-123")
+            .await
+            .unwrap();
+        service.on_transport_error();
+
+        assert_eq!(service.connection_state(), WsConnectionState::Retrying);
+        assert_eq!(service.attempts(), 1);
+        assert!(service.pending_reconnect().is_some());
+
+        service.disconnect().await.unwrap();
+
+        assert_eq!(service.connection_state(), WsConnectionState::Disconnected);
+        assert_eq!(service.attempts(), 0);
+        assert!(service.pending_reconnect().is_none());
+        assert_eq!(*transport.closes.lock().unwrap(), 2);
+    }
 }

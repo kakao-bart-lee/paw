@@ -57,10 +57,28 @@ impl RuntimeBootstrapReport {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RuntimeEffect {
+    BootstrapProgress(RuntimeBootstrapReport),
+    ConnectionStateChanged(ConnectionSnapshot),
     SyncRequested(SyncRequest),
     AckRequested {
         conversation_id: Uuid,
         last_seq: i64,
+    },
+    DuplicateMessage {
+        conversation_id: Uuid,
+        received_seq: i64,
+        last_seq: i64,
+    },
+    GapDetected {
+        conversation_id: Uuid,
+        expected_seq: i64,
+        received_seq: i64,
+        request_from_seq: i64,
+    },
+    DeviceSyncApplied {
+        conversation_id: Uuid,
+        applied_count: u32,
+        highest_seq: i64,
     },
     MessagePersisted(MessageRecord),
     StreamUpdated(StreamingSession),
@@ -143,6 +161,44 @@ impl CoreRuntime {
         Ok(report)
     }
 
+    pub async fn bootstrap_effects(
+        &mut self,
+        token_store: &dyn TokenStore,
+        auth_client: &dyn AuthClient,
+    ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
+        let report = self.bootstrap(token_store, auth_client).await?;
+        Ok(vec![
+            RuntimeEffect::BootstrapProgress(report),
+            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service)),
+        ])
+    }
+
+    pub fn on_transport_error(&mut self) -> RuntimeEffect {
+        self.ws_service.on_transport_error();
+        RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service))
+    }
+
+    pub fn on_transport_closed(&mut self) -> RuntimeEffect {
+        self.ws_service.on_transport_closed();
+        RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service))
+    }
+
+    pub async fn reconnect_with_stored_token(
+        &mut self,
+    ) -> Result<Option<RuntimeEffect>, CoreRuntimeError> {
+        self.ws_service.connect_with_stored_token().await?;
+        Ok(Some(RuntimeEffect::ConnectionStateChanged(
+            ConnectionSnapshot::from(&self.ws_service),
+        )))
+    }
+
+    pub async fn disconnect(&mut self) -> Result<RuntimeEffect, CoreRuntimeError> {
+        self.ws_service.disconnect().await?;
+        Ok(RuntimeEffect::ConnectionStateChanged(
+            ConnectionSnapshot::from(&self.ws_service),
+        ))
+    }
+
     pub async fn handle_server_message(
         &mut self,
         msg: &ServerMessage,
@@ -153,12 +209,17 @@ impl CoreRuntime {
             ServerMessage::HelloOk(_) => {
                 self.sync_engine
                     .replace_cursors(load_cursors(self.db.as_ref())?);
-                Ok(self
+                let mut effects = vec![RuntimeEffect::ConnectionStateChanged(
+                    ConnectionSnapshot::from(&self.ws_service),
+                )];
+                effects.extend(
+                    self
                     .sync_service
                     .sync_all_conversations()?
                     .into_iter()
-                    .map(RuntimeEffect::SyncRequested)
-                    .collect())
+                    .map(RuntimeEffect::SyncRequested),
+                );
+                Ok(effects)
             }
             ServerMessage::MessageReceived(message) => self.handle_message_received(message),
             ServerMessage::DeviceSyncResponse(response) => {
@@ -232,30 +293,45 @@ impl CoreRuntime {
         &mut self,
         msg: &paw_proto::MessageReceivedMsg,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
-        let effect = match self.sync_engine.ingest_message(msg) {
-            MessageSyncOutcome::DuplicateOrStale { ack_seq } => RuntimeEffect::AckRequested {
-                conversation_id: msg.conversation_id,
-                last_seq: ack_seq,
-            },
+        let effects = match self.sync_engine.ingest_message(msg) {
+            MessageSyncOutcome::DuplicateOrStale { ack_seq } => vec![
+                RuntimeEffect::DuplicateMessage {
+                    conversation_id: msg.conversation_id,
+                    received_seq: msg.seq,
+                    last_seq: ack_seq,
+                },
+                RuntimeEffect::AckRequested {
+                    conversation_id: msg.conversation_id,
+                    last_seq: ack_seq,
+                },
+            ],
             MessageSyncOutcome::GapDetected { request_from_seq } => {
-                RuntimeEffect::SyncRequested(SyncRequest {
-                    conversation_id: msg.conversation_id.to_string(),
-                    last_seq: request_from_seq,
-                })
+                vec![
+                    RuntimeEffect::GapDetected {
+                        conversation_id: msg.conversation_id,
+                        expected_seq: request_from_seq + 1,
+                        received_seq: msg.seq,
+                        request_from_seq,
+                    },
+                    RuntimeEffect::SyncRequested(SyncRequest {
+                        conversation_id: msg.conversation_id.to_string(),
+                        last_seq: request_from_seq,
+                    }),
+                ]
             }
             MessageSyncOutcome::Applied { ack_seq } => {
                 let record = self.sync_service.persist_message(msg)?;
-                return Ok(vec![
+                vec![
                     RuntimeEffect::MessagePersisted(record),
                     RuntimeEffect::AckRequested {
                         conversation_id: msg.conversation_id,
                         last_seq: ack_seq,
                     },
-                ]);
+                ]
             }
         };
 
-        Ok(vec![effect])
+        Ok(effects)
     }
 
     fn handle_device_sync_response(
@@ -266,16 +342,32 @@ impl CoreRuntime {
 
         let mut effects = Vec::with_capacity(response.messages.len() * 2);
         let mut highest_seq_by_conversation: BTreeMap<Uuid, i64> = BTreeMap::new();
+        let mut applied_count_by_conversation: BTreeMap<Uuid, u32> = BTreeMap::new();
 
         for message in &response.messages {
             let record = self.sync_service.persist_message(message)?;
             effects.push(RuntimeEffect::MessagePersisted(record));
 
+            applied_count_by_conversation
+                .entry(message.conversation_id)
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
             highest_seq_by_conversation
                 .entry(message.conversation_id)
                 .and_modify(|seq| *seq = (*seq).max(message.seq))
                 .or_insert(message.seq);
         }
+
+        effects.extend(highest_seq_by_conversation.iter().map(
+            |(conversation_id, highest_seq)| RuntimeEffect::DeviceSyncApplied {
+                conversation_id: *conversation_id,
+                applied_count: applied_count_by_conversation
+                    .get(conversation_id)
+                    .copied()
+                    .unwrap_or_default(),
+                highest_seq: *highest_seq,
+            },
+        ));
 
         effects.extend(highest_seq_by_conversation.into_iter().map(
             |(conversation_id, last_seq)| RuntimeEffect::AckRequested {
@@ -320,6 +412,7 @@ mod tests {
     use crate::{
         auth::{InMemoryTokenStore, StoredTokens},
         db::ConversationRecord,
+        events::ConnectionStateView,
         ws::{ReconnectionManager, WsConnectionState, WsTransport},
     };
 
@@ -493,10 +586,18 @@ mod tests {
 
         assert_eq!(
             effects,
-            vec![RuntimeEffect::SyncRequested(SyncRequest {
-                conversation_id: conversation_id.to_string(),
-                last_seq: 0,
-            })]
+            vec![
+                RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+                    state: ConnectionStateView::Connected,
+                    attempts: 0,
+                    pending_reconnect_delay_ms: None,
+                    pending_reconnect_uri: None,
+                }),
+                RuntimeEffect::SyncRequested(SyncRequest {
+                    conversation_id: conversation_id.to_string(),
+                    last_seq: 0,
+                }),
+            ]
         );
         assert_eq!(
             runtime.ws_service().connection_state(),
@@ -546,20 +647,35 @@ mod tests {
                 .handle_server_message(&ServerMessage::MessageReceived(stale))
                 .await
                 .unwrap(),
-            vec![RuntimeEffect::AckRequested {
-                conversation_id,
-                last_seq: 2,
-            }]
+            vec![
+                RuntimeEffect::DuplicateMessage {
+                    conversation_id,
+                    received_seq: 2,
+                    last_seq: 2,
+                },
+                RuntimeEffect::AckRequested {
+                    conversation_id,
+                    last_seq: 2,
+                },
+            ]
         );
         assert_eq!(
             runtime
                 .handle_server_message(&ServerMessage::MessageReceived(gap))
                 .await
                 .unwrap(),
-            vec![RuntimeEffect::SyncRequested(SyncRequest {
-                conversation_id: conversation_id.to_string(),
-                last_seq: 2,
-            })]
+            vec![
+                RuntimeEffect::GapDetected {
+                    conversation_id,
+                    expected_seq: 3,
+                    received_seq: 4,
+                    request_from_seq: 2,
+                },
+                RuntimeEffect::SyncRequested(SyncRequest {
+                    conversation_id: conversation_id.to_string(),
+                    last_seq: 2,
+                }),
+            ]
         );
 
         let effects = runtime
@@ -619,6 +735,16 @@ mod tests {
                 last_seq: 3,
             })
         );
+        assert!(effects.iter().any(|effect| {
+            matches!(
+                effect,
+                RuntimeEffect::DeviceSyncApplied {
+                    conversation_id: effect_conversation_id,
+                    applied_count: 3,
+                    highest_seq: 3,
+                } if *effect_conversation_id == conversation_id
+            )
+        }));
     }
 
     #[tokio::test]

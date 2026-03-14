@@ -112,6 +112,28 @@ pub struct AckRequestView {
     pub last_seq: i64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DuplicateMessageView {
+    pub conversation_id: String,
+    pub received_seq: i64,
+    pub last_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct GapDetectedView {
+    pub conversation_id: String,
+    pub expected_seq: i64,
+    pub received_seq: i64,
+    pub request_from_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DeviceSyncAppliedView {
+    pub conversation_id: String,
+    pub applied_count: u32,
+    pub highest_seq: i64,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum RuntimeInitStepView {
     DatabaseOpened,
@@ -143,6 +165,9 @@ pub enum CoreEvent {
     ConnectionStateChanged(ConnectionSnapshot),
     SyncRequested(SyncRequestView),
     AckRequested(AckRequestView),
+    DuplicateMessage(DuplicateMessageView),
+    GapDetected(GapDetectedView),
+    DeviceSyncApplied(DeviceSyncAppliedView),
     MessagePersisted(MessageRecordView),
     StreamUpdated(StreamingSessionView),
     StreamFinalized(FinalizedStreamMessageView),
@@ -277,6 +302,59 @@ impl From<&SyncRequest> for SyncRequestView {
     }
 }
 
+impl From<&RuntimeEffect> for DuplicateMessageView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::DuplicateMessage {
+                conversation_id,
+                received_seq,
+                last_seq,
+            } => Self {
+                conversation_id: conversation_id.to_string(),
+                received_seq: *received_seq,
+                last_seq: *last_seq,
+            },
+            other => panic!("expected DuplicateMessage effect, got {other:?}"),
+        }
+    }
+}
+
+impl From<&RuntimeEffect> for GapDetectedView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::GapDetected {
+                conversation_id,
+                expected_seq,
+                received_seq,
+                request_from_seq,
+            } => Self {
+                conversation_id: conversation_id.to_string(),
+                expected_seq: *expected_seq,
+                received_seq: *received_seq,
+                request_from_seq: *request_from_seq,
+            },
+            other => panic!("expected GapDetected effect, got {other:?}"),
+        }
+    }
+}
+
+impl From<&RuntimeEffect> for DeviceSyncAppliedView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::DeviceSyncApplied {
+                conversation_id,
+                applied_count,
+                highest_seq,
+            } => Self {
+                conversation_id: conversation_id.to_string(),
+                applied_count: *applied_count,
+                highest_seq: *highest_seq,
+            },
+            other => panic!("expected DeviceSyncApplied effect, got {other:?}"),
+        }
+    }
+}
+
 impl From<&RuntimeInitStep> for RuntimeInitStepView {
     fn from(value: &RuntimeInitStep) -> Self {
         match value {
@@ -302,6 +380,10 @@ impl From<&RuntimeBootstrapReport> for RuntimeBootstrapReportView {
 impl From<&RuntimeEffect> for CoreEvent {
     fn from(value: &RuntimeEffect) -> Self {
         match value {
+            RuntimeEffect::BootstrapProgress(report) => Self::BootstrapProgress(report.into()),
+            RuntimeEffect::ConnectionStateChanged(snapshot) => {
+                Self::ConnectionStateChanged(snapshot.clone())
+            }
             RuntimeEffect::SyncRequested(request) => Self::SyncRequested(request.into()),
             RuntimeEffect::AckRequested {
                 conversation_id,
@@ -310,6 +392,9 @@ impl From<&RuntimeEffect> for CoreEvent {
                 conversation_id: conversation_id.to_string(),
                 last_seq: *last_seq,
             }),
+            RuntimeEffect::DuplicateMessage { .. } => Self::DuplicateMessage(value.into()),
+            RuntimeEffect::GapDetected { .. } => Self::GapDetected(value.into()),
+            RuntimeEffect::DeviceSyncApplied { .. } => Self::DeviceSyncApplied(value.into()),
             RuntimeEffect::MessagePersisted(record) => Self::MessagePersisted(record.into()),
             RuntimeEffect::StreamUpdated(stream) => Self::StreamUpdated(stream.into()),
             RuntimeEffect::StreamFinalized(message) => Self::StreamFinalized(message.into()),
@@ -364,14 +449,16 @@ mod tests {
 
     #[test]
     fn runtime_effects_convert_to_serializable_core_events() {
-        let effect = RuntimeEffect::AckRequested {
+        let effect = RuntimeEffect::DuplicateMessage {
             conversation_id: Uuid::nil(),
+            received_seq: 7,
             last_seq: 9,
         };
 
         let event = CoreEvent::from(&effect);
         let json = serde_json::to_string(&event).unwrap();
-        assert!(json.contains("\"AckRequested\""));
+        assert!(json.contains("\"DuplicateMessage\""));
+        assert!(json.contains("\"received_seq\":7"));
         assert!(json.contains("\"last_seq\":9"));
     }
 
