@@ -3,6 +3,7 @@ mod auth;
 mod backup;
 mod channels;
 mod db;
+mod i18n;
 mod keys;
 mod media;
 mod messages;
@@ -39,6 +40,10 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:35432/paw".to_string());
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "dev_only_change_me_in_production".to_string());
+    let default_locale = std::env::var("PAW_DEFAULT_LOCALE")
+        .ok()
+        .and_then(|value| i18n::normalize_locale(&value))
+        .unwrap_or_else(|| "ko-KR".to_string());
 
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
@@ -60,6 +65,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         db: db.clone(),
         jwt_secret,
+        default_locale,
         hub: hub.clone(),
         media_service,
         nats: nats_client,
@@ -257,6 +263,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/ws", get(ws::handler::ws_handler))
         .route("/agent/ws", get(agents::handlers::agent_ws_handler))
         .merge(protected_routes)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            i18n::locale_middleware,
+        ))
         .layer(middleware::from_fn(observability::request_id_middleware))
         .layer(CorsLayer::permissive())
         .with_state(state);

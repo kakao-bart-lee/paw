@@ -1,4 +1,5 @@
 use crate::auth::{middleware::UserId, AppState};
+use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
         AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse,
@@ -16,7 +17,7 @@ use axum::{
 };
 use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -70,6 +71,7 @@ pub struct UpdateGroupNameResponse {
 
 pub async fn send_message(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(conv_id): Path<Uuid>,
     Json(payload): Json<SendMessageRequest>,
@@ -78,6 +80,7 @@ pub async fn send_message(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_content",
+            &locale,
             "Message content is required",
         )
         .into_response();
@@ -88,12 +91,13 @@ pub async fn send_message(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_format",
+            &locale,
             "format must be markdown or plain",
         )
         .into_response();
     }
 
-    match ensure_membership(&state, conv_id, user_id).await {
+    match ensure_membership(&state, conv_id, user_id, &locale).await {
         Ok(()) => {}
         Err(resp) => return resp,
     }
@@ -102,6 +106,7 @@ pub async fn send_message(
         return error(
             StatusCode::UNPROCESSABLE_ENTITY,
             "spam_detected",
+            &locale,
             "Message contains prohibited content",
         )
         .into_response();
@@ -117,6 +122,7 @@ pub async fn send_message(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "message_lookup_failed",
+                &locale,
                 "Could not send message",
             )
             .into_response();
@@ -179,6 +185,7 @@ pub async fn send_message(
                 _ => error(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "message_send_failed",
+                    &locale,
                     "Could not send message",
                 )
                 .into_response(),
@@ -273,11 +280,12 @@ fn to_message_format(raw: &str) -> MessageFormat {
 
 pub async fn get_messages(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(conv_id): Path<Uuid>,
     Query(query): Query<GetMessagesQuery>,
 ) -> Response {
-    match ensure_membership(&state, conv_id, user_id).await {
+    match ensure_membership(&state, conv_id, user_id, &locale).await {
         Ok(()) => {}
         Err(resp) => return resp,
     }
@@ -292,6 +300,7 @@ pub async fn get_messages(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "message_history_failed",
+                &locale,
                 "Could not fetch message history",
             )
             .into_response();
@@ -308,6 +317,7 @@ pub async fn get_messages(
 
 pub async fn list_conversations(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
 ) -> ApiResult<ListConversationsResponse> {
     let conversations = service::list_conversations(&state.db, user_id)
@@ -317,6 +327,7 @@ pub async fn list_conversations(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "conversation_list_failed",
+                &locale,
                 "Could not list conversations",
             )
         })?;
@@ -326,6 +337,7 @@ pub async fn list_conversations(
 
 pub async fn create_conversation(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Json(payload): Json<CreateConversationRequest>,
 ) -> Response {
@@ -333,6 +345,7 @@ pub async fn create_conversation(
         return error(
             StatusCode::BAD_REQUEST,
             "too_many_members",
+            &locale,
             "A conversation can have at most 100 members (including creator)",
         )
         .into_response();
@@ -348,6 +361,7 @@ pub async fn create_conversation(
                 return error(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "conversation_create_failed",
+                    &locale,
                     "Could not create conversation",
                 )
                 .into_response();
@@ -364,51 +378,61 @@ pub async fn create_conversation(
 
 pub async fn add_member_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(conversation_id): Path<Uuid>,
     Json(payload): Json<AddMemberRequest>,
 ) -> Response {
     match service::add_member(&state.db, conversation_id, user_id, payload.user_id).await {
         Ok(added) => Json(AddMemberResponse { added }).into_response(),
-        Err(err) => group_management_error_to_response(err).into_response(),
+        Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
 
 pub async fn remove_member_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
 ) -> Response {
     match service::remove_member(&state.db, conversation_id, user_id, target_user_id).await {
         Ok(removed) => Json(RemoveMemberResponse { removed }).into_response(),
-        Err(err) => group_management_error_to_response(err).into_response(),
+        Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
 
 pub async fn update_group_name_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(conversation_id): Path<Uuid>,
     Json(payload): Json<UpdateGroupNameRequest>,
 ) -> Response {
     match service::update_group_name(&state.db, conversation_id, user_id, &payload.name).await {
         Ok(updated) => Json(UpdateGroupNameResponse { updated }).into_response(),
-        Err(err) => group_management_error_to_response(err).into_response(),
+        Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
 
-async fn ensure_membership(state: &AppState, conv_id: Uuid, user_id: Uuid) -> Result<(), Response> {
+async fn ensure_membership(
+    state: &AppState,
+    conv_id: Uuid,
+    user_id: Uuid,
+    locale: &str,
+) -> Result<(), Response> {
     match service::check_member(&state.db, conv_id, user_id).await {
         Ok(Membership::Member) => Ok(()),
         Ok(Membership::NotMember) => Err(error(
             StatusCode::FORBIDDEN,
             "forbidden",
+            locale,
             "User is not a member of this conversation",
         )
         .into_response()),
         Ok(Membership::ConversationNotFound) => Err(error(
             StatusCode::NOT_FOUND,
             "conversation_not_found",
+            locale,
             "Conversation not found",
         )
         .into_response()),
@@ -417,6 +441,7 @@ async fn ensure_membership(state: &AppState, conv_id: Uuid, user_id: Uuid) -> Re
             Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "membership_check_failed",
+                locale,
                 "Could not validate conversation membership",
             )
             .into_response())
@@ -424,51 +449,55 @@ async fn ensure_membership(state: &AppState, conv_id: Uuid, user_id: Uuid) -> Re
     }
 }
 
-fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
-    (
-        status,
-        Json(json!({
-            "error": code,
-            "message": message,
-        })),
-    )
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
 }
 
-fn group_management_error_to_response(err: GroupManagementError) -> (StatusCode, Json<Value>) {
+fn group_management_error_to_response(
+    err: GroupManagementError,
+    locale: &str,
+) -> (StatusCode, Json<Value>) {
     match err {
         GroupManagementError::ConversationNotFound => error(
             StatusCode::NOT_FOUND,
             "conversation_not_found",
+            locale,
             "Conversation not found",
         ),
         GroupManagementError::NotAuthorized => error(
             StatusCode::FORBIDDEN,
             "forbidden",
+            locale,
             "Not authorized for this action",
         ),
         GroupManagementError::TooManyMembers => error(
             StatusCode::CONFLICT,
             "too_many_members",
+            locale,
             "Conversation reached maximum member limit",
         ),
         GroupManagementError::AlreadyMember => error(
             StatusCode::CONFLICT,
             "already_member",
+            locale,
             "User is already a member of this conversation",
         ),
         GroupManagementError::MemberNotFound => error(
             StatusCode::NOT_FOUND,
             "member_not_found",
+            locale,
             "Conversation member not found",
         ),
         GroupManagementError::CannotRemoveLastOwner => error(
             StatusCode::FORBIDDEN,
             "cannot_remove_last_owner",
+            locale,
             "Cannot remove the last owner from conversation",
         ),
         GroupManagementError::InvalidGroupName => error(
             StatusCode::BAD_REQUEST,
             "invalid_group_name",
+            locale,
             "Group name is required",
         ),
     }

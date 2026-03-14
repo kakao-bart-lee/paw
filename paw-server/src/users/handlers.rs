@@ -3,24 +3,15 @@ use axum::{
     http::StatusCode,
     Extension, Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use sqlx::Error as SqlxError;
 use uuid::Uuid;
 
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
+use crate::i18n::{error_response, normalize_locale, RequestLocale};
 
 use super::models::{PublicUser, SearchQuery, UpdateProfileRequest, User};
-
-fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
-    (
-        status,
-        Json(json!({
-            "error": code,
-            "message": message,
-        })),
-    )
-}
 
 fn normalize_username(input: &str) -> Option<String> {
     let normalized = input.trim().to_ascii_lowercase();
@@ -38,10 +29,11 @@ fn normalize_username(input: &str) -> Option<String> {
 
 pub async fn get_me(
     Extension(user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     State(state): State<AppState>,
 ) -> (StatusCode, Json<Value>) {
     match sqlx::query_as::<_, User>(
-        "SELECT id, phone, username, discoverable_by_phone, phone_verified_at, display_name, avatar_url, created_at \
+        "SELECT id, phone, username, preferred_locale, discoverable_by_phone, phone_verified_at, display_name, avatar_url, created_at \
          FROM users WHERE id = $1",
     )
     .bind(user_id.0)
@@ -52,10 +44,11 @@ pub async fn get_me(
             StatusCode::OK,
             Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
-        Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
-        Err(_) => error(
+        Ok(None) => error_response(StatusCode::NOT_FOUND, "user_not_found", &locale, "User not found"),
+        Err(_) => error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "query_failed",
+            &locale,
             "Failed to fetch user profile",
         ),
     }
@@ -63,6 +56,7 @@ pub async fn get_me(
 
 pub async fn update_me(
     Extension(user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     State(state): State<AppState>,
     Json(payload): Json<UpdateProfileRequest>,
 ) -> (StatusCode, Json<Value>) {
@@ -71,12 +65,27 @@ pub async fn update_me(
         .as_ref()
         .map(|value| value.trim())
         .filter(|value| !value.is_empty());
+    let preferred_locale = match payload.preferred_locale.as_deref() {
+        Some(value) => match normalize_locale(value) {
+            Some(locale) => Some(locale),
+            None => {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_preferred_locale",
+                    &locale,
+                    "Preferred locale must be a valid BCP-47 style tag such as ko-KR or en-US",
+                );
+            }
+        },
+        None => None,
+    };
 
     if let Some(raw_username) = username {
         if normalize_username(raw_username).is_none() {
-            return error(
+            return error_response(
                 StatusCode::BAD_REQUEST,
                 "invalid_username",
+                &locale,
                 "Username must be 3-20 chars of lowercase letters, numbers, or underscores",
             );
         }
@@ -85,13 +94,15 @@ pub async fn update_me(
     match sqlx::query_as::<_, User>(
         "UPDATE users SET \
          username = COALESCE($1, username), \
-         discoverable_by_phone = COALESCE($2, discoverable_by_phone), \
-         display_name = COALESCE($3, display_name), \
-         avatar_url = COALESCE($4, avatar_url) \
-         WHERE id = $5 \
-         RETURNING id, phone, username, discoverable_by_phone, phone_verified_at, display_name, avatar_url, created_at",
+         preferred_locale = COALESCE($2, preferred_locale), \
+         discoverable_by_phone = COALESCE($3, discoverable_by_phone), \
+         display_name = COALESCE($4, display_name), \
+         avatar_url = COALESCE($5, avatar_url) \
+         WHERE id = $6 \
+         RETURNING id, phone, username, preferred_locale, discoverable_by_phone, phone_verified_at, display_name, avatar_url, created_at",
     )
     .bind(username.and_then(normalize_username))
+    .bind(preferred_locale)
     .bind(payload.discoverable_by_phone)
     .bind(&payload.display_name)
     .bind(&payload.avatar_url)
@@ -103,26 +114,34 @@ pub async fn update_me(
             StatusCode::OK,
             Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
-        Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
-        Err(SqlxError::Database(db_err)) if db_err.code().as_deref() == Some("23505") => error(
+        Ok(None) => error_response(StatusCode::NOT_FOUND, "user_not_found", &locale, "User not found"),
+        Err(SqlxError::Database(db_err)) if db_err.code().as_deref() == Some("23505") => error_response(
             StatusCode::CONFLICT,
             "username_taken",
+            &locale,
             "Username is already in use",
         ),
-        Err(_) => error(StatusCode::INTERNAL_SERVER_ERROR, "update_failed", "Failed to update profile"),
+        Err(_) => error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "update_failed",
+            &locale,
+            "Failed to update profile",
+        ),
     }
 }
 
 pub async fn search_user(
     Extension(_user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     State(state): State<AppState>,
     Query(params): Query<SearchQuery>,
 ) -> (StatusCode, Json<Value>) {
     let result = if let Some(username) = params.username.as_deref() {
         let Some(username) = normalize_username(username) else {
-            return error(
+            return error_response(
                 StatusCode::BAD_REQUEST,
                 "invalid_username",
+                &locale,
                 "Username must be 3-20 chars of lowercase letters, numbers, or underscores",
             );
         };
@@ -147,9 +166,10 @@ pub async fn search_user(
         .fetch_optional(state.db.as_ref())
         .await
     } else {
-        return error(
+        return error_response(
             StatusCode::BAD_REQUEST,
             "missing_search_param",
+            &locale,
             "Provide either username or phone",
         );
     };
@@ -159,10 +179,16 @@ pub async fn search_user(
             StatusCode::OK,
             Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
-        Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
-        Err(_) => error(
+        Ok(None) => error_response(
+            StatusCode::NOT_FOUND,
+            "user_not_found",
+            &locale,
+            "User not found",
+        ),
+        Err(_) => error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "query_failed",
+            &locale,
             "Failed to search users",
         ),
     }
@@ -170,6 +196,7 @@ pub async fn search_user(
 
 pub async fn get_user(
     Extension(_user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     State(state): State<AppState>,
     Path(target_user_id): Path<Uuid>,
 ) -> (StatusCode, Json<Value>) {
@@ -184,10 +211,16 @@ pub async fn get_user(
             StatusCode::OK,
             Json(serde_json::to_value(user).unwrap_or(Value::Null)),
         ),
-        Ok(None) => error(StatusCode::NOT_FOUND, "user_not_found", "User not found"),
-        Err(_) => error(
+        Ok(None) => error_response(
+            StatusCode::NOT_FOUND,
+            "user_not_found",
+            &locale,
+            "User not found",
+        ),
+        Err(_) => error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "query_failed",
+            &locale,
             "Failed to fetch user",
         ),
     }
@@ -196,6 +229,7 @@ pub async fn get_user(
 #[cfg(test)]
 mod tests {
     use super::normalize_username;
+    use crate::i18n::normalize_locale;
 
     #[test]
     fn normalize_username_accepts_valid_input() {
@@ -212,5 +246,11 @@ mod tests {
         assert_eq!(normalize_username("UPPER.CASE"), None);
         assert_eq!(normalize_username("admin"), None);
         assert_eq!(normalize_username("support"), None);
+    }
+
+    #[test]
+    fn preferred_locale_accepts_valid_bcp47_style_tags() {
+        assert_eq!(normalize_locale("ko_kr"), Some("ko-KR".to_string()));
+        assert_eq!(normalize_locale("en-us"), Some("en-US".to_string()));
     }
 }

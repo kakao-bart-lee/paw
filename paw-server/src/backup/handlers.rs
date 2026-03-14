@@ -4,26 +4,22 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use uuid::Uuid;
 
 use super::models::{BackupSettings, ListBackupsResponse, RestoreBackupResponse};
 use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
+use crate::i18n::{error_response, RequestLocale};
 
-fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
-    (
-        status,
-        Json(json!({
-            "error": code,
-            "message": message,
-        })),
-    )
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
 }
 
 pub async fn initiate_backup(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
 ) -> Response {
     match service::initiate_backup(&state.db, &state.media_service, user_id).await {
@@ -33,6 +29,7 @@ pub async fn initiate_backup(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "backup_initiate_failed",
+                &locale,
                 "Could not initiate backup",
             )
             .into_response()
@@ -42,6 +39,7 @@ pub async fn initiate_backup(
 
 pub async fn list_backups(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
 ) -> Response {
     match service::list_backups(&state.db, user_id).await {
@@ -51,6 +49,7 @@ pub async fn list_backups(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "backup_list_failed",
+                &locale,
                 "Could not list backups",
             )
             .into_response()
@@ -60,6 +59,7 @@ pub async fn list_backups(
 
 pub async fn restore_backup(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(backup_id): Path<Uuid>,
 ) -> Response {
@@ -68,6 +68,7 @@ pub async fn restore_backup(
         Ok(None) => error(
             StatusCode::NOT_FOUND,
             "backup_not_found",
+            &locale,
             "Backup not found",
         )
         .into_response(),
@@ -76,6 +77,7 @@ pub async fn restore_backup(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "backup_restore_failed",
+                &locale,
                 "Could not restore backup",
             )
             .into_response()
@@ -85,6 +87,7 @@ pub async fn restore_backup(
 
 pub async fn delete_backup(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(backup_id): Path<Uuid>,
 ) -> Response {
@@ -93,6 +96,7 @@ pub async fn delete_backup(
         Ok(false) => error(
             StatusCode::NOT_FOUND,
             "backup_not_found",
+            &locale,
             "Backup not found",
         )
         .into_response(),
@@ -101,6 +105,7 @@ pub async fn delete_backup(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "backup_delete_failed",
+                &locale,
                 "Could not delete backup",
             )
             .into_response()
@@ -110,6 +115,7 @@ pub async fn delete_backup(
 
 pub async fn get_settings(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
 ) -> Response {
     match service::get_backup_settings(&state.db, user_id).await {
@@ -119,6 +125,7 @@ pub async fn get_settings(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "backup_settings_failed",
+                &locale,
                 "Could not get backup settings",
             )
             .into_response()
@@ -128,6 +135,7 @@ pub async fn get_settings(
 
 pub async fn update_settings(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Json(settings): Json<BackupSettings>,
 ) -> Response {
@@ -138,6 +146,7 @@ pub async fn update_settings(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "backup_settings_update_failed",
+                &locale,
                 "Could not update backup settings",
             )
             .into_response()

@@ -1,0 +1,2 @@
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS preferred_locale VARCHAR(35) NOT NULL DEFAULT 'ko-KR';

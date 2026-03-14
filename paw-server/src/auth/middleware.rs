@@ -4,11 +4,10 @@ use axum::{
     http::{header, Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
-    Json,
 };
-use serde_json::json;
 use uuid::Uuid;
 
+use crate::i18n::{error_response_with_request_id, RequestLocale};
 use crate::observability::RequestId;
 
 use super::{jwt, AppState};
@@ -61,6 +60,11 @@ fn unauthorized(code: &str, message: &str, request: &Request<Body>) -> Response 
         .get::<RequestId>()
         .map(|req_id| req_id.0.as_str())
         .unwrap_or("-");
+    let locale = request
+        .extensions()
+        .get::<RequestLocale>()
+        .map(|locale| locale.0.as_str())
+        .unwrap_or("ko-KR");
     tracing::warn!(
         request_id = %request_id,
         path = %request.uri().path(),
@@ -68,13 +72,12 @@ fn unauthorized(code: &str, message: &str, request: &Request<Body>) -> Response 
         "auth failed"
     );
 
-    (
+    error_response_with_request_id(
         StatusCode::UNAUTHORIZED,
-        Json(json!({
-            "error": code,
-            "message": message,
-            "request_id": request_id,
-        })),
+        code,
+        locale,
+        Some(request_id),
+        message,
     )
-        .into_response()
+    .into_response()
 }

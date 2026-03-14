@@ -1,4 +1,4 @@
-use axum::{extract::State, Json};
+use axum::{extract::State, Extension, Json};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -6,6 +6,7 @@ use sqlx::Row;
 use uuid::Uuid;
 
 use super::{device, jwt, otp, AppState};
+use crate::i18n::{error_response, RequestLocale};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestOtpRequest {
@@ -30,23 +31,22 @@ pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 
-fn error_json(code: &str, message: &str) -> Json<Value> {
-    Json(json!({
-        "error": code,
-        "message": message,
-    }))
-}
-
 fn valid_phone(phone: &str) -> bool {
     phone.starts_with('+') && phone.len() >= 8
 }
 
 pub async fn request_otp(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Json(payload): Json<RequestOtpRequest>,
-) -> Json<Value> {
+) -> (axum::http::StatusCode, Json<Value>) {
     if !valid_phone(&payload.phone) {
-        return error_json("invalid_phone", "Phone number must be E.164 format");
+        return error_response(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_phone",
+            &locale,
+            "Phone number must be E.164 format",
+        );
     }
 
     let code = otp::generate_otp();
@@ -61,7 +61,12 @@ pub async fn request_otp(
             .await;
 
     if insert_result.is_err() {
-        return error_json("otp_store_failed", "Failed to create OTP");
+        return error_response(
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "otp_store_failed",
+            &locale,
+            "Failed to create OTP",
+        );
     }
 
     tracing::info!(
@@ -76,30 +81,51 @@ pub async fn request_otp(
 
     if expose_otp {
         tracing::warn!("PAW_EXPOSE_OTP_FOR_E2E is enabled; do not use in production");
-        Json(json!({ "ok": true, "debug_code": code }))
+        (
+            axum::http::StatusCode::OK,
+            Json(json!({ "ok": true, "debug_code": code })),
+        )
     } else {
         if otp::fixed_otp().is_some() {
             tracing::warn!("PAW_FIXED_OTP is enabled; OTP is fixed server-side only");
         }
-        Json(json!({ "ok": true }))
+        (axum::http::StatusCode::OK, Json(json!({ "ok": true })))
     }
 }
 
 pub async fn verify_otp(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Json(payload): Json<VerifyOtpRequest>,
-) -> Json<Value> {
+) -> (axum::http::StatusCode, Json<Value>) {
     if !valid_phone(&payload.phone) {
-        return error_json("invalid_phone", "Phone number must be E.164 format");
+        return error_response(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_phone",
+            &locale,
+            "Phone number must be E.164 format",
+        );
     }
 
     if payload.code.len() != 6 || !payload.code.chars().all(|c| c.is_ascii_digit()) {
-        return error_json("invalid_code_format", "OTP must be a 6-digit code");
+        return error_response(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_code_format",
+            &locale,
+            "OTP must be a 6-digit code",
+        );
     }
 
     let mut tx = match state.db.begin().await {
         Ok(tx) => tx,
-        Err(_) => return error_json("transaction_start_failed", "Failed to verify OTP"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "transaction_start_failed",
+                &locale,
+                "Failed to verify OTP",
+            )
+        }
     };
 
     let otp_row = sqlx::query(
@@ -116,9 +142,21 @@ pub async fn verify_otp(
 
     let Some(otp_row) = (match otp_row {
         Ok(row) => row,
-        Err(_) => return error_json("otp_query_failed", "Failed to verify OTP"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "otp_query_failed",
+                &locale,
+                "Failed to verify OTP",
+            )
+        }
     }) else {
-        return error_json("invalid_otp", "Invalid or expired OTP");
+        return error_response(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_otp",
+            &locale,
+            "Invalid or expired OTP",
+        );
     };
 
     let otp_id: Uuid = otp_row.get("id");
@@ -126,7 +164,12 @@ pub async fn verify_otp(
     let used_at = otp_row.get::<Option<chrono::DateTime<Utc>>, _>("used_at");
 
     if used_at.is_some() || expires_at <= Utc::now() {
-        return error_json("invalid_otp", "Invalid or expired OTP");
+        return error_response(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_otp",
+            &locale,
+            "Invalid or expired OTP",
+        );
     }
 
     let mark_used =
@@ -137,7 +180,14 @@ pub async fn verify_otp(
 
     match mark_used {
         Ok(result) if result.rows_affected() == 1 => {}
-        _ => return error_json("otp_already_used", "OTP has already been used"),
+        _ => {
+            return error_response(
+                axum::http::StatusCode::BAD_REQUEST,
+                "otp_already_used",
+                &locale,
+                "OTP has already been used",
+            )
+        }
     }
 
     let user_id = sqlx::query_scalar::<_, Uuid>(
@@ -154,33 +204,58 @@ pub async fn verify_otp(
 
     let user_id = match user_id {
         Ok(id) => id,
-        Err(_) => return error_json("user_upsert_failed", "Failed to create user"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "user_upsert_failed",
+                &locale,
+                "Failed to create user",
+            )
+        }
     };
 
     if tx.commit().await.is_err() {
-        return error_json(
+        return error_response(
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             "transaction_commit_failed",
+            &locale,
             "Failed to finalize OTP verification",
         );
     }
 
     let session_token = match jwt::issue_session_token(user_id, &state.jwt_secret) {
         Ok(token) => token,
-        Err(_) => return error_json("session_issue_failed", "Failed to create session token"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "session_issue_failed",
+                &locale,
+                "Failed to create session token",
+            )
+        }
     };
 
-    Json(json!({
-        "user_id": user_id,
-        "session_token": session_token,
-    }))
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "user_id": user_id,
+            "session_token": session_token,
+        })),
+    )
 }
 
 pub async fn register_device(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Json(payload): Json<RegisterDeviceRequest>,
-) -> Json<Value> {
+) -> (axum::http::StatusCode, Json<Value>) {
     if payload.device_name.trim().is_empty() {
-        return error_json("invalid_device_name", "Device name is required");
+        return error_response(
+            axum::http::StatusCode::BAD_REQUEST,
+            "invalid_device_name",
+            &locale,
+            "Device name is required",
+        );
     }
 
     let claims = match jwt::verify_token(
@@ -189,12 +264,26 @@ pub async fn register_device(
         Some(jwt::TOKEN_TYPE_SESSION),
     ) {
         Ok(claims) => claims,
-        Err(_) => return error_json("invalid_session_token", "Session token is invalid"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::UNAUTHORIZED,
+                "invalid_session_token",
+                &locale,
+                "Session token is invalid",
+            )
+        }
     };
 
     let ed25519_public_key = match device::decode_ed25519_public_key(&payload.ed25519_public_key) {
         Ok(key) => key,
-        Err(message) => return error_json("invalid_device_key", &message),
+        Err(message) => {
+            return error_response(
+                axum::http::StatusCode::BAD_REQUEST,
+                "invalid_device_key",
+                &locale,
+                &message,
+            )
+        }
     };
 
     let device_id = sqlx::query_scalar::<_, Uuid>(
@@ -210,47 +299,89 @@ pub async fn register_device(
 
     let device_id = match device_id {
         Ok(id) => id,
-        Err(_) => return error_json("device_register_failed", "Failed to register device"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "device_register_failed",
+                &locale,
+                "Failed to register device",
+            )
+        }
     };
 
     let access_token = match jwt::issue_access_token(claims.sub, Some(device_id), &state.jwt_secret)
     {
         Ok(token) => token,
-        Err(_) => return error_json("access_issue_failed", "Failed to issue access token"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "access_issue_failed",
+                &locale,
+                "Failed to issue access token",
+            )
+        }
     };
 
     let refresh_token =
         match jwt::issue_refresh_token(claims.sub, Some(device_id), &state.jwt_secret) {
             Ok(token) => token,
-            Err(_) => return error_json("refresh_issue_failed", "Failed to issue refresh token"),
+            Err(_) => {
+                return error_response(
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "refresh_issue_failed",
+                    &locale,
+                    "Failed to issue refresh token",
+                )
+            }
         };
 
-    Json(json!({
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-    }))
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+        })),
+    )
 }
 
 pub async fn refresh_token(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Json(payload): Json<RefreshTokenRequest>,
-) -> Json<Value> {
+) -> (axum::http::StatusCode, Json<Value>) {
     let claims = match jwt::verify_token(
         &payload.refresh_token,
         &state.jwt_secret,
         Some(jwt::TOKEN_TYPE_REFRESH),
     ) {
         Ok(claims) => claims,
-        Err(_) => return error_json("invalid_refresh_token", "Refresh token is invalid"),
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::UNAUTHORIZED,
+                "invalid_refresh_token",
+                &locale,
+                "Refresh token is invalid",
+            )
+        }
     };
 
     let access_token =
         match jwt::issue_access_token(claims.sub, claims.device_id, &state.jwt_secret) {
             Ok(token) => token,
-            Err(_) => return error_json("access_issue_failed", "Failed to issue access token"),
+            Err(_) => {
+                return error_response(
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "access_issue_failed",
+                    &locale,
+                    "Failed to issue access token",
+                )
+            }
         };
 
-    Json(json!({
-        "access_token": access_token,
-    }))
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "access_token": access_token,
+        })),
+    )
 }

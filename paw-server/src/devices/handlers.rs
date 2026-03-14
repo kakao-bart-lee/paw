@@ -1,26 +1,22 @@
-use crate::auth::AppState;
 use crate::auth::middleware::UserId;
+use crate::auth::AppState;
 use crate::devices::models::Device;
+use crate::i18n::{error_response, RequestLocale};
 use axum::{
-    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
+    Extension, Json,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
-fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
-    (
-        status,
-        Json(json!({
-            "error": code,
-            "message": message,
-        })),
-    )
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
 }
 
 pub async fn list_devices(
     Extension(user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     State(state): State<AppState>,
 ) -> (StatusCode, Json<Value>) {
     match sqlx::query_as::<_, Device>(
@@ -42,6 +38,7 @@ pub async fn list_devices(
         Err(_) => error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "query_failed",
+            &locale,
             "Failed to list devices",
         ),
     }
@@ -49,6 +46,7 @@ pub async fn list_devices(
 
 pub async fn delete_device(
     Extension(user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     State(state): State<AppState>,
     Path(device_id): Path<Uuid>,
 ) -> (StatusCode, Json<Value>) {
@@ -61,10 +59,16 @@ pub async fn delete_device(
         Ok(result) if result.rows_affected() == 1 => {
             (StatusCode::OK, Json(json!({ "deleted": true })))
         }
-        Ok(_) => error(StatusCode::NOT_FOUND, "device_not_found", "Device not found"),
+        Ok(_) => error(
+            StatusCode::NOT_FOUND,
+            "device_not_found",
+            &locale,
+            "Device not found",
+        ),
         Err(_) => error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "delete_failed",
+            &locale,
             "Failed to delete device",
         ),
     }
