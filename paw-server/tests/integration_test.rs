@@ -522,7 +522,7 @@ async fn ws_sync_gap_fill() {
         "last_seq": 0,
     });
     ws_stream
-        .send(Message::Text(sync_frame.to_string().into()))
+        .send(Message::Text(sync_frame.to_string()))
         .await
         .unwrap();
 
@@ -1044,7 +1044,7 @@ fn test_replenish_threshold() {
     for count in 0..5u32 {
         assert!(count < 5, "should replenish at count {}", count);
     }
-    assert!(!(5 < 5), "should NOT replenish at count 5");
+    assert!(5 >= 5, "should NOT replenish at count 5");
 }
 
 const MAX_GROUP_MEMBERS: usize = 100;
