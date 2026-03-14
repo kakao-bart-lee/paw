@@ -40,7 +40,7 @@ flowchart LR
 | `paw-proto/` | WebSocket 및 에이전트 스트리밍에 쓰이는 공용 메시지 타입입니다. |
 | `paw-crypto/` | E2EE 실험 및 암호 관련 Rust 코드입니다. 현재 `mls` 모듈을 노출합니다. |
 | `paw-ffi/` | Flutter에서 Rust 암호 기능을 호출하기 위한 FFI 계층입니다. |
-| `paw-client/` | 현재는 Flutter Web/Desktop 경로를 유지하는 클라이언트입니다. |
+| `paw-client/` | 현재는 Flutter Web/Desktop 경로를 유지하며, Web/Desktop 회귀 검증 게이트를 관리하는 클라이언트입니다. |
 | `paw-android/` | Kotlin + Compose 네이티브 Android shell scaffold 입니다. |
 | `paw-ios/` | SwiftUI 네이티브 iOS shell scaffold 입니다. |
 | `agents/paw-agent-sdk/` | Python 에이전트 SDK입니다. |
@@ -64,7 +64,7 @@ flowchart LR
 
 ### 클라이언트
 
-- Flutter 3 계열
+- Flutter 3.41 계열
 - Riverpod
 - go_router
 - Drift + SQLCipher
@@ -205,6 +205,13 @@ make server
 ```bash
 make dev
 ```
+
+### 현재 전환 상태 요약
+
+- `paw-core`: 공용 Rust 런타임 slice 구현 완료
+- `paw-android`: auth/bootstrap/chat shell + Android 자동화 추가
+- `paw-ios`: auth/bootstrap/chat shell + XCUITest 추가
+- `paw-client`: Web/Desktop 책임으로 축소 진행
 
 ### 5.5 데이터베이스 마이그레이션
 

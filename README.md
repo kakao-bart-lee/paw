@@ -59,22 +59,6 @@ Paw is an AI-native messenger monorepo that is currently migrating from a single
 1. Navigate to `paw-client`.
 2. Run `flutter run`.
 
-## Documentation
-
-- [API Reference](docs/api/openapi.yaml)
-- [WebSocket Protocol](docs/protocol-v1.md)
-- [Python SDK Quickstart](docs/sdk/python-quickstart.md)
-- [TypeScript SDK Quickstart](docs/sdk/typescript-quickstart.md)
-- [Architecture Deep Dive](docs/ARCHITECTURE.md)
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
-| paw-core / native shells |
-| paw-client (Web/Desktop) |
-
-```
-
 ## Repository status
 
 Migration progress follows `docs/native-migration-plan.md`.
@@ -82,7 +66,9 @@ Migration progress follows `docs/native-migration-plan.md`.
 - Phase 0–1 groundwork: in repo
 - Phase 2 core slices: crypto / db-search / auth foundation implemented in `paw-core`
 - Phase 3 core slices: HTTP + WS/sync/runtime foundation implemented in `paw-core`
-- Phase 4–5: native shell scaffolds exist, but local/full build verification still depends on Android SDK/NDK and full Xcode simulator runtimes
+- Phase 4–5: native auth/bootstrap/chat shells and platform automation are in repo
+- Phase 6: Flutter client has been shifted toward Web/Desktop verification gates
+- Phase 7: final legacy removal is gated on `paw-ffi` removal conditions in `docs/native-migration-plan.md`
 
 ## Quickstart
 
@@ -97,7 +83,10 @@ make bindings
 
 ```bash
 cd paw-client
-flutter run -d chrome
+flutter test test/widget_test.dart test/features/chat/widgets/media_picker_test.dart test/features/settings/screens/settings_screen_test.dart test/desktop_service_test.dart
+flutter build macos
+./scripts/run-playwright-smoke.sh
+./scripts/run-real-web-e2e.sh
 ```
 
 ### Android shell scaffold
@@ -114,7 +103,7 @@ cd paw-android
 make core-ios
 cd paw-ios
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-xcodebuild -project Paw.xcodeproj -scheme Paw -destination 'generic/platform=iOS Simulator' build
+xcodebuild -project Paw.xcodeproj -scheme Paw -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
 
 > Note: Android SDK/NDK and iOS simulator runtimes must be installed for full native build verification.
@@ -132,11 +121,18 @@ The repo is split into dedicated workflows:
 ## Documentation
 
 - [Native migration plan](docs/native-migration-plan.md)
+- [Native core contract](docs/native-core-contract.md)
+- [Native platform contract](docs/native-platform-contract.md)
+- [Native mobile automation plan](docs/native-mobile-automation-plan.md)
 - [API Reference](docs/api/openapi.yaml)
 - [WebSocket Protocol](docs/protocol-v1.md)
 - [Architecture Deep Dive](docs/ARCHITECTURE.md)
 - [Python SDK Quickstart](docs/sdk/python-quickstart.md)
 - [TypeScript SDK Quickstart](docs/sdk/typescript-quickstart.md)
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
 
 ## License
 

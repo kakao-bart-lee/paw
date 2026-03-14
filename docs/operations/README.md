@@ -44,7 +44,7 @@ make e2e-real-web
 
 `e2e-real-web`은 서버와 Flutter web-server를 함께 기동한 뒤 Playwright real full-loop를 실행합니다.
 
-> 참고: Android/iOS 네이티브 검증 명령은 `paw-core`, `paw-android`, `paw-ios`가 실제로 추가된 뒤 별도 타깃으로 도입합니다.
+> 현재 상태: Android/iOS 네이티브 검증 명령은 이미 도입되어 있으며, 별도로 `docs/native-mobile-automation-plan.md`에서 platform-native automation 구조를 관리합니다.
 
 ## 클라이언트 정책 스냅샷
 

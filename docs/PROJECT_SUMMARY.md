@@ -35,7 +35,7 @@
 - `paw-core`: 공유 Rust 런타임 (crypto, db/search, auth, http, ws/sync, core runtime slice)
 - `paw-android`: Kotlin + Compose shell scaffold
 - `paw-ios`: SwiftUI/Xcode shell scaffold
-- `paw-client`: Flutter Web/Desktop 경로 유지
+- `paw-client`: Flutter Web/Desktop 경로 유지 + Web/Desktop verification gate 정리 진행
 
 ### Flutter 클라이언트 (paw-client)
 - **언어**: Dart 3.11.1
@@ -45,6 +45,7 @@
 - **로컬 DB**: Drift (SQLite) + FTS5 전문검색
 - **암호화**: flutter_rust_bridge v2 (paw-ffi 바인딩)
 - **보안 저장소**: flutter_secure_storage
+- **현 상태**: 모바일은 네이티브 우선, Flutter는 Web/Desktop 책임으로 축소 중
 
 ### 암호화 크레이트 (paw-crypto, paw-ffi)
 - openmls 0.7.4 (MLS 프로토콜)

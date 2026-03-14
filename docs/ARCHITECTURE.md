@@ -43,7 +43,7 @@ Paw is an **AI-native messenger** optimized as the ideal OpenClaw integration ch
 | Component | Technology | Version | Purpose |
 |-----------|-----------|---------|---------|
 | **Server** | Rust + Axum | 1.x | High-performance async HTTP/WebSocket |
-| **Client (Web/Desktop)** | Flutter | 3.27+ | Transitional Web/Desktop client |
+| **Client (Web/Desktop)** | Flutter | 3.41+ | Transitional Web/Desktop client with web/macOS verification gates |
 | **Client (Mobile)** | Kotlin + SwiftUI + paw-core | current migration | Native mobile shells over shared Rust runtime |
 | **SDK** | Python | 3.10+ | Agent integration, scripting |
 | **Database** | PostgreSQL | 16 | Persistent storage, pg_notify for pub/sub |
