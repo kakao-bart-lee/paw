@@ -74,6 +74,12 @@ pub struct ConversationCursorView {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct RecoveryCursorView {
+    pub conversation_id: String,
+    pub request_from_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ToolCallView {
     pub tool: String,
     pub label: String,
@@ -191,6 +197,7 @@ pub struct RuntimeBootstrapReportView {
 pub struct RuntimeSnapshot {
     pub connection: ConnectionSnapshot,
     pub cursors: Vec<ConversationCursorView>,
+    pub pending_recoveries: Vec<RecoveryCursorView>,
     pub active_streams: Vec<StreamingSessionView>,
 }
 
@@ -274,6 +281,15 @@ impl From<&crate::sync::ConversationSyncCursor> for ConversationCursorView {
         Self {
             conversation_id: value.conversation_id.to_string(),
             last_seq: value.last_seq,
+        }
+    }
+}
+
+impl From<&crate::sync::ConversationSyncCursor> for RecoveryCursorView {
+    fn from(value: &crate::sync::ConversationSyncCursor) -> Self {
+        Self {
+            conversation_id: value.conversation_id.to_string(),
+            request_from_seq: value.last_seq,
         }
     }
 }

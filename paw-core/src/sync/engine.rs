@@ -19,6 +19,7 @@ pub enum MessageSyncOutcome {
 #[derive(Clone, Debug, Default)]
 pub struct SyncEngine {
     cursors: BTreeMap<Uuid, i64>,
+    pending_recoveries: BTreeMap<Uuid, i64>,
 }
 
 impl SyncEngine {
@@ -34,6 +35,7 @@ impl SyncEngine {
             self.cursors
                 .insert(cursor.conversation_id, cursor.last_seq.max(0));
         }
+        self.pending_recoveries.clear();
     }
 
     pub fn last_seq(&self, conversation_id: Uuid) -> i64 {
@@ -73,7 +75,13 @@ impl SyncEngine {
         }
 
         self.cursors.insert(msg.conversation_id, msg.seq);
+        self.pending_recoveries.remove(&msg.conversation_id);
         MessageSyncOutcome::Applied { ack_seq: msg.seq }
+    }
+
+    pub fn mark_recovery_pending(&mut self, conversation_id: Uuid, request_from_seq: i64) {
+        self.pending_recoveries
+            .insert(conversation_id, request_from_seq.max(0));
     }
 
     pub fn apply_gap_fill(&mut self, messages: &[MessageReceivedMsg]) {
@@ -83,12 +91,31 @@ impl SyncEngine {
         }
     }
 
+    pub fn clear_recoveries(
+        &mut self,
+        conversations: impl IntoIterator<Item = ConversationSyncCursor>,
+    ) {
+        for conversation in conversations {
+            self.pending_recoveries.remove(&conversation.conversation_id);
+        }
+    }
+
     pub fn cursors(&self) -> Vec<ConversationSyncCursor> {
         self.cursors
             .iter()
             .map(|(conversation_id, last_seq)| ConversationSyncCursor {
                 conversation_id: *conversation_id,
                 last_seq: *last_seq,
+            })
+            .collect()
+    }
+
+    pub fn pending_recoveries(&self) -> Vec<ConversationSyncCursor> {
+        self.pending_recoveries
+            .iter()
+            .map(|(conversation_id, request_from_seq)| ConversationSyncCursor {
+                conversation_id: *conversation_id,
+                last_seq: *request_from_seq,
             })
             .collect()
     }
@@ -171,5 +198,29 @@ mod tests {
         ]);
 
         assert_eq!(engine.last_seq(conversation_id), 5);
+    }
+
+    #[test]
+    fn recovery_tracking_marks_gap_and_clears_after_response() {
+        let conversation_id = Uuid::new_v4();
+        let mut engine = SyncEngine::new([ConversationSyncCursor {
+            conversation_id,
+            last_seq: 2,
+        }]);
+
+        assert_eq!(
+            engine.ingest_message(&message(conversation_id, 4)),
+            MessageSyncOutcome::GapDetected {
+                request_from_seq: 2
+            }
+        );
+        engine.mark_recovery_pending(conversation_id, 2);
+        assert_eq!(engine.pending_recoveries().len(), 1);
+
+        engine.clear_recoveries([ConversationSyncCursor {
+            conversation_id,
+            last_seq: 2,
+        }]);
+        assert!(engine.pending_recoveries().is_empty());
     }
 }

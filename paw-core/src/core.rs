@@ -10,7 +10,10 @@ use crate::{
         run_session_reset,
     },
     db::{AppDatabase, DbError, MessageRecord},
-    events::{ConnectionSnapshot, ConversationCursorView, RuntimeSnapshot, StreamingSessionView},
+    events::{
+        ConnectionSnapshot, ConversationCursorView, RecoveryCursorView, RuntimeSnapshot,
+        StreamingSessionView,
+    },
     sync::{
         ConversationSyncCursor, FinalizedStreamMessage, MessageSyncOutcome, StreamingSession,
         StreamingState, SyncEngine, SyncRequest, SyncService,
@@ -173,6 +176,12 @@ impl CoreRuntime {
                 .cursors()
                 .iter()
                 .map(ConversationCursorView::from)
+                .collect(),
+            pending_recoveries: self
+                .sync_engine
+                .pending_recoveries()
+                .iter()
+                .map(RecoveryCursorView::from)
                 .collect(),
             active_streams: self
                 .streaming
@@ -389,6 +398,8 @@ impl CoreRuntime {
                 },
             ],
             MessageSyncOutcome::GapDetected { request_from_seq } => {
+                self.sync_engine
+                    .mark_recovery_pending(msg.conversation_id, request_from_seq);
                 vec![
                     RuntimeEffect::GapDetected {
                         conversation_id: msg.conversation_id,
@@ -421,6 +432,12 @@ impl CoreRuntime {
         &mut self,
         response: &DeviceSyncResponse,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
+        self.sync_engine.clear_recoveries(response.conversations.iter().map(
+            |conversation| ConversationSyncCursor {
+                conversation_id: conversation.conversation_id,
+                last_seq: conversation.last_seq,
+            },
+        ));
         self.sync_engine.apply_gap_fill(&response.messages);
 
         let mut effects = Vec::with_capacity(response.messages.len() * 2 + 1);
@@ -797,6 +814,13 @@ mod tests {
                 }),
             ]
         );
+        assert_eq!(
+            runtime.snapshot().pending_recoveries,
+            vec![RecoveryCursorView {
+                conversation_id: conversation_id.to_string(),
+                request_from_seq: 2,
+            }]
+        );
 
         let effects = runtime
             .handle_server_message(&ServerMessage::MessageReceived(applied.clone()))
@@ -852,6 +876,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(db.get_last_seq(&conversation_id.to_string()).unwrap(), 3);
+        assert!(runtime.snapshot().pending_recoveries.is_empty());
         assert!(effects.iter().any(|effect| {
             matches!(
                 effect,
@@ -886,11 +911,16 @@ mod tests {
     async fn empty_device_sync_response_still_surfaces_batch_completion() {
         let db = Arc::new(AppDatabase::open_in_memory().unwrap());
         let (mut runtime, _, _) = runtime_with_db(db);
+        let conversation_id = Uuid::new_v4();
+        runtime.sync_engine.mark_recovery_pending(conversation_id, 4);
 
         let effects = runtime
             .handle_server_message(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
                 v: PROTOCOL_VERSION,
-                conversations: vec![],
+                conversations: vec![ConvSyncState {
+                    conversation_id,
+                    last_seq: 4,
+                }],
                 messages: vec![],
             }))
             .await
@@ -901,9 +931,10 @@ mod tests {
             vec![RuntimeEffect::DeviceSyncBatchProcessed {
                 message_count: 0,
                 conversation_count: 0,
-                conversation_ids: vec![],
+                conversation_ids: vec![conversation_id],
             }]
         );
+        assert!(runtime.snapshot().pending_recoveries.is_empty());
     }
 
     #[tokio::test]

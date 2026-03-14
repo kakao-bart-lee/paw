@@ -28,8 +28,9 @@ pub use events::{
     ConnectionStateView, ConversationCursorView, CoreEvent, DeviceSyncAppliedView,
     DeviceSyncBatchProcessedView, DuplicateMessageView, FinalizedStreamMessageView,
     GapDetectedView, MessageRecordView, ReconnectAttemptStartedView, ReconnectScheduledView,
-    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, SessionEventView,
-    SessionExpiryReasonView, StreamingSessionView, SyncRequestView, ToolCallView,
+    RecoveryCursorView, RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot,
+    SessionEventView, SessionExpiryReasonView, StreamingSessionView, SyncRequestView,
+    ToolCallView,
 };
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,
@@ -74,6 +75,7 @@ pub fn empty_runtime_snapshot() -> RuntimeSnapshot {
             pending_reconnect_endpoint: None,
         },
         cursors: Vec::new(),
+        pending_recoveries: Vec::new(),
         active_streams: Vec::new(),
     }
 }
