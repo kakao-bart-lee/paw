@@ -110,6 +110,9 @@ impl SyncEngine {
             .collect()
     }
 
+    /// Pending recovery markers are cleared on:
+    /// - `replace_cursors()` after a fresh HelloOk/bootstrap cursor reload
+    /// - `clear_recoveries()` when a DeviceSyncResponse arrives for a conversation
     pub fn pending_recoveries(&self) -> Vec<ConversationSyncCursor> {
         self.pending_recoveries
             .iter()

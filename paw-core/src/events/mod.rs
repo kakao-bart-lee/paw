@@ -8,6 +8,14 @@ use crate::{
     ws::{WsConnectionState, WsService},
 };
 
+fn saturating_u32(value: usize) -> u32 {
+    u32::try_from(value).unwrap_or(u32::MAX)
+}
+
+fn saturating_u64(value: u128) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum AuthStepView {
     AuthMethodSelect,
@@ -299,8 +307,8 @@ impl From<&WsService> for ConnectionSnapshot {
         let pending = value.pending_reconnect();
         Self {
             state: value.connection_state().into(),
-            attempts: value.attempts() as u32,
-            pending_reconnect_delay_ms: pending.map(|plan| plan.delay.as_millis() as u64),
+            attempts: saturating_u32(value.attempts()),
+            pending_reconnect_delay_ms: pending.map(|plan| saturating_u64(plan.delay.as_millis())),
             pending_reconnect_endpoint: pending.map(|plan| crate::ws::public_endpoint_label(&plan.uri)),
         }
     }
@@ -403,7 +411,7 @@ impl From<&RuntimeEffect> for DuplicateMessageView {
                 received_seq: *received_seq,
                 last_seq: *last_seq,
             },
-            other => panic!("expected DuplicateMessage effect, got {other:?}"),
+            other => unreachable!("invariant: matched DuplicateMessage effect before conversion, got {other:?}"),
         }
     }
 }
@@ -422,7 +430,7 @@ impl From<&RuntimeEffect> for GapDetectedView {
                 received_seq: *received_seq,
                 request_from_seq: *request_from_seq,
             },
-            other => panic!("expected GapDetected effect, got {other:?}"),
+            other => unreachable!("invariant: matched GapDetected effect before conversion, got {other:?}"),
         }
     }
 }
@@ -439,7 +447,7 @@ impl From<&RuntimeEffect> for DeviceSyncAppliedView {
                 applied_count: *applied_count,
                 highest_seq: *highest_seq,
             },
-            other => panic!("expected DeviceSyncApplied effect, got {other:?}"),
+            other => unreachable!("invariant: matched DeviceSyncApplied effect before conversion, got {other:?}"),
         }
     }
 }
@@ -456,7 +464,7 @@ impl From<&RuntimeEffect> for DeviceSyncBatchProcessedView {
                 conversation_count: *conversation_count,
                 conversation_ids: conversation_ids.iter().map(ToString::to_string).collect(),
             },
-            other => panic!("expected DeviceSyncBatchProcessed effect, got {other:?}"),
+            other => unreachable!("invariant: matched DeviceSyncBatchProcessed effect before conversion, got {other:?}"),
         }
     }
 }

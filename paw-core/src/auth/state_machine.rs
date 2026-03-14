@@ -377,6 +377,12 @@ impl AuthStateMachine {
         self.clear_session().await;
     }
 
+    /// Resets only the in-memory auth state for session invalidation.
+    ///
+    /// Persisted token clearing and transport disconnect are intentionally
+    /// owned by `CoreRuntime::handle_session_event`, so standalone callers
+    /// must perform those side effects separately if they do not route
+    /// unauthorized-session handling through the runtime.
     pub async fn handle_session_event(&mut self, event: SessionEvent) {
         if matches!(event.reason, SessionExpiryReason::Unauthorized) {
             self.state = AuthState::initial();

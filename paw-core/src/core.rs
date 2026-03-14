@@ -21,6 +21,14 @@ use crate::{
     ws::{WsService, WsServiceError},
 };
 
+fn saturating_u32(value: usize) -> u32 {
+    u32::try_from(value).unwrap_or(u32::MAX)
+}
+
+fn saturating_u64(value: u128) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum CoreRuntimeError {
     #[error(transparent)]
@@ -259,7 +267,7 @@ impl CoreRuntime {
         let mut effects = Vec::with_capacity(3);
         if cleared_streams > 0 {
             effects.push(RuntimeEffect::ActiveStreamsCleared {
-                count: cleared_streams as u32,
+                count: saturating_u32(cleared_streams),
             });
         }
         effects.push(RuntimeEffect::SessionInvalidated(event));
@@ -279,7 +287,7 @@ impl CoreRuntime {
         Ok(Some(vec![
             RuntimeEffect::ReconnectAttemptStarted {
                 endpoint: crate::ws::public_endpoint_label(&uri),
-                attempt: self.ws_service.attempts() as u32,
+                attempt: saturating_u32(self.ws_service.attempts()),
             },
             RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service)),
         ]))
@@ -459,8 +467,8 @@ impl CoreRuntime {
         }
 
         effects.push(RuntimeEffect::DeviceSyncBatchProcessed {
-            message_count: response.messages.len() as u32,
-            conversation_count: applied_count_by_conversation.len() as u32,
+            message_count: saturating_u32(response.messages.len()),
+            conversation_count: saturating_u32(response.conversations.len()),
             conversation_ids: response
                 .conversations
                 .iter()
@@ -497,9 +505,9 @@ impl CoreRuntime {
         let mut effects = Vec::with_capacity(2);
         if let Some(plan) = self.ws_service.pending_reconnect() {
             effects.push(RuntimeEffect::ReconnectScheduled {
-                delay_ms: plan.delay.as_millis() as u64,
+                delay_ms: saturating_u64(plan.delay.as_millis()),
                 endpoint: crate::ws::public_endpoint_label(&plan.uri),
-                attempt: plan.attempt as u32,
+                attempt: saturating_u32(plan.attempt),
             });
         }
         effects.push(RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(
@@ -930,7 +938,7 @@ mod tests {
             effects,
             vec![RuntimeEffect::DeviceSyncBatchProcessed {
                 message_count: 0,
-                conversation_count: 0,
+                conversation_count: 1,
                 conversation_ids: vec![conversation_id],
             }]
         );
