@@ -77,10 +77,10 @@ pub async fn request_otp(
     if expose_otp {
         tracing::warn!("PAW_EXPOSE_OTP_FOR_E2E is enabled; do not use in production");
         Json(json!({ "ok": true, "debug_code": code }))
-    } else if otp::fixed_otp().is_some() {
-        tracing::warn!("PAW_FIXED_OTP is enabled; do not use in production");
-        Json(json!({ "ok": true, "fixed_code": code }))
     } else {
+        if otp::fixed_otp().is_some() {
+            tracing::warn!("PAW_FIXED_OTP is enabled; OTP is fixed server-side only");
+        }
         Json(json!({ "ok": true }))
     }
 }

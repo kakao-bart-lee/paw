@@ -12,12 +12,15 @@ need_cmd() {
 }
 
 need_cmd cargo
+need_cmd rustup
 need_cmd cargo-ndk
 
 ANDROID_OUT="paw-android/app/src/main/jniLibs"
 mkdir -p "$ANDROID_OUT"
 
 ./scripts/gen-ffi-bindings.sh
+
+rustup target add aarch64-linux-android x86_64-linux-android
 
 cargo ndk -t arm64-v8a -t x86_64 -o "$ANDROID_OUT" build -p paw-core --release
 

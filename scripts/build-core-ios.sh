@@ -12,11 +12,14 @@ need_cmd() {
 }
 
 need_cmd cargo
+need_cmd rustup
 
 IOS_OUT="paw-ios/PawCore/Artifacts"
 mkdir -p "$IOS_OUT"
 
 ./scripts/gen-ffi-bindings.sh
+
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 
 cargo build -p paw-core --target aarch64-apple-ios --release
 cargo build -p paw-core --target aarch64-apple-ios-sim --release
