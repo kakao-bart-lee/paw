@@ -593,7 +593,7 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
             state = if (connected) ConnectionStateView.CONNECTED else ConnectionStateView.DISCONNECTED,
             attempts = 0u,
             pendingReconnectDelayMs = null,
-            pendingReconnectUri = if (connected) PawAndroidConfig.apiBaseUrl else null,
+            pendingReconnectEndpoint = if (connected) PawAndroidConfig.apiBaseUrl else null,
         ),
     )
 

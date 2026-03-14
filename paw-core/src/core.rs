@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 use crate::{
     auth::{
-        AuthBackendError, AuthClient, AuthUserProfile, SessionEvent, StoredTokens, TokenStore,
-        run_session_reset,
+        run_session_reset, AuthBackendError, AuthClient, AuthUserProfile, SessionEvent,
+        StoredTokens, TokenStore,
     },
     db::{AppDatabase, DbError, MessageRecord},
     events::{
@@ -271,9 +271,9 @@ impl CoreRuntime {
             });
         }
         effects.push(RuntimeEffect::SessionInvalidated(event));
-        effects.push(RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(
-            &self.ws_service,
-        )));
+        effects.push(RuntimeEffect::ConnectionStateChanged(
+            ConnectionSnapshot::from(&self.ws_service),
+        ));
 
         Ok(effects)
     }
@@ -440,12 +440,13 @@ impl CoreRuntime {
         &mut self,
         response: &DeviceSyncResponse,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
-        self.sync_engine.clear_recoveries(response.conversations.iter().map(
-            |conversation| ConversationSyncCursor {
-                conversation_id: conversation.conversation_id,
-                last_seq: conversation.last_seq,
-            },
-        ));
+        self.sync_engine
+            .clear_recoveries(response.conversations.iter().map(|conversation| {
+                ConversationSyncCursor {
+                    conversation_id: conversation.conversation_id,
+                    last_seq: conversation.last_seq,
+                }
+            }));
         self.sync_engine.apply_gap_fill(&response.messages);
 
         let mut effects = Vec::with_capacity(response.messages.len() * 2 + 1);
@@ -510,9 +511,9 @@ impl CoreRuntime {
                 attempt: saturating_u32(plan.attempt),
             });
         }
-        effects.push(RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(
-            &self.ws_service,
-        )));
+        effects.push(RuntimeEffect::ConnectionStateChanged(
+            ConnectionSnapshot::from(&self.ws_service),
+        ));
         effects
     }
 }
@@ -920,7 +921,9 @@ mod tests {
         let db = Arc::new(AppDatabase::open_in_memory().unwrap());
         let (mut runtime, _, _) = runtime_with_db(db);
         let conversation_id = Uuid::new_v4();
-        runtime.sync_engine.mark_recovery_pending(conversation_id, 4);
+        runtime
+            .sync_engine
+            .mark_recovery_pending(conversation_id, 4);
 
         let effects = runtime
             .handle_server_message(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {

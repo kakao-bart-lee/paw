@@ -25,7 +25,9 @@ mod tests {
     #[tokio::test]
     async fn clears_token_store_before_running_follow_up_action() {
         let token_store = InMemoryTokenStore::new();
-        token_store.write(StoredTokens::new("access", "refresh")).await;
+        token_store
+            .write(StoredTokens::new("access", "refresh"))
+            .await;
         let observed_empty = Arc::new(AtomicBool::new(false));
         let observed_empty_check = observed_empty.clone();
 

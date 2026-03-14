@@ -54,7 +54,7 @@ object PawCoreBridge {
             state = ConnectionStateView.DISCONNECTED,
             attempts = 0u,
             pendingReconnectDelayMs = null,
-            pendingReconnectUri = null,
+            pendingReconnectEndpoint = null,
         ),
         cursors = emptyList(),
         activeStreams = emptyList(),
