@@ -169,6 +169,11 @@ impl WsService {
         Ok(())
     }
 
+    pub async fn clear_session(&mut self) -> Result<(), WsServiceError> {
+        self.access_token = None;
+        self.disconnect().await
+    }
+
     pub async fn send_typing_start(
         &self,
         conversation_id: uuid::Uuid,
@@ -475,6 +480,25 @@ mod tests {
         assert_eq!(service.attempts(), 0);
         assert!(service.pending_reconnect().is_none());
         assert_eq!(*transport.closes.lock().unwrap(), 2);
+    }
+
+    #[tokio::test]
+    async fn clear_session_drops_stored_token_and_prevents_reconnect_attempts() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "http://localhost:38173",
+            transport,
+            ReconnectionManager::new(3, vec![Duration::from_secs(1)]),
+        );
+        service
+            .connect("http://localhost:38173", "token-123")
+            .await
+            .unwrap();
+
+        service.clear_session().await.unwrap();
+
+        assert!(service.connect_with_stored_token().await.unwrap().is_none());
+        assert_eq!(service.connection_state(), WsConnectionState::Disconnected);
     }
 
     #[tokio::test]

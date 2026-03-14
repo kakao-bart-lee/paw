@@ -197,7 +197,7 @@ impl CoreRuntime {
         event: SessionEvent,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
         token_store.clear().await;
-        self.ws_service.disconnect().await?;
+        self.ws_service.clear_session().await?;
         let cleared_streams = self.streaming.clear();
 
         let mut effects = Vec::with_capacity(3);
@@ -217,7 +217,9 @@ impl CoreRuntime {
     pub async fn reconnect_with_stored_token(
         &mut self,
     ) -> Result<Option<RuntimeEffect>, CoreRuntimeError> {
-        self.ws_service.connect_with_stored_token().await?;
+        let Some(_) = self.ws_service.connect_with_stored_token().await? else {
+            return Ok(None);
+        };
         Ok(Some(RuntimeEffect::ConnectionStateChanged(
             ConnectionSnapshot::from(&self.ws_service),
         )))
@@ -1000,5 +1002,36 @@ mod tests {
             Some(&RuntimeEffect::ActiveStreamsCleared { count: 1 })
         );
         assert!(runtime.snapshot().active_streams.is_empty());
+    }
+
+    #[tokio::test]
+    async fn session_invalidation_prevents_reconnect_with_stale_in_memory_token() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let (mut runtime, _transport, calls) = runtime_with_db(db);
+        let token_store = InMemoryTokenStore::new();
+        token_store
+            .write(StoredTokens::new("access-token", "refresh-token"))
+            .await;
+        let auth_client = StubAuthClient {
+            calls: calls.clone(),
+        };
+
+        runtime.bootstrap(&token_store, &auth_client).await.unwrap();
+        runtime
+            .handle_session_event(
+                &token_store,
+                SessionEvent {
+                    reason: crate::auth::SessionExpiryReason::Unauthorized,
+                },
+            )
+            .await
+            .unwrap();
+
+        let reconnect = runtime.reconnect_with_stored_token().await.unwrap();
+        assert_eq!(reconnect, None);
+        assert_eq!(
+            runtime.ws_service().connection_state(),
+            WsConnectionState::Disconnected
+        );
     }
 }
