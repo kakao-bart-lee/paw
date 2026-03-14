@@ -1,5 +1,9 @@
 name: android
 
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, develop]
@@ -22,7 +26,7 @@ on:
 
 jobs:
   android-shell:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +44,11 @@ jobs:
         with:
           targets: aarch64-linux-android,x86_64-linux-android
 
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        uses: taiki-e/install-action@cargo-ndk
 
       - name: Generate bindings
         run: ./scripts/gen-ffi-bindings.sh
