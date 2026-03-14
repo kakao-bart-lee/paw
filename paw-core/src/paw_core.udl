@@ -30,6 +30,7 @@ typedef record SessionEventView;
 typedef record RuntimeBootstrapReportView;
 typedef record RuntimeSnapshot;
 typedef enum CoreEvent;
+typedef enum CoreEventDomain;
 typedef enum SecureStorageProvider;
 typedef enum SecureStorageAvailability;
 typedef record SecureStorageCapabilities;

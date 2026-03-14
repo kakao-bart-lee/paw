@@ -25,12 +25,12 @@ pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
 pub use events::{
     AckRequestView, ActiveStreamsClearedView, AuthStateView, AuthStepView, ConnectionSnapshot,
-    ConnectionStateView, ConversationCursorView, CoreEvent, DeviceSyncAppliedView,
-    DeviceSyncBatchProcessedView, DuplicateMessageView, FinalizedStreamMessageView,
-    GapDetectedView, MessageRecordView, ReconnectAttemptStartedView, ReconnectScheduledView,
-    RecoveryCursorView, RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot,
-    SessionEventView, SessionExpiryReasonView, StreamingSessionView, SyncRequestView,
-    ToolCallView,
+    ConnectionStateView, ConversationCursorView, CoreEvent, CoreEventDomain,
+    DeviceSyncAppliedView, DeviceSyncBatchProcessedView, DuplicateMessageView,
+    FinalizedStreamMessageView, GapDetectedView, MessageRecordView,
+    ReconnectAttemptStartedView, ReconnectScheduledView, RecoveryCursorView,
+    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, SessionEventView,
+    SessionExpiryReasonView, StreamingSessionView, SyncRequestView, ToolCallView,
 };
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,

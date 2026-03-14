@@ -222,6 +222,36 @@ pub enum CoreEvent {
     StreamFinalized(FinalizedStreamMessageView),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+pub enum CoreEventDomain {
+    Lifecycle,
+    Connection,
+    Sync,
+    Streaming,
+}
+
+impl CoreEvent {
+    pub fn domain(&self) -> CoreEventDomain {
+        match self {
+            Self::AuthStateChanged(_)
+            | Self::BootstrapProgress(_)
+            | Self::ActiveStreamsCleared(_)
+            | Self::SessionInvalidated(_) => CoreEventDomain::Lifecycle,
+            Self::ConnectionStateChanged(_)
+            | Self::ReconnectScheduled(_)
+            | Self::ReconnectAttemptStarted(_) => CoreEventDomain::Connection,
+            Self::SyncRequested(_)
+            | Self::AckRequested(_)
+            | Self::DuplicateMessage(_)
+            | Self::GapDetected(_)
+            | Self::DeviceSyncApplied(_)
+            | Self::DeviceSyncBatchProcessed(_)
+            | Self::MessagePersisted(_) => CoreEventDomain::Sync,
+            Self::StreamUpdated(_) | Self::StreamFinalized(_) => CoreEventDomain::Streaming,
+        }
+    }
+}
+
 impl From<&AuthStep> for AuthStepView {
     fn from(value: &AuthStep) -> Self {
         match value {
@@ -641,6 +671,35 @@ mod tests {
         assert!(json.contains("\"message_count\":3"));
         assert!(json.contains("\"conversation_count\":1"));
         assert!(json.contains("\"conversation_ids\""));
+    }
+
+    #[test]
+    fn core_event_domain_groups_exported_events_by_semantics() {
+        assert_eq!(
+            CoreEvent::ReconnectScheduled(ReconnectScheduledView {
+                delay_ms: 1_000,
+                endpoint: "wss://paw.example/ws".into(),
+                attempt: 1,
+            })
+            .domain(),
+            CoreEventDomain::Connection
+        );
+        assert_eq!(
+            CoreEvent::DeviceSyncBatchProcessed(DeviceSyncBatchProcessedView {
+                message_count: 0,
+                conversation_count: 0,
+                conversation_ids: vec![],
+            })
+            .domain(),
+            CoreEventDomain::Sync
+        );
+        assert_eq!(
+            CoreEvent::SessionInvalidated(SessionEventView {
+                reason: SessionExpiryReasonView::Unauthorized,
+            })
+            .domain(),
+            CoreEventDomain::Lifecycle
+        );
     }
 
     #[test]
