@@ -34,8 +34,6 @@ case "$MODE" in
     ;;
 esac
 
-cargo build -p paw-core --lib
-
 if [[ "$MODE" == "all" || "$MODE" == "kotlin" ]]; then
   cargo run -p paw-core --bin gen-bindings -- kotlin "$OUT_KOTLIN"
   echo "generated UniFFI kotlin bindings -> $OUT_KOTLIN"

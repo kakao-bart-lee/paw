@@ -35,6 +35,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -49,9 +50,6 @@ jobs:
 
       - name: Install cargo-ndk
         uses: taiki-e/install-action@cargo-ndk
-
-      - name: Generate bindings
-        run: ./scripts/gen-ffi-bindings.sh
 
       - name: Build paw-core Android artifacts
         env:
