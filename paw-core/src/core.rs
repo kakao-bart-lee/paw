@@ -2,7 +2,6 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use chrono::Utc;
 use paw_proto::{DeviceSyncResponse, ServerMessage};
-use reqwest::Url;
 use uuid::Uuid;
 
 use crate::{
@@ -45,7 +44,7 @@ pub struct RuntimeBootstrapReport {
     pub steps: Vec<RuntimeInitStep>,
     pub tokens: Option<StoredTokens>,
     pub profile: Option<AuthUserProfile>,
-    pub connected_uri: Option<Url>,
+    pub connected_endpoint: Option<String>,
 }
 
 impl RuntimeBootstrapReport {
@@ -54,7 +53,7 @@ impl RuntimeBootstrapReport {
             steps: vec![RuntimeInitStep::DatabaseOpened],
             tokens: None,
             profile: None,
-            connected_uri: None,
+            connected_endpoint: None,
         }
     }
 }
@@ -65,11 +64,11 @@ pub enum RuntimeEffect {
     ConnectionStateChanged(ConnectionSnapshot),
     ReconnectScheduled {
         delay_ms: u64,
-        uri: String,
+        endpoint: String,
         attempt: u32,
     },
     ReconnectAttemptStarted {
-        uri: String,
+        endpoint: String,
         attempt: u32,
     },
     ActiveStreamsCleared {
@@ -210,7 +209,7 @@ impl CoreRuntime {
             .connect_with_access_token(tokens.access_token.clone())
             .await?;
         report.steps.push(RuntimeInitStep::WsConnected);
-        report.connected_uri = Some(uri);
+        report.connected_endpoint = Some(crate::ws::public_endpoint_label(&uri));
 
         Ok(report)
     }
@@ -270,7 +269,7 @@ impl CoreRuntime {
         };
         Ok(Some(vec![
             RuntimeEffect::ReconnectAttemptStarted {
-                uri: uri.to_string(),
+                endpoint: crate::ws::public_endpoint_label(&uri),
                 attempt: self.ws_service.attempts() as u32,
             },
             RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service)),
@@ -482,7 +481,7 @@ impl CoreRuntime {
         if let Some(plan) = self.ws_service.pending_reconnect() {
             effects.push(RuntimeEffect::ReconnectScheduled {
                 delay_ms: plan.delay.as_millis() as u64,
-                uri: plan.uri.to_string(),
+                endpoint: crate::ws::public_endpoint_label(&plan.uri),
                 attempt: plan.attempt as u32,
             });
         }
@@ -522,6 +521,7 @@ mod tests {
         MessageReceivedMsg, StreamEndMsg, StreamStartMsg, ToolEndMsg, ToolStartMsg,
         PROTOCOL_VERSION,
     };
+    use reqwest::Url;
 
     use crate::{
         auth::{InMemoryTokenStore, StoredTokens},
@@ -648,8 +648,8 @@ mod tests {
         );
         assert_eq!(*calls.lock().unwrap(), vec!["get_me"]);
         assert_eq!(
-            report.connected_uri.unwrap().as_str(),
-            "wss://paw.example/ws?token=access-token"
+            report.connected_endpoint.as_deref(),
+            Some("wss://paw.example/ws")
         );
         assert_eq!(
             runtime.ws_service().connection_state(),
@@ -711,7 +711,7 @@ mod tests {
                     state: ConnectionStateView::Connected,
                     attempts: 0,
                     pending_reconnect_delay_ms: None,
-                    pending_reconnect_uri: None,
+                    pending_reconnect_endpoint: None,
                 }),
                 RuntimeEffect::SyncRequested(SyncRequest {
                     conversation_id: conversation_id.to_string(),
@@ -1038,7 +1038,7 @@ mod tests {
             [RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
                 state: ConnectionStateView::Exhausted,
                 pending_reconnect_delay_ms: None,
-                pending_reconnect_uri: None,
+                pending_reconnect_endpoint: None,
                 ..
             })]
         ));
@@ -1079,7 +1079,7 @@ mod tests {
                     state: ConnectionStateView::Disconnected,
                     attempts: 0,
                     pending_reconnect_delay_ms: None,
-                    pending_reconnect_uri: None,
+                    pending_reconnect_endpoint: None,
                 }),
             ]
         );
@@ -1195,7 +1195,7 @@ mod tests {
         assert_eq!(
             RuntimeEffect::ReconnectScheduled {
                 delay_ms: 1_000,
-                uri: "wss://paw.example/ws?token=abc".into(),
+                endpoint: "wss://paw.example/ws".into(),
                 attempt: 1,
             }
             .domain(),

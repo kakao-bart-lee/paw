@@ -25,6 +25,13 @@ pub struct ReconnectPlan {
     pub attempt: usize,
 }
 
+pub fn public_endpoint_label(url: &Url) -> String {
+    let mut sanitized = url.clone();
+    sanitized.set_query(None);
+    sanitized.set_fragment(None);
+    sanitized.to_string()
+}
+
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
 pub enum WsServiceError {
     #[error("invalid websocket url: {0}")]

@@ -71,7 +71,7 @@ pub fn empty_runtime_snapshot() -> RuntimeSnapshot {
             state: ConnectionStateView::Disconnected,
             attempts: 0,
             pending_reconnect_delay_ms: None,
-            pending_reconnect_uri: None,
+            pending_reconnect_endpoint: None,
         },
         cursors: Vec::new(),
         active_streams: Vec::new(),

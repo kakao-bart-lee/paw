@@ -46,19 +46,19 @@ pub struct ConnectionSnapshot {
     pub state: ConnectionStateView,
     pub attempts: u32,
     pub pending_reconnect_delay_ms: Option<u64>,
-    pub pending_reconnect_uri: Option<String>,
+    pub pending_reconnect_endpoint: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ReconnectScheduledView {
     pub delay_ms: u64,
-    pub uri: String,
+    pub endpoint: String,
     pub attempt: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ReconnectAttemptStartedView {
-    pub uri: String,
+    pub endpoint: String,
     pub attempt: u32,
 }
 
@@ -184,7 +184,7 @@ pub struct RuntimeBootstrapReportView {
     pub steps: Vec<RuntimeInitStepView>,
     pub has_tokens: bool,
     pub has_profile: bool,
-    pub connected_uri: Option<String>,
+    pub connected_endpoint: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -264,7 +264,7 @@ impl From<&WsService> for ConnectionSnapshot {
             state: value.connection_state().into(),
             attempts: value.attempts() as u32,
             pending_reconnect_delay_ms: pending.map(|plan| plan.delay.as_millis() as u64),
-            pending_reconnect_uri: pending.map(|plan| plan.uri.to_string()),
+            pending_reconnect_endpoint: pending.map(|plan| crate::ws::public_endpoint_label(&plan.uri)),
         }
     }
 }
@@ -433,7 +433,7 @@ impl From<&RuntimeBootstrapReport> for RuntimeBootstrapReportView {
             steps: value.steps.iter().map(Into::into).collect(),
             has_tokens: value.tokens.is_some(),
             has_profile: value.profile.is_some(),
-            connected_uri: value.connected_uri.as_ref().map(ToString::to_string),
+            connected_endpoint: value.connected_endpoint.clone(),
         }
     }
 }
@@ -463,16 +463,16 @@ impl From<&RuntimeEffect> for CoreEvent {
             }
             RuntimeEffect::ReconnectScheduled {
                 delay_ms,
-                uri,
+                endpoint,
                 attempt,
             } => Self::ReconnectScheduled(ReconnectScheduledView {
                 delay_ms: *delay_ms,
-                uri: uri.clone(),
+                endpoint: endpoint.clone(),
                 attempt: *attempt,
             }),
-            RuntimeEffect::ReconnectAttemptStarted { uri, attempt } => {
+            RuntimeEffect::ReconnectAttemptStarted { endpoint, attempt } => {
                 Self::ReconnectAttemptStarted(ReconnectAttemptStartedView {
-                    uri: uri.clone(),
+                    endpoint: endpoint.clone(),
                     attempt: *attempt,
                 })
             }
@@ -587,7 +587,7 @@ mod tests {
     fn reconnect_scheduled_effects_convert_to_serializable_core_events() {
         let effect = RuntimeEffect::ReconnectScheduled {
             delay_ms: 1_000,
-            uri: "wss://paw.example/ws?token=abc".into(),
+            endpoint: "wss://paw.example/ws".into(),
             attempt: 2,
         };
 
@@ -601,7 +601,7 @@ mod tests {
     #[test]
     fn reconnect_attempt_started_effects_convert_to_serializable_core_events() {
         let effect = RuntimeEffect::ReconnectAttemptStarted {
-            uri: "wss://paw.example/ws?token=abc".into(),
+            endpoint: "wss://paw.example/ws".into(),
             attempt: 3,
         };
 
@@ -663,6 +663,10 @@ mod tests {
         assert_eq!(snapshot.state, ConnectionStateView::Retrying);
         assert_eq!(snapshot.attempts, 1);
         assert_eq!(snapshot.pending_reconnect_delay_ms, Some(1_000));
+        assert_eq!(
+            snapshot.pending_reconnect_endpoint.as_deref(),
+            Some("wss://example.com/ws")
+        );
     }
 
     #[test]
