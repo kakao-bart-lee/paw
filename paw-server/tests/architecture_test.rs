@@ -59,8 +59,7 @@ fn extract_dependencies_section(cargo_toml: &str) -> String {
 
 fn read_crate_cargo_toml(crate_dir: &str) -> String {
     let path = workspace_root().join(crate_dir).join("Cargo.toml");
-    fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e))
+    fs::read_to_string(&path).unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e))
 }
 
 // ---------------------------------------------------------------------------

@@ -119,10 +119,7 @@ fn extract_client_ip(request: &Request<Body>) -> String {
 }
 
 fn too_many_requests(request: &Request<Body>) -> Response {
-    let request_id = request
-        .extensions()
-        .get::<RequestId>()
-        .map(|r| r.0.clone());
+    let request_id = request.extensions().get::<RequestId>().map(|r| r.0.clone());
     let locale = request
         .extensions()
         .get::<RequestLocale>()
@@ -135,24 +132,22 @@ fn too_many_requests(request: &Request<Body>) -> Response {
     };
 
     let mut body = serde_json::Map::new();
-    body.insert(
-        "error".to_owned(),
-        json!("rate_limit_exceeded"),
-    );
+    body.insert("error".to_owned(), json!("rate_limit_exceeded"));
     body.insert("message".to_owned(), json!(message));
     if let Some(rid) = request_id {
         body.insert("request_id".to_owned(), json!(rid));
     }
 
-    (StatusCode::TOO_MANY_REQUESTS, Json(serde_json::Value::Object(body))).into_response()
+    (
+        StatusCode::TOO_MANY_REQUESTS,
+        Json(serde_json::Value::Object(body)),
+    )
+        .into_response()
 }
 
 // ── Public-route middleware (keyed by IP) ──────────────────────────────
 
-pub async fn public_rate_limit(
-    request: Request<Body>,
-    next: Next,
-) -> Response {
+pub async fn public_rate_limit(request: Request<Body>, next: Next) -> Response {
     let limiter = request
         .extensions()
         .get::<PublicLimiter>()
@@ -176,10 +171,7 @@ pub struct PublicLimiter(pub RateLimiter);
 
 // ── Protected-route middleware (keyed by user ID) ─────────────────────
 
-pub async fn protected_rate_limit(
-    request: Request<Body>,
-    next: Next,
-) -> Response {
+pub async fn protected_rate_limit(request: Request<Body>, next: Next) -> Response {
     let limiter = request
         .extensions()
         .get::<ProtectedLimiter>()

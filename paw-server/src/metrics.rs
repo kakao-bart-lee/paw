@@ -46,10 +46,7 @@ pub async fn metrics_middleware(request: Request<Body>, next: Next) -> Response 
     ];
     counter!("paw_http_requests_total", &labels).increment(1);
 
-    let duration_labels = [
-        ("method", method),
-        ("path_pattern", path_pattern),
-    ];
+    let duration_labels = [("method", method), ("path_pattern", path_pattern)];
     histogram!("paw_http_request_duration_seconds", &duration_labels).record(elapsed);
 
     response
@@ -174,9 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn metrics_endpoint_returns_200() {
-        let handle = PrometheusBuilder::new()
-            .build_recorder()
-            .handle();
+        let handle = PrometheusBuilder::new().build_recorder().handle();
 
         let app = Router::new()
             .route("/metrics", get(metrics_handler))
