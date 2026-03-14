@@ -29,6 +29,7 @@
 		B00000000000000000000009 /* PawKeychainDeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000019 /* PawKeychainDeviceKeyStore.swift */; };
 		B0000000000000000000000A /* PawApnsPushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001A /* PawApnsPushRegistrar.swift */; };
 		B0000000000000000000000B /* PawInMemorySecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001B /* PawInMemorySecureStore.swift */; };
+		C00000000000000000000001 /* PawApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000002 /* PawApiClient.swift */; };
 		B0000000000000000000000C /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001C /* AuthViewModel.swift */; };
 		B0000000000000000000000D /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001D /* AuthView.swift */; };
 		B0000000000000000000000E /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001E /* ChatViewModel.swift */; };
@@ -66,6 +67,7 @@
 		B00000000000000000000019 /* PawKeychainDeviceKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawKeychainDeviceKeyStore.swift; sourceTree = "<group>"; };
 		B0000000000000000000001A /* PawApnsPushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawApnsPushRegistrar.swift; sourceTree = "<group>"; };
 		B0000000000000000000001B /* PawInMemorySecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawInMemorySecureStore.swift; sourceTree = "<group>"; };
+		C00000000000000000000002 /* PawApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawApiClient.swift; sourceTree = "<group>"; };
 		B0000000000000000000001C /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		B0000000000000000000001D /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		B0000000000000000000001E /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 				B00000000000000000000019 /* PawKeychainDeviceKeyStore.swift */,
 				B0000000000000000000001A /* PawApnsPushRegistrar.swift */,
 				B0000000000000000000001B /* PawInMemorySecureStore.swift */,
+				C00000000000000000000002 /* PawApiClient.swift */,
 			);
 		};
 		B00000000000000000000050 /* Features */ = {
@@ -368,6 +371,7 @@
 				B00000000000000000000023 /* PawThemeNew.swift in Sources */,
 				B00000000000000000000025 /* PawTypographyNew.swift in Sources */,
 				B00000000000000000000027 /* PawAccessibilityNew.swift in Sources */,
+				C00000000000000000000001 /* PawApiClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

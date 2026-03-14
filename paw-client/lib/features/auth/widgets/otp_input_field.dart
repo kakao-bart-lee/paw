@@ -44,6 +44,12 @@ class _OtpInputFieldState extends State<OtpInputField>
     _shakeAnimation = Tween<double>(begin: 0, end: 24).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
     );
+
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _focusNodes[0].requestFocus();
+      }
+    });
   }
 
   @override
@@ -134,6 +140,7 @@ class _OtpInputFieldState extends State<OtpInputField>
                     key: ValueKey('otp-input-$index'),
                     controller: _controllers[index],
                     focusNode: _focusNodes[index],
+                    autofocus: index == 0,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     maxLength: 2, // Allow 2 for paste detection

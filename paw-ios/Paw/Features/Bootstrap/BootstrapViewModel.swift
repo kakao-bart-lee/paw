@@ -20,8 +20,14 @@ final class BootstrapViewModel {
         self.tokenVault = tokenVault
         self.deviceKeyStore = deviceKeyStore
         self.pushRegistrar = pushRegistrar
-        self.authVM = AuthViewModel(tokenVault: tokenVault, deviceKeyStore: deviceKeyStore)
-        self.chatVM = ChatViewModel(now: now)
+
+        let apiClient = PawApiClient()
+        self.authVM = AuthViewModel(
+            tokenVault: tokenVault,
+            deviceKeyStore: deviceKeyStore,
+            apiClient: apiClient
+        )
+        self.chatVM = ChatViewModel(now: now, apiClient: apiClient)
     }
 
     func buildInitialPreview() -> PawBootstrapPreview {
@@ -85,7 +91,7 @@ final class BootstrapViewModel {
 
         let selectedConversation = selectedConversation(from: preview)
         let conversation = selectedConversation?.title ?? "No conversation"
-        preview.shellBanner = "\(conversation) · \(preview.runtime.connectionState) · push \(preview.push.status.lowercased())"
+        preview.shellBanner = "\(conversation) \u{00B7} \(preview.runtime.connectionState) \u{00B7} push \(preview.push.status.lowercased())"
     }
 
     func agentReply(for outgoing: String, preview: PawBootstrapPreview) -> String {

@@ -6,10 +6,202 @@ import Foundation
 @MainActor
 final class ChatViewModel {
     private let now: () -> Date
+    private let apiClient: PawApiClient
 
-    init(now: @escaping () -> Date = Date.init) {
+    init(
+        now: @escaping () -> Date = Date.init,
+        apiClient: PawApiClient = PawApiClient()
+    ) {
         self.now = now
+        self.apiClient = apiClient
     }
+
+    // MARK: - API-backed operations (used by views)
+
+    func hydrateChatFromAPI(
+        authenticated: Bool,
+        username: String?,
+        preview: inout PawBootstrapPreview
+    ) async {
+        guard authenticated else {
+            preview.conversations = []
+            preview.selectedConversationID = nil
+            preview.messages = []
+            preview.composerText = "Authenticate to enable chat"
+            preview.shellBanner = "Authenticate to unlock conversations + chat runtime shell."
+            return
+        }
+
+        do {
+            let rawConversations = try await apiClient.getConversations()
+            let conversations = rawConversations.enumerated().map { index, raw in
+                PawConversationPreview(
+                    id: raw["id"] as? String ?? "conv-\(index)",
+                    title: (raw["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                        ?? "Conversation \(index + 1)",
+                    subtitle: (raw["last_message"] as? String) ?? "",
+                    unreadCount: raw["unread_count"] as? Int ?? 0,
+                    accent: index == 0 ? "primary" : "accent"
+                )
+            }
+
+            preview.conversations = conversations
+            preview.selectedConversationID = conversations.first?.id
+
+            if let firstId = conversations.first?.id {
+                let rawMessages = try await apiClient.getMessages(conversationId: firstId)
+                let resolvedUsername = Self.nilIfEmpty(username) ?? "me"
+                preview.messages = rawMessages.enumerated().map { index, raw in
+                    let senderId = raw["sender_id"] as? String ?? "unknown"
+                    let role: PawMessagePreview.Role = senderId == resolvedUsername ? .me
+                        : (raw["format"] as? String == "agent" ? .agent : .peer)
+                    return PawMessagePreview(
+                        id: raw["id"] as? String ?? "msg-\(index)",
+                        conversationID: firstId,
+                        author: senderId,
+                        body: raw["content"] as? String ?? "",
+                        role: role,
+                        timestampLabel: (raw["created_at"] as? String) ?? Self.timestampLabel(from: Date())
+                    )
+                }
+            } else {
+                preview.messages = []
+            }
+
+            preview.composerText = conversations.isEmpty
+                ? "No conversations yet"
+                : "Summarize bootstrap status"
+            preview.shellBanner = conversations.isEmpty
+                ? "No conversations available."
+                : "\(conversations.first?.title ?? "Chat") \u{00B7} Ready"
+            preview.runtime.cursorCount = conversations.count
+            preview.runtime.activeStreamCount = 0
+        } catch {
+            // API failed: show empty state rather than hardcoded data
+            preview.conversations = []
+            preview.selectedConversationID = nil
+            preview.messages = []
+            preview.composerText = "Failed to load conversations"
+            preview.shellBanner = "Could not reach server."
+            preview.auth.error = error.localizedDescription
+        }
+    }
+
+    func selectConversationAsync(
+        _ id: String,
+        preview: inout PawBootstrapPreview,
+        effectiveUsername: String
+    ) async {
+        guard preview.auth.hasAccessToken else {
+            preview.auth.error = "Authenticate first to open conversations"
+            return
+        }
+        guard preview.conversations.contains(where: { $0.id == id }) else {
+            return
+        }
+
+        preview.selectedConversationID = id
+        preview.auth.isLoading = true
+
+        do {
+            let rawMessages = try await apiClient.getMessages(conversationId: id)
+            preview.messages = rawMessages.enumerated().map { index, raw in
+                let senderId = raw["sender_id"] as? String ?? "unknown"
+                let role: PawMessagePreview.Role = senderId == effectiveUsername ? .me
+                    : (raw["format"] as? String == "agent" ? .agent : .peer)
+                return PawMessagePreview(
+                    id: raw["id"] as? String ?? "msg-\(index)",
+                    conversationID: id,
+                    author: senderId,
+                    body: raw["content"] as? String ?? "",
+                    role: role,
+                    timestampLabel: (raw["created_at"] as? String) ?? Self.timestampLabel(from: Date())
+                )
+            }
+        } catch {
+            preview.messages = []
+            preview.auth.error = error.localizedDescription
+        }
+
+        preview.conversations = updateConversationMetadata(
+            in: preview.conversations,
+            for: id,
+            unreadCount: 0
+        )
+        preview.runtime.cursorCount = preview.conversations.count
+        preview.auth.isLoading = false
+    }
+
+    func selectNextConversationAsync(
+        preview: inout PawBootstrapPreview,
+        effectiveUsername: String
+    ) async {
+        guard let selectedID = preview.selectedConversationID else {
+            if let firstID = preview.conversations.first?.id {
+                await selectConversationAsync(firstID, preview: &preview, effectiveUsername: effectiveUsername)
+            }
+            return
+        }
+        guard let index = preview.conversations.firstIndex(where: { $0.id == selectedID }) else {
+            return
+        }
+        let next = preview.conversations[(index + 1) % preview.conversations.count]
+        await selectConversationAsync(next.id, preview: &preview, effectiveUsername: effectiveUsername)
+    }
+
+    func sendChatMessageToAPI(
+        _ text: String?,
+        preview: inout PawBootstrapPreview
+    ) async {
+        guard preview.auth.hasAccessToken, let conversationID = preview.selectedConversationID else {
+            preview.auth.error = "Finish auth flow before using chat"
+            return
+        }
+
+        let outgoing = (text ?? preview.composerText).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !outgoing.isEmpty else {
+            preview.auth.error = "Message cannot be empty"
+            return
+        }
+
+        preview.auth.error = nil
+        preview.runtime.activeStreamCount = 1
+
+        do {
+            let result = try await apiClient.sendMessage(
+                conversationId: conversationID,
+                content: outgoing
+            )
+
+            let msgId = result["id"] as? String ?? "msg-\(preview.messages.count + 1)"
+            let createdAt = result["created_at"] as? String ?? Self.timestampLabel(from: now())
+
+            preview.messages.append(
+                PawMessagePreview(
+                    id: msgId,
+                    conversationID: conversationID,
+                    author: "me",
+                    body: outgoing,
+                    role: .me,
+                    timestampLabel: createdAt
+                )
+            )
+
+            preview.composerText = ""
+            preview.conversations = updateConversationMetadata(
+                in: preview.conversations,
+                for: conversationID,
+                subtitle: outgoing,
+                unreadCount: 0
+            )
+        } catch {
+            preview.auth.error = error.localizedDescription
+        }
+
+        preview.runtime.activeStreamCount = 0
+    }
+
+    // MARK: - Synchronous methods (backward-compat for tests)
 
     func selectConversation(
         _ id: String,
