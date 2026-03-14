@@ -2,6 +2,7 @@ package dev.paw.android.runtime
 
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
+import dev.paw.android.data.remote.ApiClientContract
 import kotlinx.coroutines.suspendCancellableCoroutine
 import uniffi.paw_core.PushPlatform
 import uniffi.paw_core.PushRegistrationState
@@ -10,8 +11,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class FirebasePushRegistrar(
-    private val apiClient: PawApiClient,
-) {
+    private val apiClient: ApiClientContract,
+) : PushRegistrarContract {
     @Volatile
     private var state = PushRegistrationState(
         status = PushRegistrationStatus.UNREGISTERED,
@@ -21,9 +22,9 @@ class FirebasePushRegistrar(
         lastUpdatedMs = System.currentTimeMillis(),
     )
 
-    fun currentState(): PushRegistrationState = state.copy()
+    override fun currentState(): PushRegistrationState = state.copy()
 
-    suspend fun register(accessToken: String?): PushRegistrationState {
+    override suspend fun register(accessToken: String?): PushRegistrationState {
         if (accessToken.isNullOrBlank()) {
             return updateState(
                 status = PushRegistrationStatus.UNREGISTERED,
@@ -51,7 +52,7 @@ class FirebasePushRegistrar(
         }
     }
 
-    suspend fun unregister(accessToken: String?): PushRegistrationState {
+    override suspend fun unregister(accessToken: String?): PushRegistrationState {
         return try {
             if (!accessToken.isNullOrBlank()) {
                 apiClient.setAccessToken(accessToken)
