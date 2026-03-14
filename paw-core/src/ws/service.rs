@@ -122,6 +122,7 @@ impl WsService {
             .send(ClientMessage::Connect(ConnectMsg {
                 v: PROTOCOL_VERSION,
                 token: access_token,
+                // Advertise threads once the client runtime can route thread-scoped state.
                 capabilities: None,
             }))
             .await?;
