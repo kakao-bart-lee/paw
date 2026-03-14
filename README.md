@@ -68,7 +68,7 @@ Migration progress follows `docs/native-migration-plan.md`.
 - Phase 3 core slices: HTTP + WS/sync/runtime foundation implemented in `paw-core`
 - Phase 4–5: native auth/bootstrap/chat shells and platform automation are in repo
 - Phase 6: Flutter client has been shifted toward Web/Desktop verification gates
-- Phase 7: final legacy removal is gated on `paw-ffi` removal conditions in `docs/native-migration-plan.md`
+- Phase 7: Flutter Web/Desktop path is independent of `paw-ffi`; final cleanup is reflected in workspace/CI/docs
 
 ## Quickstart
 

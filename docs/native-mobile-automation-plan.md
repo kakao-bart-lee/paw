@@ -30,7 +30,6 @@
 
 - `cargo test -p paw-core`
 - `cargo clippy -p paw-core --all-targets -- -D warnings`
-- `cargo check -p paw-ffi`
 - `make bindings`
 
 역할:

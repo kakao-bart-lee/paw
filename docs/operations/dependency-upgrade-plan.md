@@ -6,7 +6,6 @@ Stabilize current web/runtime behavior first, then upgrade dependencies in low-r
 
 ## Current Verified Baseline
 
-- `flutter_rust_bridge` runtime/codegen/generated code aligned at `2.11.1`.
 - `flutter build web` succeeds.
 - Web DB path is split by platform import (`drift/web` for web, `drift/native` for native).
 - Riverpod migrated to v3/v4 style (`Notifier` + family constructor pattern).
@@ -30,8 +29,6 @@ Blocked until `riverpod_generator` supports `analyzer ^10` (or project migrates 
 
 ## Safety Checklist
 
-- Ensure `flutter_rust_bridge` runtime and generated code versions are identical.
-- Regenerate FRB bindings after FRB-related changes.
 - Keep web path free from `dart:io` and native sqlite imports.
 - Validate at least:
   - `flutter build web`
@@ -48,9 +45,6 @@ flutter pub outdated
 
 # selective upgrades (repeat by package group)
 flutter pub upgrade <package_name>
-
-# FRB regenerate when needed
-flutter_rust_bridge_codegen generate --config-file flutter_rust_bridge.yaml
 
 # web smoke
 flutter build web

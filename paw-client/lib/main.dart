@@ -6,7 +6,6 @@ import 'core/di/service_locator.dart';
 import 'core/platform/desktop_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'src/rust/rust_init.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +15,6 @@ void main() async {
   final supportsFlutterClient = kIsWeb || desktop.isDesktop;
 
   if (supportsFlutterClient) {
-    await initRust();
     await setupServiceLocator();
   }
 

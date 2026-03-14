@@ -89,7 +89,6 @@
 완료 기준:
 - `cargo clippy -p paw-core --all-targets -- -D warnings`
 - `cargo test -p paw-core`
-- `cargo check -p paw-ffi`
 - `make bindings`
 
 ---

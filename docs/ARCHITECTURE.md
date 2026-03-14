@@ -85,7 +85,7 @@ paw/
 │
 ├── paw-crypto/                   # E2EE (Phase 2)
 │   ├── Cargo.toml
-│   └── src/lib.rs               # Placeholder (TBD after T8)
+│   └── src/lib.rs               # E2EE experiments / crypto support
 │
 ├── docs/
 │   ├── ARCHITECTURE.md           # This file
