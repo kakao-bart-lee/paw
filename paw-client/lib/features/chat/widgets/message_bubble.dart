@@ -25,7 +25,7 @@ class MessageBubble extends StatelessWidget {
         ? AppTheme.agentBubbleDark
         : AppTheme.receivedBubbleDark;
 
-    final textColor = isMe ? AppTheme.primary : theme.colorScheme.onSurface;
+    final textColor = isMe ? AppTheme.background : theme.colorScheme.onSurface;
     final bubbleBorder = isMe
         ? AppTheme.accent.withValues(alpha: 0.16)
         : isAgent

@@ -233,7 +233,7 @@ class _SearchResultTile extends StatelessWidget {
               ),
               child: const Icon(
                 Icons.chat_bubble_outline_rounded,
-                color: AppTheme.primary,
+                color: AppTheme.accent,
                 size: 20,
               ),
             ),

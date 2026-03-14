@@ -22,7 +22,7 @@ class E2eeBanner extends StatelessWidget {
       E2eeBannerType.active => (
         Icons.lock_rounded,
         '종단간 암호화됨 · Signal Protocol',
-        AppTheme.primary,
+        AppTheme.accent,
         AppTheme.primarySoft,
       ),
       E2eeBannerType.available => (

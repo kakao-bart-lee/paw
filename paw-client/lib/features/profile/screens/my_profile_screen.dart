@@ -217,7 +217,7 @@ class _ProfileInfoRow extends StatelessWidget {
               color: AppTheme.surface4,
               borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
-            child: Icon(icon, color: AppTheme.primary),
+            child: Icon(icon, color: AppTheme.accent),
           ),
           const SizedBox(width: 12),
           Expanded(

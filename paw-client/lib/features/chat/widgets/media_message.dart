@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 
 class MediaMessage extends StatelessWidget {
   final String mediaId;
@@ -28,8 +29,10 @@ class MediaMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = isMe ? Colors.white : theme.colorScheme.onSurface;
-    final iconColor = isMe ? Colors.white70 : theme.colorScheme.onSurfaceVariant;
+    final textColor = isMe ? AppTheme.background : theme.colorScheme.onSurface;
+    final iconColor = isMe
+        ? AppTheme.background.withValues(alpha: 0.78)
+        : theme.colorScheme.onSurfaceVariant;
 
     if (isImage) {
       return GestureDetector(
@@ -41,7 +44,7 @@ class MediaMessage extends StatelessWidget {
           child: Container(
             width: 240,
             height: 240,
-            color: theme.colorScheme.surfaceVariant,
+            color: AppTheme.surface3,
             child: const Center(
               child: Icon(Icons.image, size: 48, color: Colors.grey),
               // Phase 2: Load actual image using presigned URL
@@ -59,13 +62,13 @@ class MediaMessage extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isMe
-                ? Colors.white.withOpacity(0.2)
-                : theme.colorScheme.surfaceVariant,
+                ? AppTheme.background.withValues(alpha: 0.2)
+                : AppTheme.surface3,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             Icons.insert_drive_file,
-            color: isMe ? Colors.white : theme.colorScheme.primary,
+            color: isMe ? AppTheme.background : AppTheme.accent,
           ),
         ),
         const SizedBox(width: 12),

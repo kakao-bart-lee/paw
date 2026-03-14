@@ -142,7 +142,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                             '방장',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.primary,
+                              color: AppTheme.accent,
                             ),
                           ),
                         )
