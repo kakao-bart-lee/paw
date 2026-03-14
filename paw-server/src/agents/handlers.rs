@@ -22,7 +22,7 @@ use super::models::{
 use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
-use crate::i18n::{error_response, localized_message, RequestLocale};
+use crate::i18n::{error_response, error_response_with_details, localized_message, RequestLocale};
 use crate::messages::service::{check_member, Membership};
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
@@ -369,10 +369,11 @@ pub async fn publish_agent_handler(
     Json(req): Json<PublishAgentRequest>,
 ) -> Result<Json<PublishAgentResponse>, (StatusCode, Json<Value>)> {
     if let Err(msg) = req.manifest.validate() {
-        return Err(error(
+        return Err(error_with_details(
             StatusCode::BAD_REQUEST,
             "invalid_manifest",
             &locale,
+            Some(msg),
             msg,
         ));
     }
@@ -653,6 +654,16 @@ async fn relay_agent_stream_message(
 
 fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
     error_response(status, code, locale, message)
+}
+
+fn error_with_details(
+    status: StatusCode,
+    code: &str,
+    locale: &str,
+    details: Option<&str>,
+    message: &str,
+) -> (StatusCode, Json<Value>) {
+    error_response_with_details(status, code, locale, details, message)
 }
 
 fn agent_error_frame(code: &str, locale: &str, fallback: &str) -> Value {

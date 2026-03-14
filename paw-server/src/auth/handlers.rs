@@ -6,7 +6,7 @@ use sqlx::Row;
 use uuid::Uuid;
 
 use super::{device, jwt, otp, AppState};
-use crate::i18n::{error_response, RequestLocale};
+use crate::i18n::{error_response, error_response_with_details, RequestLocale};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestOtpRequest {
@@ -277,10 +277,11 @@ pub async fn register_device(
     let ed25519_public_key = match device::decode_ed25519_public_key(&payload.ed25519_public_key) {
         Ok(key) => key,
         Err(message) => {
-            return error_response(
+            return error_response_with_details(
                 axum::http::StatusCode::BAD_REQUEST,
                 "invalid_device_key",
                 &locale,
+                Some(&message),
                 &message,
             )
         }

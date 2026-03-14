@@ -452,6 +452,7 @@ mod tests {
                 v: PROTOCOL_VERSION,
                 code: "invalid_version".into(),
                 message: "unsupported protocol".into(),
+                details: None,
             }))
             .await
             .unwrap();

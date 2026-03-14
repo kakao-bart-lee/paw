@@ -97,6 +97,7 @@ pub async fn handle_socket(
                                             &outbound_tx,
                                             "unsupported_protocol_version",
                                             &locale,
+                                            Some(&err.to_string()),
                                             "Unsupported protocol version",
                                         ).await;
                                     }
@@ -107,7 +108,8 @@ pub async fn handle_socket(
                                     &outbound_tx,
                                     "invalid_frame",
                                     &locale,
-                                    &format!("invalid json frame: {err}"),
+                                    Some(&format!("invalid json frame: {err}")),
+                                    "Invalid websocket frame",
                                 ).await;
                             }
                         }
@@ -124,7 +126,8 @@ pub async fn handle_socket(
                             &outbound_tx,
                             "invalid_frame",
                             &locale,
-                            "binary frames are not supported",
+                            Some("binary frames are not supported"),
+                            "Invalid websocket frame",
                         ).await;
                     }
                     Some(Err(err)) => {
@@ -203,6 +206,7 @@ async fn handle_client_message(
                         outbound_tx,
                         "forbidden",
                         locale,
+                        None,
                         "User is not a member of this conversation",
                     )
                     .await;
@@ -213,6 +217,7 @@ async fn handle_client_message(
                         outbound_tx,
                         "not_found",
                         locale,
+                        None,
                         "Conversation not found",
                     )
                     .await;
@@ -356,12 +361,14 @@ async fn send_protocol_error(
     outbound_tx: &WsSender,
     code: &str,
     locale: &str,
+    details: Option<&str>,
     fallback: &str,
 ) -> anyhow::Result<()> {
     let payload = serde_json::to_string(&ServerMessage::HelloError(HelloErrorMsg {
         v: PROTOCOL_VERSION,
         code: code.to_owned(),
         message: localized_message(code, locale, fallback).to_string(),
+        details: details.map(ToOwned::to_owned),
     }))?;
     let _ = outbound_tx.send(Message::Text(payload.into()));
     Ok(())

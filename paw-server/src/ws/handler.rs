@@ -1,6 +1,6 @@
 use crate::auth::jwt;
 use crate::auth::AppState;
-use crate::i18n::{error_response, RequestLocale};
+use crate::i18n::{error_response, lookup_user_preferred_locale, RequestLocale};
 use crate::ws::connection::handle_socket;
 use axum::extract::{Extension, Query, State, WebSocketUpgrade};
 use axum::http::StatusCode;
@@ -27,7 +27,16 @@ pub async fn ws_handler(
         }
     };
 
-    ws.on_upgrade(move |socket| handle_socket(socket, user_id, device_id, locale, state))
+    let effective_locale = match lookup_user_preferred_locale(&state.db, user_id).await {
+        Ok(Some(preferred_locale)) => preferred_locale,
+        Ok(None) => locale,
+        Err(err) => {
+            tracing::warn!(%err, user_id = %user_id, "failed to load preferred locale for websocket");
+            locale
+        }
+    };
+
+    ws.on_upgrade(move |socket| handle_socket(socket, user_id, device_id, effective_locale, state))
 }
 
 fn validate_jwt(token: &str, secret: &str) -> anyhow::Result<(uuid::Uuid, uuid::Uuid)> {

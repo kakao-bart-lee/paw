@@ -7,8 +7,10 @@ use axum::{
     Json,
 };
 use serde_json::{Map, Value};
+use uuid::Uuid;
 
 use crate::auth::AppState;
+use crate::db::DbPool;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RequestLocale(pub String);
@@ -57,11 +59,54 @@ pub fn normalize_locale(input: &str) -> Option<String> {
 }
 
 pub fn resolve_locale(accept_language: Option<&str>, default_locale: &str) -> String {
-    accept_language
-        .into_iter()
-        .flat_map(|value| value.split(','))
-        .filter_map(|item| item.split(';').next())
-        .find_map(normalize_locale)
+    let mut best: Option<(f32, usize, String)> = None;
+
+    if let Some(header_value) = accept_language {
+        for (index, item) in header_value.split(',').enumerate() {
+            let raw = item.trim();
+            if raw.is_empty() {
+                continue;
+            }
+
+            let mut parts = raw.split(';');
+            let Some(tag) = parts.next() else {
+                continue;
+            };
+
+            let Some(locale) = normalize_locale(tag) else {
+                continue;
+            };
+
+            let mut quality = 1.0_f32;
+            let mut invalid_quality = false;
+
+            for param in parts {
+                let param = param.trim();
+                if let Some(value) = param.strip_prefix("q=") {
+                    match value.parse::<f32>() {
+                        Ok(parsed) if (0.0..=1.0).contains(&parsed) => quality = parsed,
+                        _ => {
+                            invalid_quality = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if invalid_quality || quality <= 0.0 {
+                continue;
+            }
+
+            match &best {
+                Some((best_quality, best_index, _))
+                    if *best_quality > quality
+                        || (*best_quality == quality && *best_index < index) => {}
+                _ => best = Some((quality, index, locale)),
+            }
+        }
+    }
+
+    best.map(|(_, _, locale)| locale)
         .unwrap_or_else(|| default_locale.to_string())
 }
 
@@ -186,7 +231,7 @@ pub fn error_response(
     locale: &str,
     fallback: &str,
 ) -> (StatusCode, Json<Value>) {
-    error_response_with_request_id(status, code, locale, None, fallback)
+    error_response_with_details(status, code, locale, None, fallback)
 }
 
 pub fn error_response_with_request_id(
@@ -196,12 +241,31 @@ pub fn error_response_with_request_id(
     request_id: Option<&str>,
     fallback: &str,
 ) -> (StatusCode, Json<Value>) {
+    error_response_with_details_and_request_id(status, code, locale, None, request_id, fallback)
+}
+
+pub fn error_response_with_details(
+    status: StatusCode,
+    code: &str,
+    locale: &str,
+    details: Option<&str>,
+    fallback: &str,
+) -> (StatusCode, Json<Value>) {
+    error_response_with_details_and_request_id(status, code, locale, details, None, fallback)
+}
+
+pub fn error_response_with_details_and_request_id(
+    status: StatusCode,
+    code: &str,
+    locale: &str,
+    details: Option<&str>,
+    request_id: Option<&str>,
+    fallback: &str,
+) -> (StatusCode, Json<Value>) {
+    let localized = localized_message(code, locale, fallback);
     let mut payload = Map::new();
     payload.insert("error".to_string(), Value::String(code.to_string()));
-    payload.insert(
-        "message".to_string(),
-        Value::String(localized_message(code, locale, fallback).to_string()),
-    );
+    payload.insert("message".to_string(), Value::String(localized.to_string()));
 
     if let Some(request_id) = request_id {
         payload.insert(
@@ -210,7 +274,27 @@ pub fn error_response_with_request_id(
         );
     }
 
+    if let Some(details) = details
+        .map(str::trim)
+        .filter(|details| !details.is_empty() && *details != localized)
+    {
+        payload.insert("details".to_string(), Value::String(details.to_string()));
+    }
+
     (status, Json(Value::Object(payload)))
+}
+
+pub async fn lookup_user_preferred_locale(
+    db: &DbPool,
+    user_id: Uuid,
+) -> Result<Option<String>, sqlx::Error> {
+    let locale =
+        sqlx::query_scalar::<_, String>("SELECT preferred_locale FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db.as_ref())
+            .await?;
+
+    Ok(locale.and_then(|value| normalize_locale(&value)))
 }
 
 pub async fn locale_middleware(
@@ -232,8 +316,13 @@ pub async fn locale_middleware(
     tracing::debug!(locale = %resolved, path = %request.uri().path(), "resolved request locale");
 
     let mut response = next.run(request).await;
+    let final_locale = response
+        .extensions()
+        .get::<RequestLocale>()
+        .map(|locale| locale.0.clone())
+        .unwrap_or(resolved);
 
-    if let Ok(header_value) = HeaderValue::from_str(&resolved) {
+    if let Ok(header_value) = HeaderValue::from_str(&final_locale) {
         response
             .headers_mut()
             .insert(header::CONTENT_LANGUAGE, header_value);
@@ -247,7 +336,10 @@ pub async fn locale_middleware(
 
 #[cfg(test)]
 mod tests {
-    use super::{error_response, localized_message, normalize_locale, resolve_locale};
+    use super::{
+        error_response, error_response_with_details, localized_message, normalize_locale,
+        resolve_locale,
+    };
     use axum::{http::StatusCode, Json};
     use serde_json::json;
 
@@ -273,6 +365,18 @@ mod tests {
     fn resolve_locale_prefers_first_valid_header_entry() {
         let resolved = resolve_locale(Some("fr-CA,ko-KR;q=0.8,en;q=0.5"), "ko-KR");
         assert_eq!(resolved, "fr-CA");
+    }
+
+    #[test]
+    fn resolve_locale_respects_quality_values() {
+        let resolved = resolve_locale(Some("en;q=0.5, ko-KR;q=1.0"), "fr-FR");
+        assert_eq!(resolved, "ko-KR");
+    }
+
+    #[test]
+    fn resolve_locale_ignores_zero_quality_and_invalid_q_values() {
+        let resolved = resolve_locale(Some("en;q=0, ko;q=bogus, ja;q=0.8"), "fr-FR");
+        assert_eq!(resolved, "ja");
     }
 
     #[test]
@@ -306,5 +410,18 @@ mod tests {
             payload["message"],
             json!("전화번호는 E.164 형식이어야 합니다")
         );
+    }
+
+    #[test]
+    fn error_response_preserves_dynamic_details() {
+        let (_, Json(payload)) = error_response_with_details(
+            StatusCode::BAD_REQUEST,
+            "invalid_manifest",
+            "ko-KR",
+            Some("manifest.version must be >= 1"),
+            "manifest.version must be >= 1",
+        );
+        assert_eq!(payload["message"], json!("매니페스트가 올바르지 않습니다"));
+        assert_eq!(payload["details"], json!("manifest.version must be >= 1"));
     }
 }
