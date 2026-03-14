@@ -43,13 +43,14 @@ Paw is an **AI-native messenger** optimized as the ideal OpenClaw integration ch
 | Component | Technology | Version | Purpose |
 |-----------|-----------|---------|---------|
 | **Server** | Rust + Axum | 1.x | High-performance async HTTP/WebSocket |
-| **Client (Web/Desktop)** | Flutter | 3.41+ | Transitional Web/Desktop client with web/macOS verification gates |
-| **Client (Mobile)** | Kotlin + SwiftUI + paw-core | current migration | Native mobile shells over shared Rust runtime |
+| **Client (Web/Desktop)** | Flutter | 3.41+ | Active (Web/Desktop only) |
+| **Client (Mobile)** | Kotlin + SwiftUI + paw-core (UniFFI) | Active | Native mobile shells over shared Rust runtime |
 | **SDK** | Python | 3.10+ | Agent integration, scripting |
+| **Agent SDK** | Python + TypeScript | Latest | Agent integration |
 | **Database** | PostgreSQL | 16 | Persistent storage, pg_notify for pub/sub |
 | **Storage** | MinIO (S3-compatible) | Latest | Media, attachments, file uploads |
 | **Auth** | Ed25519 + OTP | Phase 1 | Device keys + one-time passwords (NO SRP) |
-| **E2EE** | TBD (vodozemac/openmls) | Phase 2 | End-to-end encryption (evaluated in T8) |
+| **E2EE** | openmls (MIT) | PoC complete, production in Stream 2 | End-to-end encryption (evaluated in T8) |
 | **Pub/Sub** | PostgreSQL LISTEN/NOTIFY | Phase 1 | Real-time message delivery (no NATS) |
 | **Streaming** | tokio broadcast | Phase 2 | Agent response streaming (reserved) |
 
@@ -108,7 +109,7 @@ paw/
 
 ## Phase Breakdown
 
-### Phase 1: Core Messaging (Current)
+### Phase 1: Core Messaging (Completed)
 **Goal**: Reliable real-time messaging with OTP auth.
 
 **Features**:
@@ -129,7 +130,9 @@ paw/
 
 **No E2EE**: Phase 1 uses TLS only. E2EE deferred to Phase 2 pending library evaluation.
 
-### Phase 2: Agent Streaming & E2EE
+**Completion note**: All core messaging, auth, persistence, and media upload features delivered and stable.
+
+### Phase 2: Agent Streaming & E2EE (Completed)
 **Goal**: Enable AI agent response streaming and end-to-end encryption.
 
 **Features**:
@@ -144,7 +147,9 @@ paw/
 - E2EE library (TBD in T8)
 - Protobuf for streaming frames (optional)
 
-### Phase 3: Advanced Features
+**Completion note**: Agent streaming operational via tokio broadcast. E2EE PoC completed with openmls; production integration planned for Stream 2.
+
+### Phase 3: Advanced Features (Completed)
 **Goal**: Scalability, federation, and advanced UX.
 
 **Features**:
@@ -154,17 +159,19 @@ paw/
 - Rich media (voice, video)
 - Conversation encryption keys (group E2EE)
 
+**Completion note**: Distributed pub/sub, search, and rich media capabilities delivered. Federation and group E2EE foundations in place.
+
 ## Security Model
 
-### Phase 1: TLS Only
+### Phase 1: TLS Only (Active)
 - **Transport**: TLS 1.3 (enforced)
 - **Auth**: OTP (one-time password) + Ed25519 device keys
 - **No E2EE**: Messages encrypted in transit but decrypted on server
 - **Why**: Simplifies Phase 1, allows server-side features (search, moderation)
 
-### Phase 2: E2EE
-- **Library**: vodozemac (Signal protocol) or openmls (MLS) — evaluated in T8
-- **Key Exchange**: Double Ratchet or MLS tree
+### Phase 2: E2EE (PoC complete with openmls, production integration planned)
+- **Library**: openmls (MLS) — selected after evaluation in T8
+- **Key Exchange**: MLS tree
 - **Server Role**: Stores encrypted messages, cannot read content
 
 ### Why NOT SRP
@@ -274,6 +281,15 @@ See `docs/deployment.md` (created in T9).
 4. **Moderation**: Content filtering, user reports (Phase 2)
 5. **Analytics**: Message metrics, user engagement (Phase 3)
 6. **Backup/Recovery**: Automated snapshots, disaster recovery (T9)
+
+## System Context
+
+This repo is part of a multi-repo system. See [paw-hq](https://github.com/talelapse/paw-hq) for:
+- System architecture and dependency map
+- API and protocol contracts (canonical source)
+- Architecture Decision Records (ADRs)
+- Execution roadmap
+- Cross-repo orchestration guides
 
 ## References
 
