@@ -205,11 +205,13 @@ async fn handle_client_message(
             require_v(request.v)?;
 
             let mut messages = Vec::new();
+            let mut conversations = Vec::new();
             for conversation in request.conversations {
                 match service::check_member(&state.db, conversation.conversation_id, user_id)
                     .await?
                 {
                     Membership::Member => {
+                        conversations.push(conversation.clone());
                         let mut missing = fetch_messages_after_seq(
                             state,
                             conversation.conversation_id,
@@ -228,11 +230,13 @@ async fn handle_client_message(
                 }
             }
 
+            conversations.sort_by_key(|conversation| conversation.conversation_id);
             messages.sort_by_key(|message| (message.conversation_id, message.seq));
 
             let payload =
                 serde_json::to_string(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
                     v: PROTOCOL_VERSION,
+                    conversations,
                     messages,
                 }))?;
             let _ = outbound_tx.send(Message::Text(payload.into()));

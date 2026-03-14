@@ -18,7 +18,8 @@ pub use auth::{
     VerifyOtpResponse,
 };
 pub use core::{
-    CoreRuntime, CoreRuntimeError, RuntimeBootstrapReport, RuntimeEffect, RuntimeInitStep,
+    CoreRuntime, CoreRuntimeError, RuntimeBootstrapReport, RuntimeEffect, RuntimeEffectDomain,
+    RuntimeInitStep,
 };
 pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};

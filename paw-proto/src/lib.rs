@@ -133,6 +133,8 @@ pub struct MessageReceivedMsg {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceSyncResponse {
     pub v: u8,
+    #[serde(default)]
+    pub conversations: Vec<ConvSyncState>,
     pub messages: Vec<MessageReceivedMsg>,
 }
 

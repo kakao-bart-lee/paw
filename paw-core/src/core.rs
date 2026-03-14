@@ -6,7 +6,10 @@ use reqwest::Url;
 use uuid::Uuid;
 
 use crate::{
-    auth::{AuthBackendError, AuthClient, AuthUserProfile, SessionEvent, StoredTokens, TokenStore},
+    auth::{
+        AuthBackendError, AuthClient, AuthUserProfile, SessionEvent, StoredTokens, TokenStore,
+        run_session_reset,
+    },
     db::{AppDatabase, DbError, MessageRecord},
     events::{ConnectionSnapshot, ConversationCursorView, RuntimeSnapshot, StreamingSessionView},
     sync::{
@@ -97,10 +100,40 @@ pub enum RuntimeEffect {
     DeviceSyncBatchProcessed {
         message_count: u32,
         conversation_count: u32,
+        conversation_ids: Vec<Uuid>,
     },
     MessagePersisted(MessageRecord),
     StreamUpdated(StreamingSession),
     StreamFinalized(FinalizedStreamMessage),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RuntimeEffectDomain {
+    Lifecycle,
+    Connection,
+    Sync,
+    Streaming,
+}
+
+impl RuntimeEffect {
+    pub fn domain(&self) -> RuntimeEffectDomain {
+        match self {
+            Self::BootstrapProgress(_)
+            | Self::ActiveStreamsCleared { .. }
+            | Self::SessionInvalidated(_) => RuntimeEffectDomain::Lifecycle,
+            Self::ConnectionStateChanged(_)
+            | Self::ReconnectScheduled { .. }
+            | Self::ReconnectAttemptStarted { .. } => RuntimeEffectDomain::Connection,
+            Self::SyncRequested(_)
+            | Self::AckRequested { .. }
+            | Self::DuplicateMessage { .. }
+            | Self::GapDetected { .. }
+            | Self::DeviceSyncApplied { .. }
+            | Self::DeviceSyncBatchProcessed { .. }
+            | Self::MessagePersisted(_) => RuntimeEffectDomain::Sync,
+            Self::StreamUpdated(_) | Self::StreamFinalized(_) => RuntimeEffectDomain::Streaming,
+        }
+    }
 }
 
 pub struct CoreRuntime {
@@ -209,9 +242,11 @@ impl CoreRuntime {
         token_store: &dyn TokenStore,
         event: SessionEvent,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
-        token_store.clear().await;
-        self.ws_service.clear_session().await?;
-        let cleared_streams = self.streaming.clear();
+        let cleared_streams = run_session_reset(token_store, || async {
+            self.ws_service.clear_session().await?;
+            Ok::<usize, WsServiceError>(self.streaming.clear())
+        })
+        .await?;
 
         let mut effects = Vec::with_capacity(3);
         if cleared_streams > 0 {
@@ -410,6 +445,11 @@ impl CoreRuntime {
         effects.push(RuntimeEffect::DeviceSyncBatchProcessed {
             message_count: response.messages.len() as u32,
             conversation_count: applied_count_by_conversation.len() as u32,
+            conversation_ids: response
+                .conversations
+                .iter()
+                .map(|conversation| conversation.conversation_id)
+                .collect(),
         });
 
         effects.extend(
@@ -478,8 +518,9 @@ mod tests {
     use async_trait::async_trait;
     use chrono::{TimeZone, Utc};
     use paw_proto::{
-        ContentDeltaMsg, DeviceSyncResponse, HelloOkMsg, MessageFormat, MessageReceivedMsg,
-        StreamEndMsg, StreamStartMsg, ToolEndMsg, ToolStartMsg, PROTOCOL_VERSION,
+        ContentDeltaMsg, ConvSyncState, DeviceSyncResponse, HelloOkMsg, MessageFormat,
+        MessageReceivedMsg, StreamEndMsg, StreamStartMsg, ToolEndMsg, ToolStartMsg,
+        PROTOCOL_VERSION,
     };
 
     use crate::{
@@ -801,6 +842,10 @@ mod tests {
         let effects = runtime
             .handle_server_message(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
                 v: PROTOCOL_VERSION,
+                conversations: vec![ConvSyncState {
+                    conversation_id,
+                    last_seq: 0,
+                }],
                 messages: vec![message(1, "one"), message(3, "three"), message(2, "two")],
             }))
             .await
@@ -813,7 +858,9 @@ mod tests {
                 RuntimeEffect::DeviceSyncBatchProcessed {
                     message_count: 3,
                     conversation_count: 1,
+                    conversation_ids,
                 }
+                    if conversation_ids == &vec![conversation_id]
             )
         }));
         assert_eq!(
@@ -843,6 +890,7 @@ mod tests {
         let effects = runtime
             .handle_server_message(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
                 v: PROTOCOL_VERSION,
+                conversations: vec![],
                 messages: vec![],
             }))
             .await
@@ -853,6 +901,7 @@ mod tests {
             vec![RuntimeEffect::DeviceSyncBatchProcessed {
                 message_count: 0,
                 conversation_count: 0,
+                conversation_ids: vec![],
             }]
         );
     }
@@ -1139,5 +1188,34 @@ mod tests {
                 })
             ]
         ));
+    }
+
+    #[test]
+    fn runtime_effect_domain_groups_recovery_events_by_semantics() {
+        assert_eq!(
+            RuntimeEffect::ReconnectScheduled {
+                delay_ms: 1_000,
+                uri: "wss://paw.example/ws?token=abc".into(),
+                attempt: 1,
+            }
+            .domain(),
+            RuntimeEffectDomain::Connection
+        );
+        assert_eq!(
+            RuntimeEffect::DeviceSyncBatchProcessed {
+                message_count: 0,
+                conversation_count: 0,
+                conversation_ids: vec![],
+            }
+            .domain(),
+            RuntimeEffectDomain::Sync
+        );
+        assert_eq!(
+            RuntimeEffect::SessionInvalidated(SessionEvent {
+                reason: crate::auth::SessionExpiryReason::Unauthorized,
+            })
+            .domain(),
+            RuntimeEffectDomain::Lifecycle
+        );
     }
 }

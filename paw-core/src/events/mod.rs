@@ -157,6 +157,7 @@ pub struct DeviceSyncAppliedView {
 pub struct DeviceSyncBatchProcessedView {
     pub message_count: u32,
     pub conversation_count: u32,
+    pub conversation_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
@@ -403,9 +404,11 @@ impl From<&RuntimeEffect> for DeviceSyncBatchProcessedView {
             RuntimeEffect::DeviceSyncBatchProcessed {
                 message_count,
                 conversation_count,
+                conversation_ids,
             } => Self {
                 message_count: *message_count,
                 conversation_count: *conversation_count,
+                conversation_ids: conversation_ids.iter().map(ToString::to_string).collect(),
             },
             other => panic!("expected DeviceSyncBatchProcessed effect, got {other:?}"),
         }
@@ -613,6 +616,7 @@ mod tests {
         let effect = RuntimeEffect::DeviceSyncBatchProcessed {
             message_count: 3,
             conversation_count: 1,
+            conversation_ids: vec![uuid::Uuid::nil()],
         };
 
         let event = CoreEvent::from(&effect);
@@ -620,6 +624,7 @@ mod tests {
         assert!(json.contains("\"DeviceSyncBatchProcessed\""));
         assert!(json.contains("\"message_count\":3"));
         assert!(json.contains("\"conversation_count\":1"));
+        assert!(json.contains("\"conversation_ids\""));
     }
 
     #[test]
