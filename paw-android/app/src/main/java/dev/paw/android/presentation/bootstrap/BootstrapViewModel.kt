@@ -38,6 +38,7 @@ data class BootstrapUiState(
     val usernameInput: String = "",
     val discoverableByPhone: Boolean = false,
     val stagedSessionToken: String? = null,
+    val bootstrapReady: Boolean = false,
 ) {
     companion object {
         fun initial() = BootstrapUiState(
@@ -207,6 +208,8 @@ class BootstrapViewModel(application: Application) : AndroidViewModel(applicatio
                 deviceKeyMaterial = deviceKeys,
             ),
         )
+
+        _uiState.value = _uiState.value.copy(bootstrapReady = true)
 
         if (auth.step == AuthStepView.AUTHENTICATED || auth.step == AuthStepView.USERNAME_SETUP) {
             chatViewModel.loadChatShell()

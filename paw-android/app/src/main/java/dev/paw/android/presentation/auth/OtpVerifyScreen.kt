@@ -43,17 +43,7 @@ fun OtpVerifyScreen(navController: NavController, viewModel: BootstrapViewModel)
     val authVm = viewModel.authViewModel
     val otpValue = uiState.otpInput
 
-    // Navigate on step change
-    LaunchedEffect(uiState.preview.auth.step) {
-        when (uiState.preview.auth.step) {
-            AuthStepView.DEVICE_NAME -> navController.navigate(PawRoutes.DEVICE_REGISTER)
-            AuthStepView.USERNAME_SETUP -> navController.navigate(PawRoutes.USERNAME_SETUP)
-            AuthStepView.AUTHENTICATED -> navController.navigate(PawRoutes.CHAT_LIST) {
-                popUpTo(0) { inclusive = true }
-            }
-            else -> {}
-        }
-    }
+    // Navigation is handled centrally by PawNavGraph's LaunchedEffect on authStep.
 
     Column(
         modifier = Modifier

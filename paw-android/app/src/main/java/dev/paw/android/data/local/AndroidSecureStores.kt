@@ -3,6 +3,7 @@ package dev.paw.android.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import android.util.Log
 import dev.paw.android.data.local.contracts.DeviceKeyStoreContract
 import dev.paw.android.data.local.contracts.StoredTokens
 import dev.paw.android.data.local.contracts.TokenVault
@@ -37,6 +38,8 @@ class AndroidSecureTokenVault(
                 accessToken = cipher.decryptString(encryptedAccess),
                 refreshToken = cipher.decryptString(encryptedRefresh),
             )
+        }.onFailure { e ->
+            Log.w("PawTokenVault", "Failed to decrypt stored tokens — Keystore may be invalidated", e)
         }.getOrNull()
     }
 
@@ -85,6 +88,8 @@ class AndroidDeviceKeyStore(
                 x25519PrivateKey = cipher.decryptBytes(privateKey),
                 x25519PublicKey = cipher.decryptBytes(publicKey),
             )
+        }.onFailure { e ->
+            Log.w("PawDeviceKeyStore", "Failed to decrypt device keys — Keystore may be invalidated", e)
         }.getOrNull()
     }
 

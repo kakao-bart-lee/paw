@@ -61,13 +61,7 @@ fun UsernameSetupScreen(navController: NavController, viewModel: BootstrapViewMo
     val error = uiState.preview.auth.error
     val username = uiState.usernameInput
 
-    LaunchedEffect(uiState.preview.auth.step) {
-        if (uiState.preview.auth.step == AuthStepView.AUTHENTICATED) {
-            navController.navigate(PawRoutes.CHAT_LIST) {
-                popUpTo(0) { inclusive = true }
-            }
-        }
-    }
+    // Navigation is handled centrally by PawNavGraph's LaunchedEffect on authStep.
 
     Column(
         modifier = Modifier

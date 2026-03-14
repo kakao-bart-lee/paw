@@ -4,11 +4,14 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -29,6 +32,7 @@ import dev.paw.android.presentation.search.SearchScreen
 import dev.paw.android.presentation.settings.ProfileScreen
 import dev.paw.android.presentation.settings.SecurityScreen
 import dev.paw.android.presentation.settings.SettingsScreen
+import dev.paw.android.presentation.theme.PawBackground
 import uniffi.paw_core.AuthStepView
 
 object PawRoutes {
@@ -51,31 +55,32 @@ object PawRoutes {
 
     fun chatDetail(chatId: String) = "chat-detail/$chatId"
     fun agentDetail(agentId: String) = "agent-detail/$agentId"
+
+    private val authScreens = setOf(WELCOME, LOGIN_METHOD, PHONE_INPUT, OTP_VERIFY, DEVICE_REGISTER, USERNAME_SETUP)
+
+    fun isAuthScreen(route: String?): Boolean = route in authScreens
 }
 
-private val fadeEnter: EnterTransition = fadeIn(
-    initialAlpha = 0.3f,
-)
-private val fadeExit: ExitTransition = fadeOut(
-    targetAlpha = 0f,
-)
+private val fadeEnter: EnterTransition = fadeIn(initialAlpha = 0.3f)
+private val fadeExit: ExitTransition = fadeOut(targetAlpha = 0f)
 
 @Composable
 fun PawNavGraph(viewModel: BootstrapViewModel) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val authStep = uiState.preview.auth.step
+    val bootstrapReady = uiState.bootstrapReady
 
-    // Navigate based on auth state changes
+    // Show nothing until bootstrap has resolved the initial auth state
+    if (!bootstrapReady) {
+        Box(modifier = Modifier.fillMaxSize().background(PawBackground))
+        return
+    }
+
+    // Single centralized navigation watcher — no per-screen LaunchedEffects for auth steps
     LaunchedEffect(authStep) {
         val currentRoute = navController.currentDestination?.route
-        val isOnAuthScreen = currentRoute == null ||
-            currentRoute == PawRoutes.WELCOME ||
-            currentRoute == PawRoutes.LOGIN_METHOD ||
-            currentRoute == PawRoutes.PHONE_INPUT ||
-            currentRoute == PawRoutes.OTP_VERIFY ||
-            currentRoute == PawRoutes.DEVICE_REGISTER ||
-            currentRoute == PawRoutes.USERNAME_SETUP
+        val isOnAuthScreen = PawRoutes.isAuthScreen(currentRoute) || currentRoute == null
 
         when (authStep) {
             AuthStepView.AUTHENTICATED -> {
@@ -92,19 +97,40 @@ fun PawNavGraph(viewModel: BootstrapViewModel) {
                     }
                 }
             }
-            else -> { /* auth step navigation handled by user actions */ }
+            AuthStepView.PHONE_INPUT -> {
+                if (isOnAuthScreen) {
+                    navController.navigate(PawRoutes.PHONE_INPUT) {
+                        popUpTo(PawRoutes.WELCOME)
+                    }
+                }
+            }
+            AuthStepView.OTP_VERIFY -> {
+                if (isOnAuthScreen) {
+                    navController.navigate(PawRoutes.OTP_VERIFY) {
+                        popUpTo(PawRoutes.WELCOME)
+                    }
+                }
+            }
+            AuthStepView.DEVICE_NAME -> {
+                if (isOnAuthScreen) {
+                    navController.navigate(PawRoutes.DEVICE_REGISTER) {
+                        popUpTo(PawRoutes.WELCOME)
+                    }
+                }
+            }
+            AuthStepView.USERNAME_SETUP -> {
+                if (isOnAuthScreen) {
+                    navController.navigate(PawRoutes.USERNAME_SETUP) {
+                        popUpTo(PawRoutes.WELCOME)
+                    }
+                }
+            }
         }
-    }
-
-    val startDestination = if (authStep == AuthStepView.AUTHENTICATED) {
-        PawRoutes.CHAT_LIST
-    } else {
-        PawRoutes.WELCOME
     }
 
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = PawRoutes.WELCOME,
         enterTransition = { fadeEnter },
         exitTransition = { fadeExit },
         popEnterTransition = { fadeEnter },
@@ -136,11 +162,7 @@ fun PawNavGraph(viewModel: BootstrapViewModel) {
         }
         composable(PawRoutes.CHAT_DETAIL) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
-            ChatDetailScreen(
-                chatId = chatId,
-                navController = navController,
-                viewModel = viewModel,
-            )
+            ChatDetailScreen(chatId = chatId, navController = navController, viewModel = viewModel)
         }
         composable(PawRoutes.NEW_CHAT) {
             NewChatScreen(navController = navController, viewModel = viewModel)
