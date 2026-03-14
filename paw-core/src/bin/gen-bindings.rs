@@ -1,10 +1,35 @@
 use camino::Utf8PathBuf;
 use cargo_metadata::MetadataCommand;
 use std::env;
+use std::process::Command;
 use uniffi::{
     generate_bindings_library_mode, CargoMetadataConfigSupplier, KotlinBindingGenerator,
     SwiftBindingGenerator,
 };
+
+fn ensure_library_exists(library_path: &Utf8PathBuf, profile: &str) {
+    if library_path.exists() {
+        return;
+    }
+
+    let mut cmd = Command::new("cargo");
+    cmd.args(["build", "-p", env!("CARGO_PKG_NAME"), "--lib"]);
+    if profile == "release" {
+        cmd.arg("--release");
+    }
+
+    let status = cmd
+        .status()
+        .expect("failed to invoke cargo build for UniFFI library generation");
+    assert!(
+        status.success(),
+        "cargo build for UniFFI library generation failed with status {status}"
+    );
+    assert!(
+        library_path.exists(),
+        "expected generated library at {library_path}, but it does not exist"
+    );
+}
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -30,11 +55,13 @@ fn main() {
     } else {
         "so"
     };
-    let library_path = target_dir.join(profile).join(format!(
+    let library_path = target_dir.join(&profile).join(format!(
         "lib{}.{}",
         env!("CARGO_PKG_NAME").replace('-', "_"),
         lib_ext
     ));
+
+    ensure_library_exists(&library_path, &profile);
 
     match language.as_str() {
         "kotlin" => {
