@@ -116,6 +116,7 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         v: PROTOCOL_VERSION,
         id,
         conversation_id,
+        thread_id: None,
         sender_id,
         content,
         format,

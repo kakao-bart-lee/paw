@@ -52,6 +52,7 @@ pub async fn handle_socket(
         v: PROTOCOL_VERSION,
         user_id: connection.user_id,
         server_time: Utc::now(),
+        capabilities: None,
     })) {
         let _ = outbound_tx.send(Message::Text(frame.into()));
     }
@@ -277,6 +278,18 @@ async fn handle_client_message(
                 }))?;
             let _ = outbound_tx.send(Message::Text(payload.into()));
         }
+        ClientMessage::ThreadCreate(thread_create) => {
+            require_v(thread_create.v)?;
+        }
+        ClientMessage::ThreadBindAgent(thread_bind_agent) => {
+            require_v(thread_bind_agent.v)?;
+        }
+        ClientMessage::ThreadUnbindAgent(thread_unbind_agent) => {
+            require_v(thread_unbind_agent.v)?;
+        }
+        ClientMessage::ThreadDelete(thread_delete) => {
+            require_v(thread_delete.v)?;
+        }
     }
 
     Ok(())
@@ -322,6 +335,7 @@ async fn fetch_messages_after_seq(
             v: PROTOCOL_VERSION,
             id: row.try_get("id")?,
             conversation_id: row.try_get("conversation_id")?,
+            thread_id: None,
             sender_id: row.try_get("sender_id")?,
             content: row.try_get("content")?,
             format,

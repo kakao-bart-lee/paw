@@ -122,6 +122,7 @@ impl WsService {
             .send(ClientMessage::Connect(ConnectMsg {
                 v: PROTOCOL_VERSION,
                 token: access_token,
+                capabilities: None,
             }))
             .await?;
         Ok(uri)
@@ -188,6 +189,7 @@ impl WsService {
         self.send_if_connected(ClientMessage::TypingStart(TypingMsg {
             v: PROTOCOL_VERSION,
             conversation_id,
+            thread_id: None,
             user_id: None,
         }))
         .await
@@ -200,6 +202,7 @@ impl WsService {
         self.send_if_connected(ClientMessage::TypingStop(TypingMsg {
             v: PROTOCOL_VERSION,
             conversation_id,
+            thread_id: None,
             user_id: None,
         }))
         .await
@@ -213,6 +216,7 @@ impl WsService {
         self.send_if_connected(ClientMessage::MessageAck(MessageAckMsg {
             v: PROTOCOL_VERSION,
             conversation_id,
+            thread_id: None,
             last_seq,
         }))
         .await
@@ -226,6 +230,7 @@ impl WsService {
         self.send_if_connected(ClientMessage::Sync(SyncMsg {
             v: PROTOCOL_VERSION,
             conversation_id,
+            thread_id: None,
             last_seq,
         }))
         .await
@@ -403,6 +408,7 @@ mod tests {
                 v: PROTOCOL_VERSION,
                 user_id: Uuid::new_v4(),
                 server_time: Utc::now(),
+                capabilities: None,
             }))
             .await
             .unwrap();
