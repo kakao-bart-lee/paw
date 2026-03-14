@@ -249,7 +249,7 @@ private fun ChatShellCard(
             ShellStatChip("threads", uiState.chat.conversations.size.toString())
             ShellStatChip("selected", selectedConversation?.name ?: "none")
             ShellStatChip("messages", uiState.chat.messages.size.toString())
-            if (selectedConversation?.unreadCount ?: 0 > 0) {
+            if ((selectedConversation?.unreadCount ?: 0) > 0) {
                 ShellStatChip("unread", selectedConversation?.unreadCount.toString())
             }
         }

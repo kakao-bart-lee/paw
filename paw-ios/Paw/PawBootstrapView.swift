@@ -1,5 +1,33 @@
 import SwiftUI
 
+struct StatusPill: View {
+    let title: String
+    let value: String
+    var identifier: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(PawTypography.labelSmall)
+                .foregroundStyle(PawTheme.mutedText)
+            Text(value)
+                .font(PawTypography.bodySmall)
+                .foregroundStyle(PawTheme.strongText)
+                .lineLimit(2)
+                .applyAccessibilityIdentifier(identifier)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PawTheme.surface3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(PawTheme.outline, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
 struct PawBootstrapView: View {
     @EnvironmentObject private var coreManager: PawCoreManager
 
@@ -25,11 +53,11 @@ struct PawBootstrapView: View {
                 : "sign in, restore session, then unlock the iOS chat workspace",
             background: PawTheme.surface2
         ) {
-            metadataPillRow([
-                statusPill(title: "bridge", value: coreManager.preview.bridgeStatus),
-                statusPill(title: "runtime", value: coreManager.preview.runtime.connectionState, identifier: PawAccessibility.connectionState),
-                statusPill(title: "push", value: coreManager.preview.push.status, identifier: coreManager.preview.auth.hasAccessToken ? PawAccessibility.pushStatus : nil)
-            ])
+            metadataPillRow(
+                StatusPill(title: "bridge", value: coreManager.preview.bridgeStatus),
+                StatusPill(title: "runtime", value: coreManager.preview.runtime.connectionState, identifier: PawAccessibility.connectionState),
+                StatusPill(title: "push", value: coreManager.preview.push.status, identifier: coreManager.preview.auth.hasAccessToken ? PawAccessibility.pushStatus : nil)
+            )
 
             if coreManager.preview.auth.hasAccessToken {
                 VStack(alignment: .leading, spacing: 8) {
@@ -331,11 +359,11 @@ struct PawBootstrapView: View {
                 Text("Switch threads, send a runtime prompt, and verify push or lifecycle behavior without dropping the current shell context.")
                     .font(PawTypography.bodySmall)
                     .foregroundStyle(PawTheme.mutedText)
-                metadataPillRow([
-                    statusPill(title: "username", value: coreManager.preview.auth.username.ifEmpty("guest")),
-                    statusPill(title: "device", value: coreManager.preview.auth.deviceName.ifEmpty("ready")),
-                    statusPill(title: "composer", value: coreManager.preview.composerText, identifier: PawAccessibility.composer)
-                ])
+                metadataPillRow(
+                    StatusPill(title: "username", value: coreManager.preview.auth.username.ifEmpty("guest")),
+                    StatusPill(title: "device", value: coreManager.preview.auth.deviceName.ifEmpty("ready")),
+                    StatusPill(title: "composer", value: coreManager.preview.composerText, identifier: PawAccessibility.composer)
+                )
             }
         }
     }
@@ -422,36 +450,12 @@ struct PawBootstrapView: View {
     }
 
     @ViewBuilder
-    private func metadataPillRow(_ pills: [AnyView]) -> some View {
+    private func metadataPillRow(_ pills: StatusPill...) -> some View {
         HStack(spacing: 8) {
             ForEach(Array(pills.enumerated()), id: \.offset) { _, pill in
                 pill
             }
         }
-    }
-
-    private func statusPill(title: String, value: String, identifier: String? = nil) -> AnyView {
-        AnyView(
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title.uppercased())
-                    .font(PawTypography.labelSmall)
-                    .foregroundStyle(PawTheme.mutedText)
-                Text(value)
-                    .font(PawTypography.bodySmall)
-                    .foregroundStyle(PawTheme.strongText)
-                    .lineLimit(2)
-                    .applyAccessibilityIdentifier(identifier)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PawTheme.surface3)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(PawTheme.outline, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        )
     }
 
     @ViewBuilder

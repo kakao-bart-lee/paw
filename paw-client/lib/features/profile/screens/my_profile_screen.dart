@@ -321,8 +321,7 @@ class _ProfileInfoRow extends StatelessWidget {
               ],
             ),
           ),
-          // ignore: use_null_aware_elements
-          if (trailing case final trailingWidget?) trailingWidget,
+          if (trailing != null) trailing!,
         ],
       ),
     );

@@ -325,7 +325,7 @@ class _SearchResultTile extends StatelessWidget {
     BuildContext context,
     ColorScheme colorScheme,
   ) {
-    final regex = RegExp(r'<mark>(.*?)</mark>');
+    final regex = RegExp(r'\[(.*?)\]');
     final spans = <TextSpan>[];
     var start = 0;
 
@@ -351,6 +351,8 @@ class _SearchResultTile extends StatelessWidget {
     }
 
     return RichText(
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
       text: TextSpan(
         style: Theme.of(context).textTheme.bodyMedium,
         children: spans,

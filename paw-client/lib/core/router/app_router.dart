@@ -132,7 +132,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 
-  ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+  ref.listen<AuthState>(authNotifierProvider, (_, __) {
     router.refresh();
   });
   ref.onDispose(router.dispose);

@@ -175,31 +175,6 @@ class _AgentScreenState extends State<AgentScreen> {
                 child: _AgentCard(agent: agent),
               ),
             ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(color: AppTheme.outline),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '검토 메모',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelMedium?.copyWith(color: AppTheme.accent),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '권한 문구, 설치 상태, 빈 검색 결과를 Web/Desktop 지원 화면과 동일한 톤으로 유지합니다.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

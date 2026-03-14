@@ -16,10 +16,10 @@ class GroupInfoScreen extends ConsumerStatefulWidget {
 }
 
 class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
-  final List<Map<String, dynamic>> _mockMembers = [
-    {'id': 'user_1', 'name': '나 (방장)', 'role': 'owner', 'avatarUrl': null},
-    {'id': 'user_2', 'name': '김철수', 'role': 'member', 'avatarUrl': null},
-    {'id': 'user_3', 'name': '이영희', 'role': 'member', 'avatarUrl': null},
+  final List<_GroupMember> _mockMembers = const [
+    _GroupMember(id: 'user_1', name: '나 (방장)', role: 'owner'),
+    _GroupMember(id: 'user_2', name: '김철수', role: 'member'),
+    _GroupMember(id: 'user_3', name: '이영희', role: 'member'),
   ];
 
   void _showStubSnackBar(String message) {
@@ -301,12 +301,12 @@ class _GroupInfoRow extends StatelessWidget {
 class _MemberRow extends StatelessWidget {
   const _MemberRow({required this.member, this.last = false});
 
-  final Map<String, dynamic> member;
+  final _GroupMember member;
   final bool last;
 
   @override
   Widget build(BuildContext context) {
-    final isOwner = member['role'] == 'owner';
+    final isOwner = member.role == 'owner';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -318,14 +318,14 @@ class _MemberRow extends StatelessWidget {
       child: Row(
         children: [
           AvatarWidget(
-            displayName: member['name'] as String,
-            imageUrl: member['avatarUrl'] as String?,
+            displayName: member.name,
+            imageUrl: member.avatarUrl,
             size: 40,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              member['name'] as String,
+              member.name,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -345,4 +345,18 @@ class _MemberRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GroupMember {
+  const _GroupMember({
+    required this.id,
+    required this.name,
+    required this.role,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String name;
+  final String role;
+  final String? avatarUrl;
 }
