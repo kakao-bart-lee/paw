@@ -107,6 +107,7 @@ pub struct UserProfile {
     pub id: Uuid,
     pub phone: Option<String>,
     pub username: Option<String>,
+    pub preferred_locale: Option<String>,
     pub discoverable_by_phone: bool,
     pub phone_verified_at: Option<DateTime<Utc>>,
     pub display_name: Option<String>,
@@ -119,6 +120,7 @@ pub struct UpdateMeRequest {
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
     pub username: Option<String>,
+    pub preferred_locale: Option<String>,
     pub discoverable_by_phone: Option<bool>,
 }
 
@@ -699,6 +701,7 @@ mod tests {
             "id": Uuid::nil(),
             "phone": "+821012345678",
             "username": json["username"],
+            "preferred_locale": json["preferred_locale"],
             "discoverable_by_phone": json["discoverable_by_phone"],
             "phone_verified_at": Utc::now(),
             "display_name": json["display_name"],
@@ -725,6 +728,7 @@ mod tests {
         Json(json!({
             "id": user_id,
             "username": "other_user",
+            "preferred_locale": "ko-KR",
             "display_name": "Other",
             "avatar_url": null,
             "discoverable_by_phone": false,
@@ -789,6 +793,7 @@ mod tests {
             "id": Uuid::nil(),
             "phone": "+821012345678",
             "username": username,
+            "preferred_locale": "ko-KR",
             "discoverable_by_phone": true,
             "phone_verified_at": Utc::now(),
             "display_name": "Paw Friend",
@@ -888,11 +893,13 @@ mod tests {
                 display_name: Some("Haruna".to_string()),
                 avatar_url: Some("https://example.com/me.png".to_string()),
                 username: Some("haruna".to_string()),
+                preferred_locale: Some("en-US".to_string()),
                 discoverable_by_phone: Some(true),
             })
             .await
             .unwrap();
         assert_eq!(updated.username.as_deref(), Some("haruna"));
+        assert_eq!(updated.preferred_locale.as_deref(), Some("en-US"));
 
         let other = client.get_user_by_id(Uuid::new_v4()).await.unwrap();
         assert_eq!(other.username.as_deref(), Some("other_user"));

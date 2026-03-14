@@ -22,6 +22,7 @@ use super::models::{
 use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
+use crate::i18n::{error_response, error_response_with_details, localized_message, RequestLocale};
 use crate::messages::service::{check_member, Membership};
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
@@ -43,6 +44,7 @@ pub struct RemoveAgentResponse {
 
 pub async fn register_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(user_id): Extension<UserId>,
     Json(req): Json<RegisterAgentRequest>,
 ) -> Result<Json<RegisterAgentResponse>, (StatusCode, Json<serde_json::Value>)> {
@@ -50,9 +52,11 @@ pub async fn register_agent_handler(
         .await
         .map_err(|e| {
             tracing::error!("failed to register agent: {e}");
-            (
+            error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "registration_failed" })),
+                "registration_failed",
+                &locale,
+                "Failed to register agent",
             )
         })?;
 
@@ -61,29 +65,35 @@ pub async fn register_agent_handler(
 
 pub async fn get_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<AgentProfile>, (StatusCode, Json<serde_json::Value>)> {
     let profile = service::get_agent_profile(&state.db, agent_id)
         .await
         .map_err(|e| {
             tracing::error!("failed to fetch agent profile: {e}");
-            (
+            error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "internal_error" })),
+                "internal_error",
+                &locale,
+                "Failed to fetch agent profile",
             )
         })?;
 
     match profile {
         Some(p) => Ok(Json(p)),
-        None => Err((
+        None => Err(error(
             StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": "agent_not_found" })),
+            "agent_not_found",
+            &locale,
+            "Agent not found",
         )),
     }
 }
 
 pub async fn revoke_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(user_id): Extension<UserId>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<RevokeAgentResponse>, (StatusCode, Json<serde_json::Value>)> {
@@ -91,23 +101,28 @@ pub async fn revoke_agent_handler(
         .await
         .map_err(|e| {
             tracing::error!("failed to revoke agent token: {e}");
-            (
+            error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "internal_error" })),
+                "internal_error",
+                &locale,
+                "Failed to revoke agent token",
             )
         })?;
 
     match result {
         Some(r) => Ok(Json(r)),
-        None => Err((
+        None => Err(error(
             StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": "agent_not_found_or_not_owner" })),
+            "agent_not_found_or_not_owner",
+            &locale,
+            "Agent not found or you are not the owner",
         )),
     }
 }
 
 pub async fn invite_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(conversation_id): Path<Uuid>,
     Json(payload): Json<InviteAgentRequest>,
@@ -115,31 +130,28 @@ pub async fn invite_agent_handler(
     match check_member(&state.db, conversation_id, user_id).await {
         Ok(Membership::Member) => {}
         Ok(Membership::NotMember) => {
-            return Err((
+            return Err(error(
                 StatusCode::FORBIDDEN,
-                Json(json!({
-                    "error": "forbidden",
-                    "message": "User is not a member of this conversation"
-                })),
+                "forbidden",
+                &locale,
+                "User is not a member of this conversation",
             ));
         }
         Ok(Membership::ConversationNotFound) => {
-            return Err((
+            return Err(error(
                 StatusCode::NOT_FOUND,
-                Json(json!({
-                    "error": "conversation_not_found",
-                    "message": "Conversation not found"
-                })),
+                "conversation_not_found",
+                &locale,
+                "Conversation not found",
             ));
         }
         Err(err) => {
             tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed membership check");
-            return Err((
+            return Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({
-                    "error": "membership_check_failed",
-                    "message": "Could not validate conversation membership"
-                })),
+                "membership_check_failed",
+                &locale,
+                "Could not validate conversation membership",
             ));
         }
     }
@@ -153,28 +165,25 @@ pub async fn invite_agent_handler(
     .await
     {
         Ok(true) => Ok(Json(InviteAgentResponse { invited: true })),
-        Ok(false) => Err((
+        Ok(false) => Err(error(
             StatusCode::CONFLICT,
-            Json(json!({
-                "error": "already_invited",
-                "message": "Agent is already invited to this conversation"
-            })),
+            "already_invited",
+            &locale,
+            "Agent is already invited to this conversation",
         )),
-        Err(err) if err.to_string() == "agent_not_found_or_revoked" => Err((
+        Err(err) if err.to_string() == "agent_not_found_or_revoked" => Err(error(
             StatusCode::NOT_FOUND,
-            Json(json!({
-                "error": "agent_not_found",
-                "message": "Agent not found or revoked"
-            })),
+            "agent_not_found",
+            &locale,
+            "Agent not found or revoked",
         )),
         Err(err) => {
             tracing::error!(%err, conversation_id = %conversation_id, agent_id = %payload.agent_id, "failed to invite agent");
-            Err((
+            Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({
-                    "error": "invite_failed",
-                    "message": "Failed to invite agent"
-                })),
+                "invite_failed",
+                &locale,
+                "Failed to invite agent",
             ))
         }
     }
@@ -182,6 +191,7 @@ pub async fn invite_agent_handler(
 
 pub async fn remove_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<RemoveAgentResponse>, (StatusCode, Json<Value>)> {
@@ -189,28 +199,25 @@ pub async fn remove_agent_handler(
         .await
     {
         Ok(true) => Ok(Json(RemoveAgentResponse { removed: true })),
-        Ok(false) => Err((
+        Ok(false) => Err(error(
             StatusCode::NOT_FOUND,
-            Json(json!({
-                "error": "agent_not_found",
-                "message": "Agent is not in this conversation"
-            })),
+            "agent_not_found",
+            &locale,
+            "Agent is not in this conversation",
         )),
-        Err(err) if err.to_string() == "not_owner" => Err((
+        Err(err) if err.to_string() == "not_owner" => Err(error(
             StatusCode::FORBIDDEN,
-            Json(json!({
-                "error": "forbidden",
-                "message": "Only conversation owners can remove agents"
-            })),
+            "forbidden",
+            &locale,
+            "Only conversation owners can remove agents",
         )),
         Err(err) => {
             tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, user_id = %user_id, "failed to remove agent");
-            Err((
+            Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({
-                    "error": "remove_failed",
-                    "message": "Failed to remove agent"
-                })),
+                "remove_failed",
+                &locale,
+                "Failed to remove agent",
             ))
         }
     }
@@ -218,6 +225,7 @@ pub async fn remove_agent_handler(
 
 pub async fn marketplace_search_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Query(params): Query<MarketplaceSearchQuery>,
 ) -> Result<Json<MarketplaceSearchResponse>, (StatusCode, Json<Value>)> {
     let agents = service::search_marketplace_agents(
@@ -229,9 +237,11 @@ pub async fn marketplace_search_handler(
     .await
     .map_err(|e| {
         tracing::error!("marketplace search failed: {e}");
-        (
+        error(
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": "search_failed", "message": "Failed to search marketplace" })),
+            "search_failed",
+            &locale,
+            "Failed to search marketplace",
         )
     })?;
 
@@ -241,31 +251,35 @@ pub async fn marketplace_search_handler(
 
 pub async fn marketplace_agent_detail_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<Value>)> {
     let detail = service::get_marketplace_agent_detail(state.db.as_ref(), agent_id)
         .await
         .map_err(|e| {
             tracing::error!("marketplace agent detail failed: {e}");
-            (
+            error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "internal_error", "message": "Failed to get agent detail" })),
+                "internal_error",
+                &locale,
+                "Failed to get agent detail",
             )
         })?;
 
     match detail {
         Some(d) => Ok(Json(serde_json::to_value(d).unwrap())),
-        None => Err((
+        None => Err(error(
             StatusCode::NOT_FOUND,
-            Json(
-                json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" }),
-            ),
+            "agent_not_found",
+            &locale,
+            "Agent not found in marketplace",
         )),
     }
 }
 
 pub async fn install_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<InstallAgentResponse>, (StatusCode, Json<Value>)> {
@@ -274,21 +288,25 @@ pub async fn install_agent_handler(
             installed: true,
             agent_id,
         })),
-        Ok(false) => Err((
+        Ok(false) => Err(error(
             StatusCode::CONFLICT,
-            Json(json!({ "error": "already_installed", "message": "Agent is already installed" })),
+            "already_installed",
+            &locale,
+            "Agent is already installed",
         )),
-        Err(err) if err.to_string() == "agent_not_found" => Err((
+        Err(err) if err.to_string() == "agent_not_found" => Err(error(
             StatusCode::NOT_FOUND,
-            Json(
-                json!({ "error": "agent_not_found", "message": "Agent not found in marketplace" }),
-            ),
+            "agent_not_found",
+            &locale,
+            "Agent not found in marketplace",
         )),
         Err(err) => {
             tracing::error!("install agent failed: {err}");
-            Err((
+            Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "install_failed", "message": "Failed to install agent" })),
+                "install_failed",
+                &locale,
+                "Failed to install agent",
             ))
         }
     }
@@ -296,6 +314,7 @@ pub async fn install_agent_handler(
 
 pub async fn uninstall_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(agent_id): Path<Uuid>,
 ) -> Result<Json<UninstallAgentResponse>, (StatusCode, Json<Value>)> {
@@ -304,17 +323,19 @@ pub async fn uninstall_agent_handler(
             uninstalled: true,
             agent_id,
         })),
-        Ok(false) => Err((
+        Ok(false) => Err(error(
             StatusCode::NOT_FOUND,
-            Json(json!({ "error": "not_installed", "message": "Agent is not installed" })),
+            "not_installed",
+            &locale,
+            "Agent is not installed",
         )),
         Err(err) => {
             tracing::error!("uninstall agent failed: {err}");
-            Err((
+            Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(
-                    json!({ "error": "uninstall_failed", "message": "Failed to uninstall agent" }),
-                ),
+                "uninstall_failed",
+                &locale,
+                "Failed to uninstall agent",
             ))
         }
     }
@@ -322,15 +343,18 @@ pub async fn uninstall_agent_handler(
 
 pub async fn list_installed_agents_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
 ) -> Result<Json<InstalledAgentsResponse>, (StatusCode, Json<Value>)> {
     let agents = service::list_installed_agents(state.db.as_ref(), user_id)
         .await
         .map_err(|e| {
             tracing::error!("list installed agents failed: {e}");
-            (
+            error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "internal_error", "message": "Failed to list installed agents" })),
+                "internal_error",
+                &locale,
+                "Failed to list installed agents",
             )
         })?;
 
@@ -339,14 +363,18 @@ pub async fn list_installed_agents_handler(
 
 pub async fn publish_agent_handler(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(agent_id): Path<Uuid>,
     Json(req): Json<PublishAgentRequest>,
 ) -> Result<Json<PublishAgentResponse>, (StatusCode, Json<Value>)> {
     if let Err(msg) = req.manifest.validate() {
-        return Err((
+        return Err(error_with_details(
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "invalid_manifest", "message": msg })),
+            "invalid_manifest",
+            &locale,
+            Some(msg),
+            msg,
         ));
     }
 
@@ -364,17 +392,19 @@ pub async fn publish_agent_handler(
             published: true,
             agent_id,
         })),
-        Ok(false) => Err((
+        Ok(false) => Err(error(
             StatusCode::NOT_FOUND,
-            Json(
-                json!({ "error": "agent_not_found_or_not_owner", "message": "Agent not found or you are not the owner" }),
-            ),
+            "agent_not_found_or_not_owner",
+            &locale,
+            "Agent not found or you are not the owner",
         )),
         Err(err) => {
             tracing::error!("publish agent failed: {err}");
-            Err((
+            Err(error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "publish_failed", "message": "Failed to publish agent" })),
+                "publish_failed",
+                &locale,
+                "Failed to publish agent",
             ))
         }
     }
@@ -382,34 +412,54 @@ pub async fn publish_agent_handler(
 
 pub async fn agent_ws_handler(
     ws: WebSocketUpgrade,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Query(params): Query<HashMap<String, String>>,
     State(state): State<AppState>,
 ) -> Response {
     let raw_token = match params.get("token") {
         Some(t) if !t.is_empty() => t.clone(),
-        _ => return (StatusCode::UNAUTHORIZED, "missing token").into_response(),
+        _ => {
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "agent_missing_token",
+                &locale,
+                "Agent token is required",
+            )
+            .into_response()
+        }
     };
 
     let agent_id = match service::verify_agent_token(&state.db, &raw_token).await {
         Ok(Some(id)) => id,
-        Ok(None) => return (StatusCode::UNAUTHORIZED, "invalid agent token").into_response(),
+        Ok(None) => {
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "invalid_agent_token",
+                &locale,
+                "Agent token is invalid",
+            )
+            .into_response()
+        }
         Err(e) => {
             tracing::error!("agent token verification failed: {e}");
-            return (StatusCode::INTERNAL_SERVER_ERROR, "internal error").into_response();
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Internal error",
+            )
+            .into_response();
         }
     };
 
     let nats = match &state.nats {
         Some(n) => n.clone(),
         None => {
+            let locale = locale.clone();
             return ws.on_upgrade(move |mut socket| async move {
                 use axum::extract::ws::Message;
-                let err_frame = serde_json::json!({
-                    "v": 1,
-                    "type": "error",
-                    "code": "nats_unavailable",
-                    "message": "Agent gateway requires NATS"
-                });
+                let err_frame =
+                    agent_error_frame("nats_unavailable", &locale, "Agent gateway requires NATS");
                 let _ = socket
                     .send(Message::Text(err_frame.to_string().into()))
                     .await;
@@ -419,12 +469,15 @@ pub async fn agent_ws_handler(
     };
 
     let state_for_socket = state.clone();
-    ws.on_upgrade(move |socket| handle_agent_socket(socket, agent_id, nats, state_for_socket))
+    ws.on_upgrade(move |socket| {
+        handle_agent_socket(socket, agent_id, locale, nats, state_for_socket)
+    })
 }
 
 async fn handle_agent_socket(
     socket: axum::extract::ws::WebSocket,
     agent_id: uuid::Uuid,
+    locale: String,
     nats: std::sync::Arc<async_nats::Client>,
     state: AppState,
 ) {
@@ -437,11 +490,11 @@ async fn handle_agent_socket(
         Ok(sub) => sub,
         Err(e) => {
             tracing::error!("NATS subscribe failed for {subject}: {e}");
-            let err = serde_json::json!({
-                "v": 1,
-                "type": "error",
-                "code": "subscribe_failed"
-            });
+            let err = agent_error_frame(
+                "subscribe_failed",
+                &locale,
+                "Failed to subscribe agent session",
+            );
             let _ = ws_tx.send(Message::Text(err.to_string().into())).await;
             return;
         }
@@ -597,6 +650,29 @@ async fn relay_agent_stream_message(
     }
 
     Ok(())
+}
+
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
+}
+
+fn error_with_details(
+    status: StatusCode,
+    code: &str,
+    locale: &str,
+    details: Option<&str>,
+    message: &str,
+) -> (StatusCode, Json<Value>) {
+    error_response_with_details(status, code, locale, details, message)
+}
+
+fn agent_error_frame(code: &str, locale: &str, fallback: &str) -> Value {
+    json!({
+        "v": PROTOCOL_VERSION,
+        "type": "error",
+        "code": code,
+        "message": localized_message(code, locale, fallback),
+    })
 }
 
 async fn relay_stream_frame(

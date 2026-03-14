@@ -96,7 +96,8 @@ impl SyncEngine {
         conversations: impl IntoIterator<Item = ConversationSyncCursor>,
     ) {
         for conversation in conversations {
-            self.pending_recoveries.remove(&conversation.conversation_id);
+            self.pending_recoveries
+                .remove(&conversation.conversation_id);
         }
     }
 
@@ -116,10 +117,12 @@ impl SyncEngine {
     pub fn pending_recoveries(&self) -> Vec<ConversationSyncCursor> {
         self.pending_recoveries
             .iter()
-            .map(|(conversation_id, request_from_seq)| ConversationSyncCursor {
-                conversation_id: *conversation_id,
-                last_seq: *request_from_seq,
-            })
+            .map(
+                |(conversation_id, request_from_seq)| ConversationSyncCursor {
+                    conversation_id: *conversation_id,
+                    last_seq: *request_from_seq,
+                },
+            )
             .collect()
     }
 }

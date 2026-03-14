@@ -7,6 +7,7 @@ use crate::channels::models::{
 use crate::channels::service::{
     self, ChannelAccess, SendPermission, SubscribeError, UnsubscribeError,
 };
+use crate::i18n::{error_response, RequestLocale};
 use crate::messages::service as message_service;
 use axum::{
     extract::{Extension, Path, Query, State},
@@ -14,11 +15,12 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use uuid::Uuid;
 
 pub async fn create_channel(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Json(payload): Json<CreateChannelRequest>,
 ) -> Response {
@@ -27,6 +29,7 @@ pub async fn create_channel(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_channel_name",
+            &locale,
             "Channel name is required",
         )
         .into_response();
@@ -40,6 +43,7 @@ pub async fn create_channel(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "channel_create_failed",
+                &locale,
                 "Could not create channel",
             )
             .into_response();
@@ -59,6 +63,7 @@ pub async fn create_channel(
 
 pub async fn list_channels(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Query(query): Query<ListChannelsQuery>,
 ) -> Response {
@@ -70,6 +75,7 @@ pub async fn list_channels(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "channel_list_failed",
+                &locale,
                 "Could not list channels",
             )
             .into_response();
@@ -81,6 +87,7 @@ pub async fn list_channels(
 
 pub async fn subscribe_channel(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(channel_id): Path<Uuid>,
 ) -> Response {
@@ -89,12 +96,14 @@ pub async fn subscribe_channel(
         Err(SubscribeError::NotFound) => error(
             StatusCode::NOT_FOUND,
             "channel_not_found",
+            &locale,
             "Channel not found",
         )
         .into_response(),
         Err(SubscribeError::Forbidden) => error(
             StatusCode::FORBIDDEN,
             "forbidden",
+            &locale,
             "Cannot subscribe to a private channel",
         )
         .into_response(),
@@ -103,6 +112,7 @@ pub async fn subscribe_channel(
 
 pub async fn unsubscribe_channel(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(channel_id): Path<Uuid>,
 ) -> Response {
@@ -111,12 +121,14 @@ pub async fn unsubscribe_channel(
         Err(UnsubscribeError::NotFound) => error(
             StatusCode::NOT_FOUND,
             "channel_not_found",
+            &locale,
             "Channel not found",
         )
         .into_response(),
         Err(UnsubscribeError::CannotUnsubscribeOwner) => error(
             StatusCode::FORBIDDEN,
             "forbidden",
+            &locale,
             "Channel owner cannot unsubscribe",
         )
         .into_response(),
@@ -125,6 +137,7 @@ pub async fn unsubscribe_channel(
 
 pub async fn send_channel_message(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(channel_id): Path<Uuid>,
     Json(payload): Json<SendChannelMessageRequest>,
@@ -133,6 +146,7 @@ pub async fn send_channel_message(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_content",
+            &locale,
             "Message content is required",
         )
         .into_response();
@@ -143,6 +157,7 @@ pub async fn send_channel_message(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_format",
+            &locale,
             "format must be markdown or plain",
         )
         .into_response();
@@ -154,6 +169,7 @@ pub async fn send_channel_message(
             return error(
                 StatusCode::FORBIDDEN,
                 "forbidden",
+                &locale,
                 "Only channel owner can send messages",
             )
             .into_response();
@@ -162,6 +178,7 @@ pub async fn send_channel_message(
             return error(
                 StatusCode::NOT_FOUND,
                 "channel_not_found",
+                &locale,
                 "Channel not found",
             )
             .into_response();
@@ -171,6 +188,7 @@ pub async fn send_channel_message(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "channel_permission_failed",
+                &locale,
                 "Could not validate channel permission",
             )
             .into_response();
@@ -192,6 +210,7 @@ pub async fn send_channel_message(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "message_lookup_failed",
+                &locale,
                 "Could not send message",
             )
             .into_response();
@@ -223,6 +242,7 @@ pub async fn send_channel_message(
                 _ => error(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "message_send_failed",
+                    &locale,
                     "Could not send message",
                 )
                 .into_response(),
@@ -233,6 +253,7 @@ pub async fn send_channel_message(
 
 pub async fn get_channel_messages(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(channel_id): Path<Uuid>,
     Query(query): Query<GetChannelMessagesQuery>,
@@ -243,6 +264,7 @@ pub async fn get_channel_messages(
             return error(
                 StatusCode::FORBIDDEN,
                 "forbidden",
+                &locale,
                 "User is not subscribed to this channel",
             )
             .into_response();
@@ -251,6 +273,7 @@ pub async fn get_channel_messages(
             return error(
                 StatusCode::NOT_FOUND,
                 "channel_not_found",
+                &locale,
                 "Channel not found",
             )
             .into_response();
@@ -260,6 +283,7 @@ pub async fn get_channel_messages(
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "channel_access_failed",
+                &locale,
                 "Could not validate channel access",
             )
             .into_response();
@@ -277,6 +301,7 @@ pub async fn get_channel_messages(
                 return error(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "channel_message_history_failed",
+                    &locale,
                     "Could not fetch channel message history",
                 )
                 .into_response();
@@ -291,12 +316,6 @@ pub async fn get_channel_messages(
     Json(GetChannelMessagesResponse { messages, has_more }).into_response()
 }
 
-fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
-    (
-        status,
-        Json(json!({
-            "error": code,
-            "message": message,
-        })),
-    )
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
 }

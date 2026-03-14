@@ -7,6 +7,7 @@ pub struct User {
     pub id: Uuid,
     pub phone: Option<String>,
     pub username: Option<String>,
+    pub preferred_locale: String,
     pub discoverable_by_phone: bool,
     pub phone_verified_at: Option<DateTime<Utc>>,
     pub display_name: Option<String>,
@@ -25,6 +26,7 @@ pub struct PublicUser {
 #[derive(Debug, Deserialize)]
 pub struct UpdateProfileRequest {
     pub username: Option<String>,
+    pub preferred_locale: Option<String>,
     pub discoverable_by_phone: Option<bool>,
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,

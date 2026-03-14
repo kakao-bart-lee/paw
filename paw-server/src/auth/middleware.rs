@@ -4,11 +4,10 @@ use axum::{
     http::{header, Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
-    Json,
 };
-use serde_json::json;
 use uuid::Uuid;
 
+use crate::i18n::{error_response_with_request_id, lookup_user_preferred_locale, RequestLocale};
 use crate::observability::RequestId;
 
 use super::{jwt, AppState};
@@ -51,8 +50,27 @@ pub async fn auth_middleware(
 
     request.extensions_mut().insert(UserId(claims.sub));
     request.extensions_mut().insert(DeviceId(claims.device_id));
+    match lookup_user_preferred_locale(&state.db, claims.sub).await {
+        Ok(Some(preferred_locale)) => {
+            request
+                .extensions_mut()
+                .insert(RequestLocale(preferred_locale));
+        }
+        Ok(None) => {}
+        Err(err) => {
+            tracing::warn!(%err, user_id = %claims.sub, "failed to load preferred locale");
+        }
+    }
 
-    next.run(request).await
+    let response_locale = request
+        .extensions()
+        .get::<RequestLocale>()
+        .cloned()
+        .unwrap_or_else(|| RequestLocale(state.default_locale.clone()));
+
+    let mut response = next.run(request).await;
+    response.extensions_mut().insert(response_locale);
+    response
 }
 
 fn unauthorized(code: &str, message: &str, request: &Request<Body>) -> Response {
@@ -61,6 +79,11 @@ fn unauthorized(code: &str, message: &str, request: &Request<Body>) -> Response 
         .get::<RequestId>()
         .map(|req_id| req_id.0.as_str())
         .unwrap_or("-");
+    let locale = request
+        .extensions()
+        .get::<RequestLocale>()
+        .map(|locale| locale.0.as_str())
+        .unwrap_or("ko-KR");
     tracing::warn!(
         request_id = %request_id,
         path = %request.uri().path(),
@@ -68,13 +91,12 @@ fn unauthorized(code: &str, message: &str, request: &Request<Body>) -> Response 
         "auth failed"
     );
 
-    (
+    error_response_with_request_id(
         StatusCode::UNAUTHORIZED,
-        Json(json!({
-            "error": code,
-            "message": message,
-            "request_id": request_id,
-        })),
+        code,
+        locale,
+        Some(request_id),
+        message,
     )
-        .into_response()
+    .into_response()
 }
