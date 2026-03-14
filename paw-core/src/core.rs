@@ -188,8 +188,18 @@ impl CoreRuntime {
         RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service))
     }
 
-    pub fn on_session_event(&mut self, event: SessionEvent) -> RuntimeEffect {
-        RuntimeEffect::SessionInvalidated(event)
+    pub async fn handle_session_event(
+        &mut self,
+        token_store: &dyn TokenStore,
+        event: SessionEvent,
+    ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
+        token_store.clear().await;
+        self.ws_service.disconnect().await?;
+
+        Ok(vec![
+            RuntimeEffect::SessionInvalidated(event),
+            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service)),
+        ])
     }
 
     pub async fn reconnect_with_stored_token(
@@ -894,5 +904,51 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[tokio::test]
+    async fn session_invalidation_clears_tokens_and_disconnects_runtime() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let (mut runtime, transport, calls) = runtime_with_db(db);
+        let token_store = InMemoryTokenStore::new();
+        token_store
+            .write(StoredTokens::new("access-token", "refresh-token"))
+            .await;
+        let auth_client = StubAuthClient {
+            calls: calls.clone(),
+        };
+
+        runtime.bootstrap(&token_store, &auth_client).await.unwrap();
+
+        let effects = runtime
+            .handle_session_event(
+                &token_store,
+                SessionEvent {
+                    reason: crate::auth::SessionExpiryReason::Unauthorized,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(token_store.snapshot().await, None);
+        assert_eq!(
+            effects,
+            vec![
+                RuntimeEffect::SessionInvalidated(SessionEvent {
+                    reason: crate::auth::SessionExpiryReason::Unauthorized,
+                }),
+                RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+                    state: ConnectionStateView::Disconnected,
+                    attempts: 0,
+                    pending_reconnect_delay_ms: None,
+                    pending_reconnect_uri: None,
+                }),
+            ]
+        );
+        assert_eq!(*transport.closes.lock().unwrap(), 2);
+        assert_eq!(
+            runtime.ws_service().connection_state(),
+            WsConnectionState::Disconnected
+        );
     }
 }
