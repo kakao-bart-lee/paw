@@ -7,7 +7,7 @@ use axum::{
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{AgentStreamMsg, ServerMessage, StreamEndMsg, PROTOCOL_VERSION};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -22,7 +22,7 @@ use super::models::{
 use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
-use crate::i18n::{error_response, RequestLocale};
+use crate::i18n::{error_response, localized_message, RequestLocale};
 use crate::messages::service::{check_member, Membership};
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
@@ -411,34 +411,54 @@ pub async fn publish_agent_handler(
 
 pub async fn agent_ws_handler(
     ws: WebSocketUpgrade,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Query(params): Query<HashMap<String, String>>,
     State(state): State<AppState>,
 ) -> Response {
     let raw_token = match params.get("token") {
         Some(t) if !t.is_empty() => t.clone(),
-        _ => return (StatusCode::UNAUTHORIZED, "missing token").into_response(),
+        _ => {
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "agent_missing_token",
+                &locale,
+                "Agent token is required",
+            )
+            .into_response()
+        }
     };
 
     let agent_id = match service::verify_agent_token(&state.db, &raw_token).await {
         Ok(Some(id)) => id,
-        Ok(None) => return (StatusCode::UNAUTHORIZED, "invalid agent token").into_response(),
+        Ok(None) => {
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "invalid_agent_token",
+                &locale,
+                "Agent token is invalid",
+            )
+            .into_response()
+        }
         Err(e) => {
             tracing::error!("agent token verification failed: {e}");
-            return (StatusCode::INTERNAL_SERVER_ERROR, "internal error").into_response();
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Internal error",
+            )
+            .into_response();
         }
     };
 
     let nats = match &state.nats {
         Some(n) => n.clone(),
         None => {
+            let locale = locale.clone();
             return ws.on_upgrade(move |mut socket| async move {
                 use axum::extract::ws::Message;
-                let err_frame = serde_json::json!({
-                    "v": 1,
-                    "type": "error",
-                    "code": "nats_unavailable",
-                    "message": "Agent gateway requires NATS"
-                });
+                let err_frame =
+                    agent_error_frame("nats_unavailable", &locale, "Agent gateway requires NATS");
                 let _ = socket
                     .send(Message::Text(err_frame.to_string().into()))
                     .await;
@@ -448,12 +468,15 @@ pub async fn agent_ws_handler(
     };
 
     let state_for_socket = state.clone();
-    ws.on_upgrade(move |socket| handle_agent_socket(socket, agent_id, nats, state_for_socket))
+    ws.on_upgrade(move |socket| {
+        handle_agent_socket(socket, agent_id, locale, nats, state_for_socket)
+    })
 }
 
 async fn handle_agent_socket(
     socket: axum::extract::ws::WebSocket,
     agent_id: uuid::Uuid,
+    locale: String,
     nats: std::sync::Arc<async_nats::Client>,
     state: AppState,
 ) {
@@ -466,11 +489,11 @@ async fn handle_agent_socket(
         Ok(sub) => sub,
         Err(e) => {
             tracing::error!("NATS subscribe failed for {subject}: {e}");
-            let err = serde_json::json!({
-                "v": 1,
-                "type": "error",
-                "code": "subscribe_failed"
-            });
+            let err = agent_error_frame(
+                "subscribe_failed",
+                &locale,
+                "Failed to subscribe agent session",
+            );
             let _ = ws_tx.send(Message::Text(err.to_string().into())).await;
             return;
         }
@@ -630,6 +653,15 @@ async fn relay_agent_stream_message(
 
 fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
     error_response(status, code, locale, message)
+}
+
+fn agent_error_frame(code: &str, locale: &str, fallback: &str) -> Value {
+    json!({
+        "v": PROTOCOL_VERSION,
+        "type": "error",
+        "code": code,
+        "message": localized_message(code, locale, fallback),
+    })
 }
 
 async fn relay_stream_frame(
