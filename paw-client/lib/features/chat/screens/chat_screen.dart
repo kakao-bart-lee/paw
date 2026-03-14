@@ -100,10 +100,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
     final isDesktop = MediaQuery.sizeOf(context).width >= 960;
+    final titleTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: AppTheme.surface1,
       appBar: AppBar(
+        leadingWidth: !isDesktop && Navigator.canPop(context) ? 44 : null,
         leading: !isDesktop && Navigator.canPop(context)
             ? IconButton(
                 icon: const Icon(Icons.chevron_left_rounded),
@@ -112,12 +114,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             : null,
         automaticallyImplyLeading: false,
         titleSpacing: !isDesktop ? 0 : 16,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: AppTheme.outline.withValues(alpha: 0.72),
+          ),
+        ),
         title: Row(
           children: [
             MessengerAvatar(
               name: conversation.name,
               imageUrl: conversation.avatarUrl,
-              size: 40,
+              size: 38,
               isAgent: conversation.agents.isNotEmpty,
               isOnline:
                   activeStreamsList.isNotEmpty || conversation.unreadCount > 0,
@@ -135,8 +144,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           conversation.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: titleTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       if (conversation.isE2ee) ...[
@@ -144,12 +154,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         Icon(
                           Icons.lock_rounded,
                           size: 15,
-                          color: AppTheme.primary.withValues(alpha: 0.8),
+                          color: AppTheme.accent.withValues(alpha: 0.88),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     conversation.agents.isNotEmpty
                         ? 'AI Agent · 항상 응답 가능'
@@ -158,7 +168,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         : '대화 중',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: titleTheme.bodySmall,
                   ),
                 ],
               ),
@@ -192,7 +202,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF111A1E), AppTheme.surface1],
+            colors: [Color(0xFF151613), AppTheme.surface1, Color(0xFF0D0E0C)],
+            stops: [0.0, 0.32, 1.0],
           ),
         ),
         child: Column(
@@ -223,7 +234,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             if (kIsWeb && conversation.isE2ee)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -231,18 +242,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2B2416),
-                    borderRadius: BorderRadius.circular(16),
+                    color: const Color(0xFF231D13),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: AppTheme.warning.withValues(alpha: 0.24),
+                      color: AppTheme.warning.withValues(alpha: 0.22),
                     ),
                   ),
                   child: Text(
                     '웹에서는 E2EE/Rust 기능을 지원하지 않습니다.',
                     textAlign: TextAlign.center,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelMedium?.copyWith(color: AppTheme.warning),
+                    style: titleTheme.labelMedium?.copyWith(
+                      color: AppTheme.warning,
+                    ),
                   ),
                 ),
               ),
@@ -259,15 +270,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   child: CircularProgressIndicator(),
                 ),
                 ResourceLoadState.error => Center(
-                  child: Text(messagesError ?? '메시지를 불러오지 못했습니다.'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(messagesError ?? '메시지를 불러오지 못했습니다.'),
+                  ),
                 ),
                 ResourceLoadState.ready =>
                   itemCount == 0
-                      ? const Center(child: Text('메시지가 없습니다.'))
+                      ? _EmptyChatState(conversation: conversation)
                       : ListView.builder(
                           controller: _scrollController,
                           reverse: true,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: EdgeInsets.fromLTRB(
+                            0,
+                            18,
+                            0,
+                            isDesktop ? 20 : 12,
+                          ),
                           itemCount: itemCount,
                           itemBuilder: (context, index) {
                             if (index < activeStreamsList.length) {
@@ -295,11 +314,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 final typing = ref.watch(typingProvider);
                 final typingInConversation =
                     typing[widget.conversationId] ?? {};
-                if (typingInConversation.isEmpty)
+                if (typingInConversation.isEmpty) {
                   return const SizedBox.shrink();
+                }
                 return const Padding(
-                  padding: EdgeInsets.only(left: 16, right: 16, bottom: 6),
-                  child: TypingIndicator(userName: '상대방'),
+                  padding: EdgeInsets.only(left: 12, right: 12, bottom: 6),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TypingIndicator(userName: '상대방'),
+                  ),
                 );
               },
             ),
@@ -339,6 +362,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 }
 
+class _EmptyChatState extends StatelessWidget {
+  const _EmptyChatState({required this.conversation});
+
+  final Conversation conversation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            MessengerAvatar(
+              name: conversation.name,
+              imageUrl: conversation.avatarUrl,
+              size: 72,
+              isAgent: conversation.agents.isNotEmpty,
+              showPresence: false,
+            ),
+            const SizedBox(height: 16),
+            Text('메시지가 없습니다.', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              conversation.agents.isNotEmpty
+                  ? '${conversation.name}에서 질문을 남기면 AI가 같은 톤으로 이어서 답변합니다.'
+                  : '${conversation.name}에서 첫 메시지로 대화를 시작해보세요.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _WsStatusBanner extends StatelessWidget {
   const _WsStatusBanner({required this.state});
 
@@ -350,37 +410,45 @@ class _WsStatusBanner extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final (text, color) = switch (state) {
+    final (text, background, foreground) = switch (state) {
       WsConnectionState.connecting => (
         '서버에 연결 중입니다...',
-        const Color(0xFF1C4F7A),
+        const Color(0xFF182126),
+        const Color(0xFF8CB7D8),
       ),
       WsConnectionState.retrying => (
         '연결이 끊겨 재시도 중입니다...',
-        const Color(0xFF6C4B16),
+        const Color(0xFF221C12),
+        AppTheme.warning,
       ),
       WsConnectionState.disconnected => (
         '오프라인 상태입니다. 네트워크를 확인해주세요.',
-        const Color(0xFF5C1F28),
+        const Color(0xFF251417),
+        const Color(0xFFF09A9A),
       ),
-      WsConnectionState.connected => ('', Colors.transparent),
+      WsConnectionState.connected => (
+        '',
+        Colors.transparent,
+        Colors.transparent,
+      ),
     };
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
+          color: background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: foreground.withValues(alpha: 0.18)),
         ),
         child: Text(
           text,
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
-          ).textTheme.labelMedium?.copyWith(color: Colors.white),
+          ).textTheme.labelMedium?.copyWith(color: foreground),
         ),
       ),
     );

@@ -30,24 +30,25 @@ final class PawUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.staticTexts[Identifier.title].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "AuthMethodSelect")
-        XCTAssertEqual(app.staticTexts[Identifier.shellBanner].label, "Authenticate to unlock conversations + chat runtime shell.")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. 로그인 방식 선택")
+        XCTAssertFalse(app.staticTexts[Identifier.shellBanner].exists)
 
         app.buttons[Identifier.phoneInput].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "PhoneInput")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "2. 전화번호 입력")
 
         app.buttons[Identifier.otpVerify].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "OtpVerify")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "3. OTP 확인")
 
         app.buttons[Identifier.deviceName].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "DeviceName")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "4. 디바이스 등록")
         XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Bootstrapping")
+        XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Bootstrap Crew"))
 
         app.buttons[Identifier.usernameSetup].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "UsernameSetup")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "5. username 설정")
 
-        app.buttons[Identifier.authenticated].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "Authenticated")
+        authCompleteButton(in: app).tap()
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "완료 · 채팅 진입 가능")
         XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Bootstrap Crew · Ready"))
         XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Connected")
 
@@ -70,9 +71,9 @@ final class PawUITests: XCTestCase {
 
         revealAtTop(app)
         app.buttons[Identifier.authMethodSelect].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "AuthMethodSelect")
-        XCTAssertEqual(app.staticTexts[Identifier.shellBanner].label, "Authenticate to unlock conversations + chat runtime shell.")
-        XCTAssertEqual(app.staticTexts[Identifier.pushStatus].label, "Unregistered")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. 로그인 방식 선택")
+        XCTAssertFalse(app.staticTexts[Identifier.shellBanner].exists)
+        XCTAssertFalse(app.staticTexts[Identifier.pushStatus].exists)
     }
 
     private func revealIfNeeded(_ element: XCUIElement, in app: XCUIApplication) {
@@ -87,5 +88,9 @@ final class PawUITests: XCTestCase {
         for _ in 0..<3 {
             app.swipeDown()
         }
+    }
+
+    private func authCompleteButton(in app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", Identifier.authenticated, "완료")).firstMatch
     }
 }

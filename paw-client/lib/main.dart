@@ -71,7 +71,7 @@ class _UnsupportedPlatformScreen extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Padding(
@@ -84,11 +84,11 @@ class _UnsupportedPlatformScreen extends StatelessWidget {
                       height: 64,
                       decoration: BoxDecoration(
                         color: AppTheme.primarySoft,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
                         Icons.phone_android_rounded,
-                        color: AppTheme.primary,
+                        color: AppTheme.accent,
                       ),
                     ),
                     const SizedBox(height: 18),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../theme/app_theme.dart';
 import 'code_block.dart';
 
 class MarkdownMessage extends StatelessWidget {
@@ -30,7 +31,7 @@ class MarkdownMessage extends StatelessWidget {
   
   MarkdownStyleSheet _buildStyleSheet(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = isMe ? Colors.white : theme.colorScheme.onSurface;
+    final textColor = isMe ? AppTheme.background : theme.colorScheme.onSurface;
     
     return MarkdownStyleSheet(
       p: TextStyle(color: textColor, fontSize: 15, height: 1.4),
@@ -42,27 +43,27 @@ class MarkdownMessage extends StatelessWidget {
       code: TextStyle(
         fontFamily: 'monospace',
         fontSize: 13,
-        color: isMe ? Colors.white70 : const Color(0xFF6C63FF),
+        color: isMe ? AppTheme.background.withValues(alpha: 0.78) : AppTheme.accent,
         backgroundColor: isMe 
-          ? Colors.white.withOpacity(0.15) 
-          : const Color(0xFF252525),
+          ? AppTheme.background.withValues(alpha: 0.15)
+          : AppTheme.surface3,
       ),
       codeblockDecoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppTheme.surface3,
         borderRadius: BorderRadius.circular(8),
       ),
       blockquoteDecoration: BoxDecoration(
         border: Border(
           left: BorderSide(
-            color: isMe ? Colors.white54 : const Color(0xFF6C63FF),
+            color: isMe ? AppTheme.background.withValues(alpha: 0.54) : AppTheme.accent,
             width: 3,
           ),
         ),
       ),
-      blockquote: TextStyle(color: textColor.withOpacity(0.8)),
+      blockquote: TextStyle(color: textColor.withValues(alpha: 0.8)),
       listBullet: TextStyle(color: textColor),
       a: const TextStyle(
-        color: Color(0xFF6C63FF),
+        color: AppTheme.accent,
         decoration: TextDecoration.underline,
       ),
     );

@@ -140,4 +140,50 @@ final class PawTests: XCTestCase {
         XCTAssertEqual(manager.preview.shellBanner, "Authenticate to unlock conversations + chat runtime shell.")
         XCTAssertEqual(manager.preview.messages.first?.body, "No stored token found. Auth flow starts from phone input.")
     }
+
+    @MainActor
+    func testSkipUsernameAuthenticatesWithFallbackChatIdentity() {
+        let store = PawInMemorySecureStore()
+        let manager = PawCoreManager(
+            tokenVault: PawKeychainTokenVault(secureStore: store),
+            deviceKeyStore: PawKeychainDeviceKeyStore(secureStore: store),
+            pushRegistrar: PawApnsPushRegistrar(secureStore: store)
+        )
+
+        manager.submitPhone()
+        manager.verifyOtp()
+        manager.submitDeviceName("Design QA")
+        manager.skipUsername()
+
+        XCTAssertEqual(manager.preview.auth.step, .authenticated)
+        XCTAssertEqual(manager.preview.auth.username, "")
+        XCTAssertTrue(manager.preview.auth.hasAccessToken)
+        XCTAssertEqual(manager.preview.runtime.connectionState, "Connected")
+        XCTAssertEqual(manager.preview.messages.first?.author, "System")
+        XCTAssertEqual(manager.preview.messages.last?.author, "Paw Agent")
+        XCTAssertEqual(manager.selectedConversation?.title, "Bootstrap Crew")
+    }
+
+    @MainActor
+    func testRefreshRebuildsBannerAfterPushStateChanges() {
+        let store = PawInMemorySecureStore()
+        let manager = PawCoreManager(
+            tokenVault: PawKeychainTokenVault(secureStore: store),
+            deviceKeyStore: PawKeychainDeviceKeyStore(secureStore: store),
+            pushRegistrar: PawApnsPushRegistrar(secureStore: store)
+        )
+
+        manager.submitPhone()
+        manager.verifyOtp()
+        manager.submitDeviceName()
+        manager.submitUsername("refresh-user")
+        manager.registerForPush(token: "apns-refresh")
+        XCTAssertEqual(manager.preview.shellBanner, "Bootstrap Crew · Connected · push registered")
+
+        manager.unregisterPush()
+        manager.refresh()
+
+        XCTAssertEqual(manager.preview.push.status, "Unregistered")
+        XCTAssertEqual(manager.preview.shellBanner, "Bootstrap Crew · Connected · push unregistered")
+    }
 }

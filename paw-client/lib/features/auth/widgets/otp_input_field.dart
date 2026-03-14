@@ -118,10 +118,10 @@ class _OtpInputFieldState extends State<OtpInputField>
               return SizedBox(
                 width: 48,
                 height: 56,
-                child: RawKeyboardListener(
+                child: KeyboardListener(
                   focusNode: FocusNode(),
-                  onKey: (event) {
-                    if (event is RawKeyDownEvent &&
+                  onKeyEvent: (event) {
+                    if (event is KeyDownEvent &&
                         event.logicalKey == LogicalKeyboardKey.backspace &&
                         _controllers[index].text.isEmpty &&
                         index > 0) {
@@ -142,7 +142,7 @@ class _OtpInputFieldState extends State<OtpInputField>
                       counterText: '',
                       contentPadding: EdgeInsets.zero,
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: widget.hasError
                               ? Theme.of(context).colorScheme.error
@@ -150,11 +150,11 @@ class _OtpInputFieldState extends State<OtpInputField>
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: widget.hasError
                               ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).colorScheme.primary,
+                              : Theme.of(context).colorScheme.secondary,
                           width: 1.5,
                         ),
                       ),

@@ -1,15 +1,16 @@
 package dev.paw.android.ui.theme
 
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
 private val PawDarkColors = darkColorScheme(
-    primary = PawPrimary,
-    onPrimary = Color(0xFF06211A),
+    primary = PawAccent,
+    onPrimary = PawBackground,
     secondary = PawAccent,
-    onSecondary = Color(0xFF08161F),
+    onSecondary = PawBackground,
     background = PawBackground,
     surface = PawSurface1,
     surfaceVariant = PawSurface3,
@@ -18,11 +19,20 @@ private val PawDarkColors = darkColorScheme(
     outline = PawOutline,
 )
 
+private val PawShapes = Shapes(
+    extraSmall = RoundedCornerShape(6),
+    small = RoundedCornerShape(8),
+    medium = RoundedCornerShape(10),
+    large = RoundedCornerShape(12),
+    extraLarge = RoundedCornerShape(12),
+)
+
 @Composable
 fun PawAndroidTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = PawDarkColors,
         typography = Typography,
+        shapes = PawShapes,
         content = content,
     )
 }

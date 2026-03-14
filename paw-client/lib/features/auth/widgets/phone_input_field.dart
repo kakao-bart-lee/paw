@@ -52,8 +52,9 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
         Container(
           height: 52,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: DropdownButtonHideUnderline(
@@ -76,8 +77,13 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
                   });
                 }
               },
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-              dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              dropdownColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest,
             ),
           ),
         ),

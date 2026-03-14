@@ -39,24 +39,24 @@ class ConversationTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         child: Material(
-          color: selected ? AppTheme.surface4 : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
+          color: selected ? AppTheme.primarySoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: ValueKey('conversation-tile-${conversation.id}'),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(8),
             onTap:
                 onTap ??
                 () {
                   context.push('/chat/${conversation.id}');
                 },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: selected
-                      ? AppTheme.primary.withValues(alpha: 0.24)
-                      : Colors.transparent,
+                      ? AppTheme.accent.withValues(alpha: 0.22)
+                      : AppTheme.outline.withValues(alpha: 0.24),
                 ),
               ),
               child: Row(
@@ -64,6 +64,7 @@ class ConversationTile extends StatelessWidget {
                   MessengerAvatar(
                     name: conversation.name,
                     imageUrl: conversation.avatarUrl,
+                    size: 44,
                     isAgent: isAgentConversation,
                     isOnline: conversation.unreadCount > 0,
                   ),
@@ -88,7 +89,7 @@ class ConversationTile extends StatelessWidget {
                               Icon(
                                 Icons.lock_rounded,
                                 size: 14,
-                                color: AppTheme.primary.withValues(alpha: 0.8),
+                                color: AppTheme.accent.withValues(alpha: 0.84),
                               ),
                               const SizedBox(width: 6),
                             ],
@@ -109,12 +110,17 @@ class ConversationTile extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: AppTheme.primarySoft,
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: AppTheme.accent.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                  ),
                                 ),
                                 child: Text(
                                   'Agent',
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: AppTheme.primary,
+                                    color: AppTheme.accent,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -127,7 +133,9 @@ class ConversationTile extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.mutedText,
+                                  color: selected
+                                      ? AppTheme.primaryDeep
+                                      : AppTheme.mutedText,
                                 ),
                               ),
                             ),
@@ -141,9 +149,9 @@ class ConversationTile extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isAgentConversation
-                                      ? AppTheme.primary
+                                      ? AppTheme.accent
                                       : AppTheme.surface4,
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius: BorderRadius.circular(5),
                                 ),
                                 child: Text(
                                   conversation.unreadCount > 99

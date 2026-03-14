@@ -92,7 +92,7 @@ class _AgentConsentBannerState extends State<AgentConsentBanner> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Padding(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
         child: SizedBox(height: 52),
       );
     }
@@ -101,14 +101,14 @@ class _AgentConsentBannerState extends State<AgentConsentBanner> {
     final names = widget.agentNames.join(', ');
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppTheme.agentBubbleDark,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.warning.withValues(alpha: 0.24)),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,11 +120,11 @@ class _AgentConsentBannerState extends State<AgentConsentBanner> {
                   height: 34,
                   decoration: BoxDecoration(
                     color: AppTheme.primarySoft,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.auto_awesome_rounded,
-                    color: AppTheme.primary,
+                    color: AppTheme.accent,
                     size: 18,
                   ),
                 ),

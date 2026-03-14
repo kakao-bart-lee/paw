@@ -35,7 +35,7 @@ struct ContentView: View {
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(PawTheme.primarySoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .padding(20)
             }
@@ -47,7 +47,7 @@ struct ContentView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("Paw")
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }

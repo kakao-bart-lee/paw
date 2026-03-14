@@ -107,18 +107,13 @@ class _DeviceNameScreenState extends ConsumerState<DeviceNameScreen> {
                   onPressed: _isNameValid && !authState.isLoading
                       ? _onSubmit
                       : null,
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                   child: authState.isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Text(

@@ -88,9 +88,9 @@ class _AgentScreenState extends State<AgentScreen> {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: AppTheme.primary.withValues(alpha: 0.24),
+                color: AppTheme.accent.withValues(alpha: 0.24),
               ),
             ),
             child: Column(
@@ -100,7 +100,7 @@ class _AgentScreenState extends State<AgentScreen> {
                   '추천 Agent',
                   style: Theme.of(
                     context,
-                  ).textTheme.labelMedium?.copyWith(color: AppTheme.primary),
+                  ).textTheme.labelMedium?.copyWith(color: AppTheme.accent),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -172,10 +172,10 @@ class _AgentCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface2,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: agent.featured
-              ? AppTheme.primary.withValues(alpha: 0.24)
+              ? AppTheme.accent.withValues(alpha: 0.24)
               : AppTheme.outline,
         ),
       ),
@@ -189,13 +189,13 @@ class _AgentCard extends StatelessWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   color: AppTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
                   child: Text(
                     agent.name.substring(0, 2).toUpperCase(),
                     style: const TextStyle(
-                      color: AppTheme.primary,
+                      color: AppTheme.accent,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -219,7 +219,7 @@ class _AgentCard extends StatelessWidget {
                           const Icon(
                             Icons.auto_awesome_rounded,
                             size: 16,
-                            color: AppTheme.primary,
+                            color: AppTheme.accent,
                           ),
                         ],
                       ],

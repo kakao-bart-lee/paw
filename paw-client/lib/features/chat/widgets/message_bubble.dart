@@ -25,16 +25,21 @@ class MessageBubble extends StatelessWidget {
         ? AppTheme.agentBubbleDark
         : AppTheme.receivedBubbleDark;
 
-    final textColor = isMe ? AppTheme.background : theme.colorScheme.onSurface;
+    final textColor = isMe ? AppTheme.primary : theme.colorScheme.onSurface;
+    final bubbleBorder = isMe
+        ? AppTheme.accent.withValues(alpha: 0.16)
+        : isAgent
+        ? AppTheme.accent.withValues(alpha: 0.18)
+        : AppTheme.outline.withValues(alpha: 0.65);
     final borderRadius = BorderRadius.only(
-      topLeft: const Radius.circular(24),
-      topRight: const Radius.circular(24),
-      bottomLeft: Radius.circular(isMe ? 24 : 8),
-      bottomRight: Radius.circular(isMe ? 8 : 24),
+      topLeft: const Radius.circular(8),
+      topRight: const Radius.circular(8),
+      bottomLeft: Radius.circular(isMe ? 8 : 3),
+      bottomRight: Radius.circular(isMe ? 3 : 8),
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         mainAxisAlignment: isMe
             ? MainAxisAlignment.end
@@ -43,10 +48,10 @@ class MessageBubble extends StatelessWidget {
         children: [
           if (!isMe) ...[
             Padding(
-              padding: const EdgeInsets.only(right: 10, bottom: 22),
+              padding: const EdgeInsets.only(right: 8, bottom: 18),
               child: MessengerAvatar(
                 name: isAgent ? 'AI' : '상대방',
-                size: 32,
+                size: 30,
                 isAgent: isAgent,
                 showPresence: false,
               ),
@@ -67,13 +72,13 @@ class MessageBubble extends StatelessWidget {
                         Icon(
                           Icons.auto_awesome_rounded,
                           size: 13,
-                          color: AppTheme.primary.withValues(alpha: 0.9),
+                          color: AppTheme.accent.withValues(alpha: 0.95),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'AI 응답',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.primary,
+                            color: AppTheme.accent,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -102,17 +107,13 @@ class MessageBubble extends StatelessWidget {
                     maxWidth: MediaQuery.sizeOf(context).width * 0.72,
                   ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 13,
+                    horizontal: 15,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: borderRadius,
-                    border: Border.all(
-                      color: isAgent
-                          ? AppTheme.primary.withValues(alpha: 0.14)
-                          : Colors.transparent,
-                    ),
+                    border: Border.all(color: bubbleBorder),
                   ),
                   child: message.mediaId != null
                       ? MediaMessage(
@@ -129,6 +130,7 @@ class MessageBubble extends StatelessWidget {
                           message.content,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: textColor,
+                            height: 1.5,
                           ),
                         ),
                 ),
@@ -146,6 +148,7 @@ class MessageBubble extends StatelessWidget {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               clipBehavior: Clip.antiAlias,
+                              color: AppTheme.surface2,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -155,7 +158,7 @@ class MessageBubble extends StatelessWidget {
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: 150,
-                                      errorBuilder: (_, __, ___) =>
+                                      errorBuilder: (_, error, stackTrace) =>
                                           const SizedBox(
                                             height: 150,
                                             child: Center(
@@ -214,7 +217,7 @@ class MessageBubble extends StatelessWidget {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+                  padding: const EdgeInsets.only(top: 5, left: 4, right: 4),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

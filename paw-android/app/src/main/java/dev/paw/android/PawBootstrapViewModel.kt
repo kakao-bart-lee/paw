@@ -93,6 +93,10 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
         uiState = uiState.copy(otpInput = value)
     }
 
+    fun useDebugOtp() {
+        uiState = uiState.copy(otpInput = dev.paw.android.runtime.PawAndroidConfig.debugFixedOtp)
+    }
+
     fun onDeviceNameChanged(value: String) {
         uiState = uiState.copy(deviceNameInput = value)
     }
@@ -204,7 +208,7 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun requestOtp() {
-        val phone = uiState.phoneInput.trim()
+        val phone = normalizePhone(uiState.phoneInput)
         if (phone.isBlank()) {
             setError("전화번호를 입력하세요.")
             return
@@ -574,4 +578,19 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
             pendingReconnectUri = if (connected) PawAndroidConfig.apiBaseUrl else null,
         ),
     )
+
+    private fun normalizePhone(input: String): String {
+        val trimmed = input.trim()
+        if (trimmed.isBlank()) return ""
+        if (trimmed.startsWith("+")) return trimmed
+
+        val digits = trimmed.filter(Char::isDigit)
+        if (digits.isBlank()) return ""
+
+        return when {
+            digits.startsWith("82") -> "+$digits"
+            digits.startsWith("0") -> "+82${digits.drop(1)}"
+            else -> "+82$digits"
+        }
+    }
 }

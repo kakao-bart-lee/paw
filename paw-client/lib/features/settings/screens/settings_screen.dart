@@ -47,13 +47,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
         children: [
           InkWell(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(10),
             onTap: () => context.go('/profile/me'),
             child: Ink(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Row(
@@ -63,16 +63,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     height: 54,
                     decoration: BoxDecoration(
                       color: AppTheme.primarySoft,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppTheme.primary.withValues(alpha: 0.28),
+                        color: AppTheme.accent.withValues(alpha: 0.28),
                       ),
                     ),
                     child: const Center(
                       child: Text(
                         'ME',
                         style: TextStyle(
-                          color: AppTheme.primary,
+                          color: AppTheme.accent,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -305,7 +305,7 @@ class _SettingsSection extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppTheme.outline),
             ),
             child: Column(children: children),
@@ -423,9 +423,9 @@ class _SettingsIcon extends StatelessWidget {
       height: 38,
       decoration: BoxDecoration(
         color: AppTheme.surface4,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(icon, size: 20, color: AppTheme.primary),
+      child: Icon(icon, size: 20, color: AppTheme.accent),
     );
   }
 }

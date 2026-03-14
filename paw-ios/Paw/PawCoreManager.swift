@@ -277,6 +277,17 @@ final class PawCoreManager: ObservableObject {
         hydrateChatShell(username: username)
     }
 
+    func skipUsername() {
+        preview.auth.step = .authenticated
+        preview.runtime.connectionState = "Connected"
+        preview.auth.error = nil
+        hydrateChatShell(username: effectiveUsername)
+    }
+
+    func refresh() {
+        updateShellBannerForCurrentState()
+    }
+
     func logout() {
         _ = tokenVault.clearTokens()
         _ = pushRegistrar.unregister()

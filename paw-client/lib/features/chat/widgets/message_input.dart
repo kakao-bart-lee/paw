@@ -68,20 +68,20 @@ class _MessageInputState extends State<MessageInput> {
           ),
         ),
         padding: EdgeInsets.only(
-          left: 12,
-          right: 12,
-          top: 12,
-          bottom: MediaQuery.of(context).viewPadding.bottom + 10,
+          left: 10,
+          right: 10,
+          top: 10,
+          bottom: MediaQuery.of(context).viewPadding.bottom + 8,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _RoundIconButton(
+            _InputChromeButton(
               icon: Icons.attach_file_rounded,
               tooltip: '첨부파일',
               onPressed: () => MediaPicker.show(
                 context,
-                onFilePicked: (_, __) {
+                onFilePicked: (_, file) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('미디어 선택 기능은 곧 추가됩니다')),
                   );
@@ -93,7 +93,7 @@ class _MessageInputState extends State<MessageInput> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppTheme.surface3,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppTheme.outline),
                 ),
                 child: Row(
@@ -111,15 +111,20 @@ class _MessageInputState extends State<MessageInput> {
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           fillColor: Colors.transparent,
                           filled: false,
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(right: 4, bottom: 4),
+                      padding: const EdgeInsets.only(right: 2, bottom: 2),
                       child: IconButton(
                         onPressed: () {},
+                        visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.sentiment_satisfied_alt_rounded),
                         color: AppTheme.mutedText,
                         tooltip: '이모지',
@@ -130,23 +135,13 @@ class _MessageInputState extends State<MessageInput> {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: _hasText ? AppTheme.primary : AppTheme.surface3,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _hasText ? AppTheme.primary : AppTheme.outline,
-                ),
-              ),
-              child: IconButton(
-                key: const ValueKey('chat-send-button'),
-                icon: Icon(
-                  _hasText ? Icons.arrow_upward : Icons.mic_none_rounded,
-                ),
-                tooltip: '전송',
-                color: _hasText ? AppTheme.background : AppTheme.mutedText,
-                onPressed: (_hasText && widget.canSend) ? _handleSend : null,
-              ),
+            _InputChromeButton(
+              iconButtonKey: const ValueKey('chat-send-button'),
+              icon: _hasText ? Icons.arrow_upward : Icons.mic_none_rounded,
+              tooltip: '전송',
+              accent: _hasText,
+              iconColor: _hasText ? AppTheme.background : AppTheme.mutedText,
+              onPressed: (_hasText && widget.canSend) ? _handleSend : null,
             ),
           ],
         ),
@@ -155,29 +150,37 @@ class _MessageInputState extends State<MessageInput> {
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
+class _InputChromeButton extends StatelessWidget {
+  const _InputChromeButton({
+    this.iconButtonKey,
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.accent = false,
+    this.iconColor,
   });
 
+  final Key? iconButtonKey;
   final IconData icon;
   final String tooltip;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool accent;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface3,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppTheme.outline),
+        color: accent ? AppTheme.accent : AppTheme.surface3,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: accent ? AppTheme.accent : AppTheme.outline),
       ),
       child: IconButton(
+        key: iconButtonKey,
         icon: Icon(icon),
-        color: AppTheme.mutedText,
+        color: iconColor ?? AppTheme.mutedText,
         tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
         onPressed: onPressed,
       ),
     );
