@@ -309,7 +309,8 @@ impl From<&WsService> for ConnectionSnapshot {
             state: value.connection_state().into(),
             attempts: saturating_u32(value.attempts()),
             pending_reconnect_delay_ms: pending.map(|plan| saturating_u64(plan.delay.as_millis())),
-            pending_reconnect_endpoint: pending.map(|plan| crate::ws::public_endpoint_label(&plan.uri)),
+            pending_reconnect_endpoint: pending
+                .map(|plan| crate::ws::public_endpoint_label(&plan.uri)),
         }
     }
 }
@@ -411,7 +412,9 @@ impl From<&RuntimeEffect> for DuplicateMessageView {
                 received_seq: *received_seq,
                 last_seq: *last_seq,
             },
-            other => unreachable!("invariant: matched DuplicateMessage effect before conversion, got {other:?}"),
+            other => unreachable!(
+                "invariant: matched DuplicateMessage effect before conversion, got {other:?}"
+            ),
         }
     }
 }
@@ -430,7 +433,9 @@ impl From<&RuntimeEffect> for GapDetectedView {
                 received_seq: *received_seq,
                 request_from_seq: *request_from_seq,
             },
-            other => unreachable!("invariant: matched GapDetected effect before conversion, got {other:?}"),
+            other => unreachable!(
+                "invariant: matched GapDetected effect before conversion, got {other:?}"
+            ),
         }
     }
 }
@@ -447,7 +452,9 @@ impl From<&RuntimeEffect> for DeviceSyncAppliedView {
                 applied_count: *applied_count,
                 highest_seq: *highest_seq,
             },
-            other => unreachable!("invariant: matched DeviceSyncApplied effect before conversion, got {other:?}"),
+            other => unreachable!(
+                "invariant: matched DeviceSyncApplied effect before conversion, got {other:?}"
+            ),
         }
     }
 }
