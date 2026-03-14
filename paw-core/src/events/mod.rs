@@ -38,6 +38,7 @@ pub enum ConnectionStateView {
     Connecting,
     Connected,
     Retrying,
+    Exhausted,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -222,6 +223,7 @@ impl From<WsConnectionState> for ConnectionStateView {
             WsConnectionState::Connecting => Self::Connecting,
             WsConnectionState::Connected => Self::Connected,
             WsConnectionState::Retrying => Self::Retrying,
+            WsConnectionState::Exhausted => Self::Exhausted,
         }
     }
 }

@@ -15,6 +15,7 @@ pub enum WsConnectionState {
     Connecting,
     Connected,
     Retrying,
+    Exhausted,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -275,7 +276,7 @@ impl WsService {
 
         let Some(delay) = self.reconnection_manager.next_delay() else {
             self.pending_reconnect = None;
-            self.connection_state = WsConnectionState::Disconnected;
+            self.connection_state = WsConnectionState::Exhausted;
             return;
         };
 
@@ -290,7 +291,7 @@ impl WsService {
             }
             Err(_) => {
                 self.pending_reconnect = None;
-                self.connection_state = WsConnectionState::Disconnected;
+                self.connection_state = WsConnectionState::Exhausted;
             }
         }
     }
@@ -474,5 +475,27 @@ mod tests {
         assert_eq!(service.attempts(), 0);
         assert!(service.pending_reconnect().is_none());
         assert_eq!(*transport.closes.lock().unwrap(), 2);
+    }
+
+    #[tokio::test]
+    async fn transport_error_marks_exhausted_when_retry_budget_is_spent() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "http://localhost:38173",
+            transport,
+            ReconnectionManager::new(1, vec![Duration::from_secs(1)]),
+        );
+        service
+            .connect("http://localhost:38173", "token-123")
+            .await
+            .unwrap();
+
+        service.on_transport_error();
+        assert_eq!(service.connection_state(), WsConnectionState::Retrying);
+        assert!(service.pending_reconnect().is_some());
+
+        service.on_transport_error();
+        assert_eq!(service.connection_state(), WsConnectionState::Exhausted);
+        assert!(service.pending_reconnect().is_none());
     }
 }

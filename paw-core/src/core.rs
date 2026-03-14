@@ -857,4 +857,42 @@ mod tests {
                 && tool_calls.len() == 1
         ));
     }
+
+    #[tokio::test]
+    async fn repeated_transport_errors_transition_runtime_to_exhausted() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let transport = Arc::new(RecordingTransport::default());
+        let ws_service = WsService::new(
+            "https://paw.example/api",
+            transport,
+            ReconnectionManager::new(1, vec![Duration::from_secs(1)]),
+        );
+        let mut runtime = CoreRuntime::new(db, ws_service).unwrap();
+
+        runtime
+            .ws_service
+            .connect("https://paw.example/api", "access-token")
+            .await
+            .unwrap();
+
+        let first = runtime.on_transport_error();
+        assert!(matches!(
+            first,
+            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+                state: ConnectionStateView::Retrying,
+                ..
+            })
+        ));
+
+        let second = runtime.on_transport_error();
+        assert!(matches!(
+            second,
+            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+                state: ConnectionStateView::Exhausted,
+                pending_reconnect_delay_ms: None,
+                pending_reconnect_uri: None,
+                ..
+            })
+        ));
+    }
 }
