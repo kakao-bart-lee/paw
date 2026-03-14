@@ -50,6 +50,19 @@ pub struct ConnectionSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ReconnectScheduledView {
+    pub delay_ms: u64,
+    pub uri: String,
+    pub attempt: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ReconnectAttemptStartedView {
+    pub uri: String,
+    pub attempt: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ActiveStreamsClearedView {
     pub count: u32,
 }
@@ -180,6 +193,8 @@ pub enum CoreEvent {
     AuthStateChanged(AuthStateView),
     BootstrapProgress(RuntimeBootstrapReportView),
     ConnectionStateChanged(ConnectionSnapshot),
+    ReconnectScheduled(ReconnectScheduledView),
+    ReconnectAttemptStarted(ReconnectAttemptStartedView),
     ActiveStreamsCleared(ActiveStreamsClearedView),
     SessionInvalidated(SessionEventView),
     SyncRequested(SyncRequestView),
@@ -421,6 +436,21 @@ impl From<&RuntimeEffect> for CoreEvent {
             RuntimeEffect::ConnectionStateChanged(snapshot) => {
                 Self::ConnectionStateChanged(snapshot.clone())
             }
+            RuntimeEffect::ReconnectScheduled {
+                delay_ms,
+                uri,
+                attempt,
+            } => Self::ReconnectScheduled(ReconnectScheduledView {
+                delay_ms: *delay_ms,
+                uri: uri.clone(),
+                attempt: *attempt,
+            }),
+            RuntimeEffect::ReconnectAttemptStarted { uri, attempt } => {
+                Self::ReconnectAttemptStarted(ReconnectAttemptStartedView {
+                    uri: uri.clone(),
+                    attempt: *attempt,
+                })
+            }
             RuntimeEffect::ActiveStreamsCleared { count } => {
                 Self::ActiveStreamsCleared(ActiveStreamsClearedView { count: *count })
             }
@@ -523,6 +553,34 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"ActiveStreamsCleared\""));
         assert!(json.contains("\"count\":2"));
+    }
+
+    #[test]
+    fn reconnect_scheduled_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::ReconnectScheduled {
+            delay_ms: 1_000,
+            uri: "wss://paw.example/ws?token=abc".into(),
+            attempt: 2,
+        };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"ReconnectScheduled\""));
+        assert!(json.contains("\"delay_ms\":1000"));
+        assert!(json.contains("\"attempt\":2"));
+    }
+
+    #[test]
+    fn reconnect_attempt_started_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::ReconnectAttemptStarted {
+            uri: "wss://paw.example/ws?token=abc".into(),
+            attempt: 3,
+        };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"ReconnectAttemptStarted\""));
+        assert!(json.contains("\"attempt\":3"));
     }
 
     #[test]

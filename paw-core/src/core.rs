@@ -60,6 +60,15 @@ impl RuntimeBootstrapReport {
 pub enum RuntimeEffect {
     BootstrapProgress(RuntimeBootstrapReport),
     ConnectionStateChanged(ConnectionSnapshot),
+    ReconnectScheduled {
+        delay_ms: u64,
+        uri: String,
+        attempt: u32,
+    },
+    ReconnectAttemptStarted {
+        uri: String,
+        attempt: u32,
+    },
     ActiveStreamsCleared {
         count: u32,
     },
@@ -181,14 +190,14 @@ impl CoreRuntime {
         ])
     }
 
-    pub fn on_transport_error(&mut self) -> RuntimeEffect {
+    pub fn on_transport_error(&mut self) -> Vec<RuntimeEffect> {
         self.ws_service.on_transport_error();
-        RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service))
+        self.connection_transition_effects()
     }
 
-    pub fn on_transport_closed(&mut self) -> RuntimeEffect {
+    pub fn on_transport_closed(&mut self) -> Vec<RuntimeEffect> {
         self.ws_service.on_transport_closed();
-        RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service))
+        self.connection_transition_effects()
     }
 
     pub async fn handle_session_event(
@@ -216,13 +225,17 @@ impl CoreRuntime {
 
     pub async fn reconnect_with_stored_token(
         &mut self,
-    ) -> Result<Option<RuntimeEffect>, CoreRuntimeError> {
-        let Some(_) = self.ws_service.connect_with_stored_token().await? else {
+    ) -> Result<Option<Vec<RuntimeEffect>>, CoreRuntimeError> {
+        let Some(uri) = self.ws_service.connect_with_stored_token().await? else {
             return Ok(None);
         };
-        Ok(Some(RuntimeEffect::ConnectionStateChanged(
-            ConnectionSnapshot::from(&self.ws_service),
-        )))
+        Ok(Some(vec![
+            RuntimeEffect::ReconnectAttemptStarted {
+                uri: uri.to_string(),
+                attempt: self.ws_service.attempts() as u32,
+            },
+            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service)),
+        ]))
     }
 
     pub async fn disconnect(&mut self) -> Result<RuntimeEffect, CoreRuntimeError> {
@@ -413,6 +426,21 @@ impl CoreRuntime {
         ));
 
         Ok(effects)
+    }
+
+    fn connection_transition_effects(&self) -> Vec<RuntimeEffect> {
+        let mut effects = Vec::with_capacity(2);
+        if let Some(plan) = self.ws_service.pending_reconnect() {
+            effects.push(RuntimeEffect::ReconnectScheduled {
+                delay_ms: plan.delay.as_millis() as u64,
+                uri: plan.uri.to_string(),
+                attempt: plan.attempt as u32,
+            });
+        }
+        effects.push(RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(
+            &self.ws_service,
+        )));
+        effects
     }
 }
 
@@ -901,22 +929,29 @@ mod tests {
 
         let first = runtime.on_transport_error();
         assert!(matches!(
-            first,
-            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
-                state: ConnectionStateView::Retrying,
-                ..
-            })
+            &first[..],
+            [
+                RuntimeEffect::ReconnectScheduled {
+                    delay_ms: 1_000,
+                    attempt: 1,
+                    ..
+                },
+                RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+                    state: ConnectionStateView::Retrying,
+                    ..
+                })
+            ]
         ));
 
         let second = runtime.on_transport_error();
         assert!(matches!(
-            second,
-            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+            &second[..],
+            [RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
                 state: ConnectionStateView::Exhausted,
                 pending_reconnect_delay_ms: None,
                 pending_reconnect_uri: None,
                 ..
-            })
+            })]
         ));
     }
 
@@ -1033,5 +1068,36 @@ mod tests {
             runtime.ws_service().connection_state(),
             WsConnectionState::Disconnected
         );
+    }
+
+    #[tokio::test]
+    async fn reconnect_with_stored_token_surfaces_attempt_metadata() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let (mut runtime, _transport, calls) = runtime_with_db(db);
+        let token_store = InMemoryTokenStore::new();
+        token_store
+            .write(StoredTokens::new("access-token", "refresh-token"))
+            .await;
+        let auth_client = StubAuthClient {
+            calls: calls.clone(),
+        };
+
+        runtime.bootstrap(&token_store, &auth_client).await.unwrap();
+        let effects = runtime
+            .reconnect_with_stored_token()
+            .await
+            .unwrap()
+            .expect("stored token reconnect effects");
+
+        assert!(matches!(
+            &effects[..],
+            [
+                RuntimeEffect::ReconnectAttemptStarted { attempt: 0, .. },
+                RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot {
+                    state: ConnectionStateView::Connecting,
+                    ..
+                })
+            ]
+        ));
     }
 }

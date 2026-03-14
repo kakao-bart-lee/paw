@@ -26,8 +26,9 @@ pub use events::{
     AckRequestView, ActiveStreamsClearedView, AuthStateView, AuthStepView, ConnectionSnapshot,
     ConnectionStateView, ConversationCursorView, CoreEvent, DeviceSyncAppliedView,
     DuplicateMessageView, FinalizedStreamMessageView, GapDetectedView, MessageRecordView,
-    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, SessionEventView,
-    SessionExpiryReasonView, StreamingSessionView, SyncRequestView, ToolCallView,
+    ReconnectAttemptStartedView, ReconnectScheduledView, RuntimeBootstrapReportView,
+    RuntimeInitStepView, RuntimeSnapshot, SessionEventView, SessionExpiryReasonView,
+    StreamingSessionView, SyncRequestView, ToolCallView,
 };
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,
