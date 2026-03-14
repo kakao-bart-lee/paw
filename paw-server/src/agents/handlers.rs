@@ -501,6 +501,7 @@ async fn handle_agent_socket(
     };
 
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
+    crate::metrics::ws_connection_opened();
 
     let nats_to_ws = async {
         while let Some(msg) = nats_sub.next().await {
@@ -557,6 +558,7 @@ async fn handle_agent_socket(
         _ = ws_to_server => {}
     }
 
+    crate::metrics::ws_connection_closed();
     tracing::info!("agent {agent_id} disconnected");
 }
 

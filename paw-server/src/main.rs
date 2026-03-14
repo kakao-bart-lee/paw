@@ -7,9 +7,11 @@ mod i18n;
 mod keys;
 mod media;
 mod messages;
+mod metrics;
 mod moderation;
 mod observability;
 mod push;
+mod rate_limit;
 mod users;
 mod ws;
 
@@ -18,12 +20,14 @@ use axum::{
     extract::DefaultBodyLimit,
     middleware,
     routing::{delete, get, patch, post, put},
-    Router,
+    Extension, Router,
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+use rate_limit::{ProtectedLimiter, PublicLimiter};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -62,6 +66,8 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    let prometheus_handle = metrics::init_metrics();
+
     let state = AppState {
         db: db.clone(),
         jwt_secret,
@@ -72,6 +78,10 @@ async fn main() -> anyhow::Result<()> {
     };
 
     tokio::spawn(ws::pg_listener::start_pg_listener(db.clone(), hub));
+
+    let public_limiter = rate_limit::public_limiter_from_env();
+    let protected_limiter = rate_limit::protected_limiter_from_env();
+    rate_limit::spawn_cleanup_task(vec![public_limiter.clone(), protected_limiter.clone()]);
 
     let media_upload = Router::new()
         .route("/media/upload", post(media::handlers::upload))
@@ -246,13 +256,14 @@ async fn main() -> anyhow::Result<()> {
             delete(push::handlers::unmute_conversation),
         )
         .merge(media_upload)
+        .layer(middleware::from_fn(rate_limit::protected_rate_limit))
+        .layer(Extension(ProtectedLimiter(protected_limiter)))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::middleware::auth_middleware,
         ));
 
-    let app = Router::new()
-        .route("/health", get(health_check))
+    let public_routes = Router::new()
         .route("/auth/request-otp", post(auth::handlers::request_otp))
         .route("/auth/verify-otp", post(auth::handlers::verify_otp))
         .route(
@@ -260,8 +271,18 @@ async fn main() -> anyhow::Result<()> {
             post(auth::handlers::register_device),
         )
         .route("/auth/refresh", post(auth::handlers::refresh_token))
+        .layer(middleware::from_fn(rate_limit::public_rate_limit))
+        .layer(Extension(PublicLimiter(public_limiter)));
+
+    let metrics_route = Router::new()
+        .route("/metrics", get(metrics::metrics_handler))
+        .with_state(prometheus_handle);
+
+    let app = Router::new()
+        .route("/health", get(health_check))
         .route("/ws", get(ws::handler::ws_handler))
         .route("/agent/ws", get(agents::handlers::agent_ws_handler))
+        .merge(public_routes)
         .merge(protected_routes)
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -269,7 +290,9 @@ async fn main() -> anyhow::Result<()> {
         ))
         .layer(middleware::from_fn(observability::request_id_middleware))
         .layer(CorsLayer::permissive())
-        .with_state(state);
+        .with_state(state)
+        .merge(metrics_route)
+        .layer(middleware::from_fn(metrics::metrics_middleware));
 
     let host = std::env::var("PAW_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PAW_PORT")

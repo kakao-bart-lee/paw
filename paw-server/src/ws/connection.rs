@@ -40,6 +40,8 @@ pub async fn handle_socket(
         "websocket connected"
     );
 
+    crate::metrics::ws_connection_opened();
+
     let (outbound_tx, mut outbound_rx) = mpsc::unbounded_channel::<Message>();
     state
         .hub
@@ -141,6 +143,7 @@ pub async fn handle_socket(
     }
 
     state.hub.unregister(connection.user_id, &outbound_tx).await;
+    crate::metrics::ws_connection_closed();
     drop(outbound_tx);
     let _ = writer.await;
 }

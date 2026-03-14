@@ -140,6 +140,7 @@ pub async fn send_message(
     .await
     {
         Ok(created) => {
+            crate::metrics::record_message_sent();
             let db = state.db.clone();
             let hub = state.hub.clone();
             let notify_state = state.clone();
@@ -241,7 +242,13 @@ async fn notify_agents_of_message(
 
     for agent_id in agent_ids {
         let subject = format!("agent.inbound.{agent_id}");
-        nats.publish(subject, payload.clone().into()).await?;
+        match nats.publish(subject, payload.clone().into()).await {
+            Ok(()) => crate::metrics::record_agent_gateway_call(true),
+            Err(err) => {
+                crate::metrics::record_agent_gateway_call(false);
+                return Err(err.into());
+            }
+        }
     }
 
     Ok(())
