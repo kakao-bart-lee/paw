@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    auth::{AuthState, AuthStep},
+    auth::{AuthState, AuthStep, SessionEvent, SessionExpiryReason},
     core::{CoreRuntime, RuntimeBootstrapReport, RuntimeEffect, RuntimeInitStep},
     db::MessageRecord,
     sync::{FinalizedStreamMessage, StreamingSession, SyncRequest, ToolCallRecord},
@@ -138,8 +138,19 @@ pub struct DeviceSyncAppliedView {
 pub enum RuntimeInitStepView {
     DatabaseOpened,
     TokensRestored,
+    BootstrapSkippedNoStoredTokens,
     SessionValidated,
     WsConnected,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+pub enum SessionExpiryReasonView {
+    Unauthorized,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct SessionEventView {
+    pub reason: SessionExpiryReasonView,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -163,6 +174,7 @@ pub enum CoreEvent {
     AuthStateChanged(AuthStateView),
     BootstrapProgress(RuntimeBootstrapReportView),
     ConnectionStateChanged(ConnectionSnapshot),
+    SessionInvalidated(SessionEventView),
     SyncRequested(SyncRequestView),
     AckRequested(AckRequestView),
     DuplicateMessage(DuplicateMessageView),
@@ -360,6 +372,7 @@ impl From<&RuntimeInitStep> for RuntimeInitStepView {
         match value {
             RuntimeInitStep::DatabaseOpened => Self::DatabaseOpened,
             RuntimeInitStep::TokensRestored => Self::TokensRestored,
+            RuntimeInitStep::BootstrapSkippedNoStoredTokens => Self::BootstrapSkippedNoStoredTokens,
             RuntimeInitStep::SessionValidated => Self::SessionValidated,
             RuntimeInitStep::WsConnected => Self::WsConnected,
         }
@@ -377,6 +390,22 @@ impl From<&RuntimeBootstrapReport> for RuntimeBootstrapReportView {
     }
 }
 
+impl From<&SessionExpiryReason> for SessionExpiryReasonView {
+    fn from(value: &SessionExpiryReason) -> Self {
+        match value {
+            SessionExpiryReason::Unauthorized => Self::Unauthorized,
+        }
+    }
+}
+
+impl From<&SessionEvent> for SessionEventView {
+    fn from(value: &SessionEvent) -> Self {
+        Self {
+            reason: (&value.reason).into(),
+        }
+    }
+}
+
 impl From<&RuntimeEffect> for CoreEvent {
     fn from(value: &RuntimeEffect) -> Self {
         match value {
@@ -384,6 +413,7 @@ impl From<&RuntimeEffect> for CoreEvent {
             RuntimeEffect::ConnectionStateChanged(snapshot) => {
                 Self::ConnectionStateChanged(snapshot.clone())
             }
+            RuntimeEffect::SessionInvalidated(event) => Self::SessionInvalidated(event.into()),
             RuntimeEffect::SyncRequested(request) => Self::SyncRequested(request.into()),
             RuntimeEffect::AckRequested {
                 conversation_id,
@@ -460,6 +490,18 @@ mod tests {
         assert!(json.contains("\"DuplicateMessage\""));
         assert!(json.contains("\"received_seq\":7"));
         assert!(json.contains("\"last_seq\":9"));
+    }
+
+    #[test]
+    fn session_invalidated_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::SessionInvalidated(SessionEvent {
+            reason: SessionExpiryReason::Unauthorized,
+        });
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"SessionInvalidated\""));
+        assert!(json.contains("\"Unauthorized\""));
     }
 
     #[test]

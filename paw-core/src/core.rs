@@ -6,7 +6,7 @@ use reqwest::Url;
 use uuid::Uuid;
 
 use crate::{
-    auth::{AuthBackendError, AuthClient, AuthUserProfile, StoredTokens, TokenStore},
+    auth::{AuthBackendError, AuthClient, AuthUserProfile, SessionEvent, StoredTokens, TokenStore},
     db::{AppDatabase, DbError, MessageRecord},
     events::{ConnectionSnapshot, ConversationCursorView, RuntimeSnapshot, StreamingSessionView},
     sync::{
@@ -32,6 +32,7 @@ pub enum CoreRuntimeError {
 pub enum RuntimeInitStep {
     DatabaseOpened,
     TokensRestored,
+    BootstrapSkippedNoStoredTokens,
     SessionValidated,
     WsConnected,
 }
@@ -59,6 +60,7 @@ impl RuntimeBootstrapReport {
 pub enum RuntimeEffect {
     BootstrapProgress(RuntimeBootstrapReport),
     ConnectionStateChanged(ConnectionSnapshot),
+    SessionInvalidated(SessionEvent),
     SyncRequested(SyncRequest),
     AckRequested {
         conversation_id: Uuid,
@@ -141,6 +143,9 @@ impl CoreRuntime {
         let mut report = RuntimeBootstrapReport::db_only();
 
         let Some(tokens) = token_store.read().await else {
+            report
+                .steps
+                .push(RuntimeInitStep::BootstrapSkippedNoStoredTokens);
             return Ok(report);
         };
 
@@ -183,6 +188,10 @@ impl CoreRuntime {
         RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service))
     }
 
+    pub fn on_session_event(&mut self, event: SessionEvent) -> RuntimeEffect {
+        RuntimeEffect::SessionInvalidated(event)
+    }
+
     pub async fn reconnect_with_stored_token(
         &mut self,
     ) -> Result<Option<RuntimeEffect>, CoreRuntimeError> {
@@ -213,11 +222,10 @@ impl CoreRuntime {
                     ConnectionSnapshot::from(&self.ws_service),
                 )];
                 effects.extend(
-                    self
-                    .sync_service
-                    .sync_all_conversations()?
-                    .into_iter()
-                    .map(RuntimeEffect::SyncRequested),
+                    self.sync_service
+                        .sync_all_conversations()?
+                        .into_iter()
+                        .map(RuntimeEffect::SyncRequested),
                 );
                 Ok(effects)
             }
@@ -358,16 +366,20 @@ impl CoreRuntime {
                 .or_insert(message.seq);
         }
 
-        effects.extend(highest_seq_by_conversation.iter().map(
-            |(conversation_id, highest_seq)| RuntimeEffect::DeviceSyncApplied {
-                conversation_id: *conversation_id,
-                applied_count: applied_count_by_conversation
-                    .get(conversation_id)
-                    .copied()
-                    .unwrap_or_default(),
-                highest_seq: *highest_seq,
-            },
-        ));
+        effects.extend(
+            highest_seq_by_conversation
+                .iter()
+                .map(
+                    |(conversation_id, highest_seq)| RuntimeEffect::DeviceSyncApplied {
+                        conversation_id: *conversation_id,
+                        applied_count: applied_count_by_conversation
+                            .get(conversation_id)
+                            .copied()
+                            .unwrap_or_default(),
+                        highest_seq: *highest_seq,
+                    },
+                ),
+        );
 
         effects.extend(highest_seq_by_conversation.into_iter().map(
             |(conversation_id, last_seq)| RuntimeEffect::AckRequested {
@@ -556,7 +568,13 @@ mod tests {
 
         let report = runtime.bootstrap(&token_store, &auth_client).await.unwrap();
 
-        assert_eq!(report.steps, vec![RuntimeInitStep::DatabaseOpened]);
+        assert_eq!(
+            report.steps,
+            vec![
+                RuntimeInitStep::DatabaseOpened,
+                RuntimeInitStep::BootstrapSkippedNoStoredTokens,
+            ]
+        );
         assert!(transport.connections.lock().unwrap().is_empty());
     }
 

@@ -20,6 +20,8 @@ typedef record DuplicateMessageView;
 typedef record GapDetectedView;
 typedef record DeviceSyncAppliedView;
 typedef enum RuntimeInitStepView;
+typedef enum SessionExpiryReasonView;
+typedef record SessionEventView;
 typedef record RuntimeBootstrapReportView;
 typedef record RuntimeSnapshot;
 typedef enum CoreEvent;
