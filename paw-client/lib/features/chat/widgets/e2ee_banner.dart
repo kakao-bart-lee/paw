@@ -35,7 +35,7 @@ class E2eeBanner extends StatelessWidget {
         Icons.auto_awesome_rounded,
         '${agentName ?? 'Agent'}이(가) 이 대화를 읽고 있습니다',
         AppTheme.warning,
-        const Color(0xFF231D13),
+        AppTheme.webNoticeSurface,
       ),
     };
 
@@ -46,7 +46,7 @@ class E2eeBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: color.withValues(alpha: 0.22)),
         ),
         child: Row(
@@ -72,7 +72,7 @@ class E2eeBanner extends StatelessWidget {
                     vertical: 8,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
                 ),
                 child: const Text('활성화'),

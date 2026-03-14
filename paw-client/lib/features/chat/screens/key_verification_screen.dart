@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 bool isE2eeVerificationSupported({bool? isWebOverride}) {
   return !(isWebOverride ?? kIsWeb);
 }
@@ -59,17 +61,17 @@ class KeyVerificationScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2E1B1B),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppTheme.webNoticeSurface,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: const Text(
                   '웹에서는 E2EE 키 검증을 지원하지 않습니다.',
-                  style: TextStyle(color: Color(0xFFFFC107), fontSize: 12),
+                  style: TextStyle(color: AppTheme.warning, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
               ),
             const SizedBox(height: 24),
-            const Icon(Icons.lock_outline, size: 64, color: Color(0xFF4CAF50)),
+            const Icon(Icons.lock_outline, size: 64, color: AppTheme.success),
             const SizedBox(height: 24),
             Text(
               '이 번호가 상대방 기기에서도 동일하게 표시되면 대화가 안전합니다',
@@ -82,8 +84,8 @@ class KeyVerificationScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(16),
+                color: AppTheme.surface2,
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
               ),
               child: Text(
                 safetyNumber,
@@ -115,11 +117,11 @@ class KeyVerificationScreen extends StatelessWidget {
                   ).showSnackBar(const SnackBar(content: Text('확인되었습니다')));
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
+                  backgroundColor: AppTheme.accent,
                   foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   ),
                 ),
                 child: const Text(
@@ -150,7 +152,7 @@ class KeyVerificationScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   side: BorderSide(color: theme.colorScheme.outline),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   ),
                 ),
                 child: const Text(

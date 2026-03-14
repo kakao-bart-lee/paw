@@ -18,8 +18,21 @@ class AppTheme {
   static const Color danger = Color(0xFF902020);
   static const Color mutedText = Color(0xFF9A9086);
   static const Color strongText = Color(0xFFF0EBE0);
+  static const Color info = Color(0xFF8CB7D8);
+  static const Color success = Color(0xFF5CBF89);
 
   static const Color sentBubbleDark = Color(0xFF201E19);
+  static const Color infoSurface = Color(0xFF182126);
+  static const Color warningSurface = Color(0xFF221C12);
+  static const Color dangerSurface = Color(0xFF251417);
+  static const Color successSurface = Color(0xFF142019);
+  static const Color webNoticeSurface = Color(0xFF231D13);
+  static const double radiusXs = 6;
+  static const double radiusSm = 8;
+  static const double radiusMd = 10;
+  static const double radiusLg = 14;
+  static const double radiusXl = 16;
+
   static const Color receivedBubbleDark = surface2;
   static const Color agentBubbleDark = Color(0xFF171715);
 
@@ -34,7 +47,7 @@ class AppTheme {
       onSurfaceVariant: mutedText,
       outline: outline,
       error: danger,
-      onError: Colors.white,
+      onError: strongText,
     );
 
     final base = ThemeData(

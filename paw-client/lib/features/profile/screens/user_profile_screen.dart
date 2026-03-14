@@ -122,7 +122,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: AppTheme.surface2,
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                   border: Border.all(color: AppTheme.outline),
                 ),
                 child: Column(

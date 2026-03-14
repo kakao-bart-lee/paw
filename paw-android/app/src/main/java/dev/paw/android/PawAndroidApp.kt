@@ -1,5 +1,6 @@
 package dev.paw.android
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,6 +57,7 @@ import dev.paw.android.ui.theme.PawReceivedBubble
 import dev.paw.android.ui.theme.PawSentBubble
 import dev.paw.android.ui.theme.PawStrongText
 import dev.paw.android.ui.theme.PawSurface1
+import dev.paw.android.ui.theme.PawSurface2
 import dev.paw.android.ui.theme.PawSurface3
 import dev.paw.android.ui.theme.PawSurface4
 import uniffi.paw_core.AuthStepView
@@ -103,16 +106,17 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                         if (showDiagnostics) {
                             MoodCard(
                                 title = "Bootstrap",
-                                subtitle = "stored token restore · lifecycle hints · runtime snapshot",
+                                subtitle = "stored token restore · lifecycle snapshot",
                                 background = PawReceivedBubble,
                             ) {
                                 MetadataLine("bridge", uiState.preview.bridgeStatus)
-                                MetadataLine("server", dev.paw.android.runtime.PawAndroidConfig.apiBaseUrl)
                                 MetadataLine("connection", uiState.preview.runtime.connection.state.name)
                                 MetadataLine("storage", uiState.preview.storage.provider.name)
                                 MetadataLine("device keys", if (uiState.preview.deviceKeyReady) "ready" else "missing")
-                                MetadataLine("bootstrap", uiState.preview.bootstrapMessage)
                                 MetadataLine("lifecycle", lifecycleState.name)
+                                uiState.preview.bootstrapMessage
+                                    .takeIf { it.isNotBlank() && it != "ready" }
+                                    ?.let { MetadataLine("status", it) }
                             }
                         } else {
                             val readyTitle = when (uiState.preview.auth.step) {
@@ -134,7 +138,6 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                             ) {
                                 MetadataLine("storage", uiState.preview.storage.provider.name)
                                 MetadataLine("device keys", if (uiState.preview.deviceKeyReady) "ready" else "missing")
-                                MetadataLine("dev otp", dev.paw.android.runtime.PawAndroidConfig.debugFixedOtp)
                             }
                         }
 
@@ -194,7 +197,7 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     MoodCard(
                                         title = "Lifecycle",
-                                        subtitle = "active/background runtime hints",
+                                        subtitle = "runtime hint contract",
                                         background = PawSentBubble,
                                         modifier = Modifier.weight(1f),
                                     ) {
@@ -208,8 +211,8 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                                         modifier = Modifier.weight(1f),
                                     ) {
                                         MetadataLine("push", uiState.preview.push.status.name)
-                                        MetadataLine("push error", uiState.preview.push.lastError ?: "-")
                                         MetadataLine("token cached", (!uiState.preview.push.token.isNullOrBlank()).toString())
+                                        uiState.preview.push.lastError?.let { MetadataLine("push error", it) }
                                     }
                                 }
                             } else {
@@ -227,14 +230,14 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
                                     background = PawAgentBubble,
                                 ) {
                                     MetadataLine("push", uiState.preview.push.status.name)
-                                    MetadataLine("push error", uiState.preview.push.lastError ?: "-")
                                     MetadataLine("token cached", (!uiState.preview.push.token.isNullOrBlank()).toString())
+                                    uiState.preview.push.lastError?.let { MetadataLine("push error", it) }
                                 }
                             }
                         }
 
                         if (uiState.preview.auth.step == AuthStepView.AUTHENTICATED) {
-                            ChatShellCard(uiState, viewModel)
+                            ChatShellCard(uiState, viewModel, wideLayout)
                             PawSecondaryButton(onClick = viewModel::logout, modifier = Modifier.testTag(PawTestTags.LOGOUT_BUTTON)) {
                                 Text("로그아웃")
                             }
@@ -247,67 +250,124 @@ fun PawAndroidApp(viewModel: PawBootstrapViewModel = viewModel()) {
 }
 
 @Composable
-private fun ChatShellCard(uiState: PawBootstrapUiState, viewModel: PawBootstrapViewModel) {
+private fun ChatShellCard(
+    uiState: PawBootstrapUiState,
+    viewModel: PawBootstrapViewModel,
+    wideLayout: Boolean,
+) {
     MoodCard(
-        title = "Conversations / chat runtime",
-        subtitle = "real authenticated shell backed by /conversations + /messages",
+        title = "Conversations",
+        subtitle = "authenticated shell backed by /conversations + /messages",
         background = PawSurface1,
     ) {
-        MetadataLine("conversation count", uiState.chat.conversations.size.toString())
-        MetadataLine("selected", uiState.chat.selectedConversationId ?: "-")
-        MetadataLine("runtime cursors", uiState.preview.runtime.cursors.joinToString { "${it.conversationId.take(8)}:${it.lastSeq}" }.ifBlank { "-" })
+        val selectedConversation = uiState.chat.conversations.firstOrNull { it.id == uiState.chat.selectedConversationId }
 
-        uiState.chat.conversationsError?.let { MetadataLine("conversation error", it) }
-        uiState.chat.messagesError?.let { MetadataLine("message error", it) }
-
-        if (uiState.chat.conversationsLoading) {
-            CircularProgressIndicator(modifier = Modifier.padding(top = 12.dp))
-        } else if (uiState.chat.conversations.isEmpty()) {
-            Text("아직 표시할 대화가 없습니다. 인증 상태는 live 이지만 대화 목록은 비어 있습니다.", color = PawMutedText, modifier = Modifier.padding(top = 12.dp))
-        } else {
-            Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                uiState.chat.conversations.forEach { conversation ->
-                    ConversationRow(
-                        name = conversation.name,
-                        selected = conversation.id == uiState.chat.selectedConversationId,
-                        preview = conversation.lastMessage ?: "최근 메시지 없음",
-                        unreadCount = conversation.unreadCount,
-                        onClick = { viewModel.selectConversation(conversation.id) },
-                    )
-                }
-            }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ShellStatChip("threads", uiState.chat.conversations.size.toString())
+            ShellStatChip("selected", selectedConversation?.name ?: "none")
+            ShellStatChip("messages", uiState.chat.messages.size.toString())
         }
 
-        if (uiState.chat.selectedConversationId != null) {
-            Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (uiState.chat.messagesLoading) {
-                    CircularProgressIndicator()
-                } else if (uiState.chat.messages.isEmpty()) {
-                    Text("메시지가 없습니다.", color = PawMutedText)
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 360.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        uiState.chat.messages.forEach { message ->
-                            ChatBubble(message)
-                        }
+        val listContent: @Composable () -> Unit = {
+            uiState.chat.conversationsError?.let { EditorialNote(it) }
+            if (uiState.chat.conversationsLoading) {
+                CircularProgressIndicator(modifier = Modifier.padding(top = 12.dp))
+            } else if (uiState.chat.conversations.isEmpty()) {
+                Text(
+                    "아직 표시할 대화가 없습니다. 인증은 완료되었지만 대화 목록이 비어 있습니다.",
+                    color = PawMutedText,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            } else {
+                Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.chat.conversations.forEach { conversation ->
+                        ConversationRow(
+                            name = conversation.name,
+                            selected = conversation.id == uiState.chat.selectedConversationId,
+                            preview = conversation.lastMessage ?: "최근 메시지 없음",
+                            unreadCount = conversation.unreadCount,
+                            onClick = { viewModel.selectConversation(conversation.id) },
+                        )
                     }
                 }
+            }
+        }
 
-                AuthField("메시지", uiState.chat.messageDraft, viewModel::onMessageDraftChanged, testTag = PawTestTags.CHAT_MESSAGE_INPUT)
-                PawPrimaryButton(
-                    onClick = viewModel::sendMessage,
-                    enabled = !uiState.chat.sendingMessage,
-                    modifier = Modifier.testTag(PawTestTags.CHAT_SEND_MESSAGE),
-                ) {
-                    Text(if (uiState.chat.sendingMessage) "전송 중…" else "메시지 보내기")
+        val detailContent: @Composable () -> Unit = {
+            selectedConversation?.let {
+                MetadataLine("active thread", it.name)
+            } ?: EditorialNote("왼쪽에서 대화를 선택하면 메시지와 작성창이 열립니다.")
+
+            uiState.chat.messagesError?.let { EditorialNote(it) }
+
+            if (uiState.chat.selectedConversationId != null) {
+                Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (uiState.chat.messagesLoading) {
+                        CircularProgressIndicator()
+                    } else if (uiState.chat.messages.isEmpty()) {
+                        Text("메시지가 없습니다.", color = PawMutedText)
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 360.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            uiState.chat.messages.forEach { message ->
+                                ChatBubble(message)
+                            }
+                        }
+                    }
+
+                    AuthField("메시지", uiState.chat.messageDraft, viewModel::onMessageDraftChanged, testTag = PawTestTags.CHAT_MESSAGE_INPUT)
+                    PawPrimaryButton(
+                        onClick = viewModel::sendMessage,
+                        enabled = !uiState.chat.sendingMessage,
+                        modifier = Modifier.testTag(PawTestTags.CHAT_SEND_MESSAGE),
+                    ) {
+                        Text(if (uiState.chat.sendingMessage) "전송 중…" else "메시지 보내기")
+                    }
                 }
             }
         }
+
+        if (wideLayout) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                EditorialPanel(
+                    title = "Thread list",
+                    subtitle = "recent rooms and unread counts",
+                    modifier = Modifier.weight(0.95f),
+                    content = listContent,
+                )
+                EditorialPanel(
+                    title = "Chat shell",
+                    subtitle = "message history and composer",
+                    modifier = Modifier.weight(1.05f),
+                    content = detailContent,
+                )
+            }
+        } else {
+            EditorialPanel(
+                title = "Thread list",
+                subtitle = "recent rooms and unread counts",
+                content = listContent,
+            )
+            EditorialPanel(
+                title = "Chat shell",
+                subtitle = "message history and composer",
+                modifier = Modifier.padding(top = 12.dp),
+                content = detailContent,
+            )
+        }
+
+        val cursorSummary = uiState.preview.runtime.cursors
+            .joinToString { "${it.conversationId.take(8)}:${it.lastSeq}" }
+            .ifBlank { "-" }
+        MetadataLine("runtime cursors", cursorSummary)
     }
 }
 
@@ -356,20 +416,25 @@ private fun AuthStepPanel(uiState: PawBootstrapUiState, viewModel: PawBootstrapV
                 title = "인증번호 입력",
                 description = "개발 서버에서는 고정 OTP 137900을 사용할 수 있습니다.",
             )
-            AssistChip(
-                onClick = viewModel::useDebugOtp,
-                label = { Text("개발용 OTP ${dev.paw.android.runtime.PawAndroidConfig.debugFixedOtp}") },
+            EditorialPanel(
+                title = "Developer shortcut",
+                subtitle = "fixed OTP for local bootstrap only",
                 modifier = Modifier.padding(top = 12.dp),
-                shape = RoundedCornerShape(6.dp),
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = PawSurface3,
-                    labelColor = PawStrongText,
-                ),
-                border = AssistChipDefaults.assistChipBorder(
-                    enabled = true,
-                    borderColor = PawOutline,
-                ),
-            )
+            ) {
+                AssistChip(
+                    onClick = viewModel::useDebugOtp,
+                    label = { Text("개발용 OTP ${dev.paw.android.runtime.PawAndroidConfig.debugFixedOtp}") },
+                    shape = RoundedCornerShape(6.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = PawSurface3,
+                        labelColor = PawStrongText,
+                    ),
+                    border = AssistChipDefaults.assistChipBorder(
+                        enabled = true,
+                        borderColor = PawOutline,
+                    ),
+                )
+            }
             AuthField(
                 label = "OTP 코드",
                 value = uiState.otpInput,
@@ -395,6 +460,14 @@ private fun AuthStepPanel(uiState: PawBootstrapUiState, viewModel: PawBootstrapV
                 title = "디바이스 등록",
                 description = "이 기기 이름으로 세션을 등록하고 다음 단계로 진행합니다.",
             )
+            EditorialPanel(
+                title = "Session restore",
+                subtitle = "기기 키와 이름을 함께 저장해 다음 실행에서 바로 복구합니다.",
+                modifier = Modifier.padding(top = 12.dp),
+            ) {
+                MetadataLine("device keys", if (uiState.preview.deviceKeyReady) "ready" else "missing")
+                MetadataLine("staged phone", uiState.preview.auth.phone.ifBlank { "(pending)" })
+            }
             AuthField("디바이스 이름", uiState.deviceNameInput, viewModel::onDeviceNameChanged, testTag = PawTestTags.AUTH_DEVICE_NAME_INPUT)
             PawPrimaryButton(
                 onClick = viewModel::registerDevice,
@@ -412,9 +485,15 @@ private fun AuthStepPanel(uiState: PawBootstrapUiState, viewModel: PawBootstrapV
                 description = "username을 설정하면 검색/프로필 링크에 사용됩니다. 지금은 건너뛰고 나중에 설정할 수도 있습니다.",
             )
             AuthField("username", uiState.usernameInput, viewModel::onUsernameChanged, testTag = PawTestTags.AUTH_USERNAME_INPUT)
-            Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("전화번호 검색 허용", color = PawMutedText)
-                Switch(checked = uiState.discoverableByPhone, onCheckedChange = viewModel::onDiscoverableChanged)
+            EditorialPanel(
+                title = "Search visibility",
+                subtitle = "전화번호 기반 검색 허용 여부를 여기서 정합니다.",
+                modifier = Modifier.padding(top = 12.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("전화번호 검색 허용", color = PawMutedText)
+                    Switch(checked = uiState.discoverableByPhone, onCheckedChange = viewModel::onDiscoverableChanged)
+                }
             }
             FlowRow(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PawPrimaryButton(onClick = viewModel::completeUsernameSetup, modifier = Modifier.testTag(PawTestTags.AUTH_COMPLETE_USERNAME)) {
@@ -461,6 +540,7 @@ private fun AuthSectionIntro(
     description: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Auth flow", style = MaterialTheme.typography.labelSmall, color = PawPrimary)
         Text(title, style = MaterialTheme.typography.titleLarge, color = PawStrongText)
         Text(description, style = MaterialTheme.typography.bodyMedium, color = PawMutedText)
     }
@@ -520,6 +600,60 @@ private fun MoodCard(
 }
 
 @Composable
+private fun EditorialPanel(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, PawOutline, RoundedCornerShape(8.dp)),
+        shape = RoundedCornerShape(8.dp),
+        color = PawSurface2,
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = PawStrongText)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = PawMutedText)
+            Column(modifier = Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditorialNote(text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .size(6.dp)
+                .background(PawAccent, RoundedCornerShape(50)),
+        )
+        Text(text, style = MaterialTheme.typography.bodySmall, color = PawMutedText)
+    }
+}
+
+@Composable
+private fun ShellStatChip(label: String, value: String) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = PawSurface3,
+        border = BorderStroke(1.dp, PawOutline),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = PawPrimary)
+            Text(value, style = MaterialTheme.typography.bodySmall, color = PawStrongText)
+        }
+    }
+}
+
+@Composable
 private fun MetadataLine(label: String, value: String, valueTestTag: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = PawPrimary)
@@ -560,9 +694,24 @@ private fun ConversationRow(
         colors = CardDefaults.cardColors(containerColor = if (selected) PawPrimarySoft else PawReceivedBubble),
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(name, color = PawStrongText, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(name, color = PawStrongText, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+                if (unreadCount > 0) {
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = PawSurface3,
+                        border = BorderStroke(1.dp, PawOutline),
+                    ) {
+                        Text(
+                            unreadCount.toString(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            color = PawPrimary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+            }
             Text(preview, color = PawMutedText, style = MaterialTheme.typography.bodySmall)
-            Text("unread $unreadCount", color = PawPrimary, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

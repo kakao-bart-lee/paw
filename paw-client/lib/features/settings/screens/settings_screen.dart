@@ -47,13 +47,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
         children: [
           InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: () => context.go('/profile/me'),
             child: Ink(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Row(
@@ -213,7 +213,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.danger,
-              side: const BorderSide(color: Color(0x55FF7A7A)),
+              side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.4)),
             ),
             icon: const Icon(Icons.logout_rounded),
             label: const Text('로그아웃'),
@@ -250,7 +250,7 @@ class _SettingsInfoRow extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   color: AppTheme.surface3,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   border: Border.all(color: AppTheme.outline),
                 ),
                 child: Icon(icon, color: AppTheme.mutedText),
@@ -272,8 +272,7 @@ class _SettingsInfoRow extends StatelessWidget {
             ],
           ),
         ),
-        if (!last)
-          const Divider(height: 1, indent: 16, endIndent: 16),
+        if (!last) const Divider(height: 1, indent: 16, endIndent: 16),
       ],
     );
   }
@@ -305,7 +304,7 @@ class _SettingsSection extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: AppTheme.outline),
             ),
             child: Column(children: children),

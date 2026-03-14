@@ -127,7 +127,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (_lastQuery.isEmpty) {
-      return _SearchEmptyState(
+      return const _SearchEmptyState(
         icon: Icons.search_rounded,
         title: '대화 내용을 검색하세요',
         subtitle: '사람, 에이전트, 파일 설명까지 빠르게 탐색할 수 있습니다.',
@@ -135,7 +135,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (_results.isEmpty) {
-      return _SearchEmptyState(
+      return const _SearchEmptyState(
         icon: Icons.search_off_rounded,
         title: '검색 결과가 없습니다',
         subtitle: '다른 키워드나 더 짧은 검색어로 다시 시도해보세요.',
@@ -145,7 +145,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       itemCount: _results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final result = _results[index];
         return _SearchResultTile(
@@ -181,7 +181,7 @@ class _SearchEmptyState extends StatelessWidget {
               height: 72,
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Icon(icon, size: 30, color: AppTheme.mutedText),
@@ -212,13 +212,13 @@ class _SearchResultTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(AppTheme.radiusXl),
       onTap: onTap,
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppTheme.surface2,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
           border: Border.all(color: AppTheme.outline),
         ),
         child: Row(
@@ -229,7 +229,7 @@ class _SearchResultTile extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: AppTheme.primarySoft,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               ),
               child: const Icon(
                 Icons.chat_bubble_outline_rounded,

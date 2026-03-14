@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 class ToolIndicator extends StatelessWidget {
   final String toolName;
   final String label;
@@ -18,14 +20,12 @@ class ToolIndicator extends StatelessWidget {
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isComplete
-            ? Colors.green.withValues(alpha: 0.1)
-            : Colors.amber.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        color: isComplete ? AppTheme.successSurface : AppTheme.warningSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
         border: Border.all(
           color: isComplete
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.amber.withValues(alpha: 0.3),
+              ? AppTheme.success.withValues(alpha: 0.28)
+              : AppTheme.warning.withValues(alpha: 0.28),
         ),
       ),
       child: Row(
@@ -37,29 +37,25 @@ class ToolIndicator extends StatelessWidget {
               height: 12,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warning),
               ),
             ),
             const SizedBox(width: 8),
             Text(
               '🔧 $label...',
               style: const TextStyle(
-                color: Colors.amber,
+                color: AppTheme.warning,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ] else ...[
-            const Icon(
-              Icons.check_circle,
-              size: 14,
-              color: Colors.green,
-            ),
+            const Icon(Icons.check_circle, size: 14, color: AppTheme.success),
             const SizedBox(width: 6),
             Text(
               '✅ $label',
               style: const TextStyle(
-                color: Colors.green,
+                color: AppTheme.success,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

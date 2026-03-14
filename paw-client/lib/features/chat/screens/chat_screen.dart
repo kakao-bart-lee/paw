@@ -202,7 +202,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF151613), AppTheme.surface1, Color(0xFF0D0E0C)],
+            colors: [
+              AppTheme.agentBubbleDark,
+              AppTheme.surface1,
+              AppTheme.background,
+            ],
             stops: [0.0, 0.32, 1.0],
           ),
         ),
@@ -242,8 +246,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF231D13),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.webNoticeSurface,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     border: Border.all(
                       color: AppTheme.warning.withValues(alpha: 0.22),
                     ),
@@ -413,18 +417,18 @@ class _WsStatusBanner extends StatelessWidget {
     final (text, background, foreground) = switch (state) {
       WsConnectionState.connecting => (
         '서버에 연결 중입니다...',
-        const Color(0xFF182126),
-        const Color(0xFF8CB7D8),
+        AppTheme.infoSurface,
+        AppTheme.info,
       ),
       WsConnectionState.retrying => (
         '연결이 끊겨 재시도 중입니다...',
-        const Color(0xFF221C12),
+        AppTheme.warningSurface,
         AppTheme.warning,
       ),
       WsConnectionState.disconnected => (
         '오프라인 상태입니다. 네트워크를 확인해주세요.',
-        const Color(0xFF251417),
-        const Color(0xFFF09A9A),
+        AppTheme.dangerSurface,
+        AppTheme.danger.withValues(alpha: 0.82),
       ),
       WsConnectionState.connected => (
         '',
@@ -440,7 +444,7 @@ class _WsStatusBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           border: Border.all(color: foreground.withValues(alpha: 0.18)),
         ),
         child: Text(

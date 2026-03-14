@@ -88,7 +88,7 @@ class _AgentScreenState extends State<AgentScreen> {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(
                 color: AppTheme.accent.withValues(alpha: 0.24),
               ),
@@ -136,7 +136,7 @@ class _AgentScreenState extends State<AgentScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final category = _categories[index];
                 final selected = category == _category;
@@ -172,7 +172,7 @@ class _AgentCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface2,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(
           color: agent.featured
               ? AppTheme.accent.withValues(alpha: 0.24)
@@ -189,7 +189,7 @@ class _AgentCard extends StatelessWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   color: AppTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                 ),
                 child: Center(
                   child: Text(
