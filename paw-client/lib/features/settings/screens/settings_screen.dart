@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -51,6 +51,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
         children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.surface2,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(
+                color: AppTheme.accent.withValues(alpha: 0.24),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '지원 & 품질 상태',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: AppTheme.accent),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Web/Desktop 보조 화면을 네이티브 제품 톤에 맞춰 정리했습니다.',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isDesktopClient
+                      ? '설정, 프로필, 검색, 채팅 상세를 데스크톱 2단 레이아웃과 같은 밀도로 점검하세요.'
+                      : '웹에서는 브라우저 세션, 도움말, 검색 흐름이 자연스럽게 이어지는지 확인하세요.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    FilledButton.tonalIcon(
+                      onPressed: () => context.go('/profile/me'),
+                      icon: const Icon(Icons.person_outline_rounded),
+                      label: const Text('프로필 점검'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/settings/help'),
+                      icon: const Icon(Icons.help_outline_rounded),
+                      label: const Text('도움말 센터'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           InkWell(
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: () => context.go('/profile/me'),
@@ -172,9 +223,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsToggleRow(
                 icon: Icons.dark_mode_outlined,
                 title: '다크 모드',
-                subtitle: darkMode
-                    ? '현재 다크 테마를 사용 중입니다'
-                    : '현재 라이트 테마를 사용 중입니다',
+                subtitle: darkMode ? '현재 다크 테마를 사용 중입니다' : '현재 라이트 테마를 사용 중입니다',
                 value: darkMode,
                 onChanged: (value) async {
                   if (themeModeController == null) return;
@@ -213,6 +262,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: '데이터 사용 정책',
                 subtitle: 'AI 개선에 활용되는 항목을 제어합니다',
                 onTap: () {},
+                last: true,
+              ),
+            ],
+          ),
+          _SettingsSection(
+            title: '지원',
+            children: [
+              _SettingsActionRow(
+                icon: Icons.help_outline_rounded,
+                title: '도움말 센터',
+                subtitle: 'Web/Desktop visual QA 메모와 지원 흐름 확인',
+                onTap: () => context.push('/settings/help'),
+              ),
+              const _SettingsInfoRow(
+                icon: Icons.palette_outlined,
+                title: '디자인 체크포인트',
+                subtitle: 'warm editorial palette, 낮은 라운딩, 모노 중심 텍스트 톤 유지',
                 last: true,
               ),
             ],

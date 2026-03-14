@@ -113,10 +113,21 @@ class _AgentScreenState extends State<AgentScreen> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => context.go('/chat'),
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  label: const Text('Agent와 대화 열기'),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => context.go('/chat'),
+                      icon: const Icon(Icons.auto_awesome_rounded),
+                      label: const Text('Agent와 대화 열기'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/settings/help'),
+                      icon: const Icon(Icons.help_outline_rounded),
+                      label: const Text('권한 가이드'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -149,10 +160,44 @@ class _AgentScreenState extends State<AgentScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          ...filtered.map(
-            (agent) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _AgentCard(agent: agent),
+          if (filtered.isEmpty)
+            _AgentEmptyState(
+              query: _searchController.text,
+              onReset: () {
+                _searchController.clear();
+                setState(() => _category = '전체');
+              },
+            )
+          else
+            ...filtered.map(
+              (agent) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _AgentCard(agent: agent),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surface2,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '검토 메모',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: AppTheme.accent),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '권한 문구, 설치 상태, 빈 검색 결과를 Web/Desktop 지원 화면과 동일한 톤으로 유지합니다.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
         ],
@@ -250,6 +295,61 @@ class _AgentCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(agent.description, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgentEmptyState extends StatelessWidget {
+  const _AgentEmptyState({required this.query, required this.onReset});
+
+  final String query;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.surface2,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(color: AppTheme.outline),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.surface3,
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: const Icon(
+              Icons.manage_search_rounded,
+              color: AppTheme.mutedText,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '일치하는 Agent가 없습니다',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            query.trim().isEmpty
+                ? '카테고리를 다시 선택하거나 도움말 센터에서 권한 가이드를 확인해 주세요.'
+                : '"${query.trim()}" 대신 더 짧은 검색어나 다른 카테고리를 시도해 보세요.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: onReset,
+            icon: const Icon(Icons.restart_alt_rounded),
+            label: const Text('필터 초기화'),
+          ),
         ],
       ),
     );
