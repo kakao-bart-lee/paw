@@ -25,10 +25,10 @@ pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
 pub use events::{
     AckRequestView, ActiveStreamsClearedView, AuthStateView, AuthStepView, ConnectionSnapshot,
     ConnectionStateView, ConversationCursorView, CoreEvent, DeviceSyncAppliedView,
-    DuplicateMessageView, FinalizedStreamMessageView, GapDetectedView, MessageRecordView,
-    ReconnectAttemptStartedView, ReconnectScheduledView, RuntimeBootstrapReportView,
-    RuntimeInitStepView, RuntimeSnapshot, SessionEventView, SessionExpiryReasonView,
-    StreamingSessionView, SyncRequestView, ToolCallView,
+    DeviceSyncBatchProcessedView, DuplicateMessageView, FinalizedStreamMessageView,
+    GapDetectedView, MessageRecordView, ReconnectAttemptStartedView, ReconnectScheduledView,
+    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, SessionEventView,
+    SessionExpiryReasonView, StreamingSessionView, SyncRequestView, ToolCallView,
 };
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,

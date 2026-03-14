@@ -153,6 +153,12 @@ pub struct DeviceSyncAppliedView {
     pub highest_seq: i64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DeviceSyncBatchProcessedView {
+    pub message_count: u32,
+    pub conversation_count: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum RuntimeInitStepView {
     DatabaseOpened,
@@ -202,6 +208,7 @@ pub enum CoreEvent {
     DuplicateMessage(DuplicateMessageView),
     GapDetected(GapDetectedView),
     DeviceSyncApplied(DeviceSyncAppliedView),
+    DeviceSyncBatchProcessed(DeviceSyncBatchProcessedView),
     MessagePersisted(MessageRecordView),
     StreamUpdated(StreamingSessionView),
     StreamFinalized(FinalizedStreamMessageView),
@@ -390,6 +397,21 @@ impl From<&RuntimeEffect> for DeviceSyncAppliedView {
     }
 }
 
+impl From<&RuntimeEffect> for DeviceSyncBatchProcessedView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::DeviceSyncBatchProcessed {
+                message_count,
+                conversation_count,
+            } => Self {
+                message_count: *message_count,
+                conversation_count: *conversation_count,
+            },
+            other => panic!("expected DeviceSyncBatchProcessed effect, got {other:?}"),
+        }
+    }
+}
+
 impl From<&RuntimeInitStep> for RuntimeInitStepView {
     fn from(value: &RuntimeInitStep) -> Self {
         match value {
@@ -466,6 +488,9 @@ impl From<&RuntimeEffect> for CoreEvent {
             RuntimeEffect::DuplicateMessage { .. } => Self::DuplicateMessage(value.into()),
             RuntimeEffect::GapDetected { .. } => Self::GapDetected(value.into()),
             RuntimeEffect::DeviceSyncApplied { .. } => Self::DeviceSyncApplied(value.into()),
+            RuntimeEffect::DeviceSyncBatchProcessed { .. } => {
+                Self::DeviceSyncBatchProcessed(value.into())
+            }
             RuntimeEffect::MessagePersisted(record) => Self::MessagePersisted(record.into()),
             RuntimeEffect::StreamUpdated(stream) => Self::StreamUpdated(stream.into()),
             RuntimeEffect::StreamFinalized(message) => Self::StreamFinalized(message.into()),
@@ -581,6 +606,20 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"ReconnectAttemptStarted\""));
         assert!(json.contains("\"attempt\":3"));
+    }
+
+    #[test]
+    fn device_sync_batch_processed_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::DeviceSyncBatchProcessed {
+            message_count: 3,
+            conversation_count: 1,
+        };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"DeviceSyncBatchProcessed\""));
+        assert!(json.contains("\"message_count\":3"));
+        assert!(json.contains("\"conversation_count\":1"));
     }
 
     #[test]

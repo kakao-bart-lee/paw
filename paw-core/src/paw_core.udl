@@ -22,6 +22,7 @@ typedef record AckRequestView;
 typedef record DuplicateMessageView;
 typedef record GapDetectedView;
 typedef record DeviceSyncAppliedView;
+typedef record DeviceSyncBatchProcessedView;
 typedef enum RuntimeInitStepView;
 typedef enum SessionExpiryReasonView;
 typedef record SessionEventView;

@@ -94,6 +94,10 @@ pub enum RuntimeEffect {
         applied_count: u32,
         highest_seq: i64,
     },
+    DeviceSyncBatchProcessed {
+        message_count: u32,
+        conversation_count: u32,
+    },
     MessagePersisted(MessageRecord),
     StreamUpdated(StreamingSession),
     StreamFinalized(FinalizedStreamMessage),
@@ -385,7 +389,7 @@ impl CoreRuntime {
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
         self.sync_engine.apply_gap_fill(&response.messages);
 
-        let mut effects = Vec::with_capacity(response.messages.len() * 2);
+        let mut effects = Vec::with_capacity(response.messages.len() * 2 + 1);
         let mut highest_seq_by_conversation: BTreeMap<Uuid, i64> = BTreeMap::new();
         let mut applied_count_by_conversation: BTreeMap<Uuid, u32> = BTreeMap::new();
 
@@ -402,6 +406,11 @@ impl CoreRuntime {
                 .and_modify(|seq| *seq = (*seq).max(message.seq))
                 .or_insert(message.seq);
         }
+
+        effects.push(RuntimeEffect::DeviceSyncBatchProcessed {
+            message_count: response.messages.len() as u32,
+            conversation_count: applied_count_by_conversation.len() as u32,
+        });
 
         effects.extend(
             highest_seq_by_conversation
@@ -798,6 +807,15 @@ mod tests {
             .unwrap();
 
         assert_eq!(db.get_last_seq(&conversation_id.to_string()).unwrap(), 3);
+        assert!(effects.iter().any(|effect| {
+            matches!(
+                effect,
+                RuntimeEffect::DeviceSyncBatchProcessed {
+                    message_count: 3,
+                    conversation_count: 1,
+                }
+            )
+        }));
         assert_eq!(
             effects.last(),
             Some(&RuntimeEffect::AckRequested {
@@ -815,6 +833,28 @@ mod tests {
                 } if *effect_conversation_id == conversation_id
             )
         }));
+    }
+
+    #[tokio::test]
+    async fn empty_device_sync_response_still_surfaces_batch_completion() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let (mut runtime, _, _) = runtime_with_db(db);
+
+        let effects = runtime
+            .handle_server_message(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
+                v: PROTOCOL_VERSION,
+                messages: vec![],
+            }))
+            .await
+            .unwrap();
+
+        assert_eq!(
+            effects,
+            vec![RuntimeEffect::DeviceSyncBatchProcessed {
+                message_count: 0,
+                conversation_count: 0,
+            }]
+        );
     }
 
     #[tokio::test]
