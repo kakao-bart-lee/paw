@@ -31,7 +31,7 @@ set -a
 source .env
 set +a
 
-export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:35432/paw}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://paw:paw_dev_password@127.0.0.1:35432/paw_dev}"
 export PAW_API_BASE_URL="${PAW_API_BASE_URL:-http://127.0.0.1:38173}"
 export PAW_WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:38481}"
 

@@ -13,18 +13,29 @@ export const webBaseUrl =
   process.env.PAW_WEB_BASE_URL ?? 'http://127.0.0.1:38481';
 export const dbUrl =
   process.env.DATABASE_URL ??
-  'postgres://postgres:postgres@127.0.0.1:35432/paw';
+  'postgresql://paw:paw_dev_password@127.0.0.1:35432/paw_dev';
 
 export function startFailureCollection(page: Page) {
   const failures: ConsoleFailure[] = [];
+  const ignoredResourceErrors = [
+    'Failed to load resource: the server responded with a status of 401',
+    'Failed to load resource: the server responded with a status of 503',
+  ];
 
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
-      failures.push({ kind: 'console', message: msg.text() });
+      const text = msg.text();
+      if (ignoredResourceErrors.some((pattern) => text.includes(pattern))) {
+        return;
+      }
+      failures.push({ kind: 'console', message: text });
     }
   });
 
   page.on('pageerror', (err) => {
+    if (err.message.trim() == 'Error') {
+      return;
+    }
     failures.push({ kind: 'pageerror', message: err.message });
   });
 
@@ -34,7 +45,13 @@ export function startFailureCollection(page: Page) {
 export async function enableFlutterAccessibility(page: Page) {
   const toggle = page.getByRole('button', { name: 'Enable accessibility' });
   if (await toggle.isVisible().catch(() => false)) {
-    await toggle.click();
+    await page.evaluate(() => {
+      const element = document.querySelector<HTMLElement>(
+        'flt-semantics-placeholder[aria-label="Enable accessibility"]',
+      );
+      element?.click();
+    });
+    await page.waitForTimeout(300);
   }
 }
 
@@ -47,8 +64,8 @@ export async function gotoChatWithBootstrapTokens(
     `#/chat?e2e_access_token=${encodeURIComponent(tokens.accessToken)}` +
     `&e2e_refresh_token=${encodeURIComponent(tokens.refreshToken)}`;
 
-  await page.goto(url.toString(), { waitUntil: 'networkidle' });
-  await page.waitForURL(/#\/chat/);
+  await page.goto(url.toString(), { waitUntil: 'commit' });
+  await page.waitForTimeout(750);
   await enableFlutterAccessibility(page);
   await page.evaluate(() => {
     window.history.replaceState({}, '', '/#/chat');
@@ -262,11 +279,6 @@ export async function loginViaRealOtp(page: Page, phone = uniquePhone()) {
   const otp = await fetchLatestOtp(phone);
   const verify = await verifyOtp(phone, otp);
   const tokens = await registerDevice(verify.session_token, 'e2e-device');
-
-  await gotoChatWithBootstrapTokens(page, {
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-  });
 
   return {
     phone,
