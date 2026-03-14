@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../profile/widgets/avatar_widget.dart';
 import '../providers/chat_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/feedback_state_card.dart';
 
 class GroupInfoScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -204,46 +205,11 @@ class _GroupInfoFeedbackState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-              border: Border.all(color: AppTheme.outline),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface3,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                    border: Border.all(color: AppTheme.outline),
-                  ),
-                  child: Icon(icon, color: AppTheme.mutedText),
-                ),
-                const SizedBox(height: 16),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (action != null) ...[const SizedBox(height: 16), action!],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return FeedbackStateCard(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      action: action,
     );
   }
 }
