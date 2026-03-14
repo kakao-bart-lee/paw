@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "dev.paw.android.app-mergeDebugResources-51:/values-v22/values-v22.xml",
+            "map": [
+                {
+                    "source": "/Users/haruna/.gradle/caches/9.4.0/transforms/88bf1162d2a17d650768caf911ac513e/transformed/appcompat-1.7.1/res/values-v22/values-v22.xml",
+                    "from": {
+                        "startLines": "2,3,4,9",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,130,217,487",
+                        "endLines": "2,3,8,13",
+                        "endColumns": "74,86,12,12",
+                        "endOffsets": "125,212,482,764"
+                    }
+                }
+            ]
+        }
+    ]
+}

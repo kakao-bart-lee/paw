@@ -1,0 +1,3805 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		CA272E8348BAB4CE0B0C804FB7B818C4 /* FlutterMacOS */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 624022EE1C2EAB1C3CC38699E1368C5F /* Build configuration list for PBXAggregateTarget "FlutterMacOS" */;
+			buildPhases = (
+			);
+			dependencies = (
+			);
+			name = FlutterMacOS;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		03FF65672874530A3E9AE6BAB1764A4A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		17874DDEB47AB62C7B63A10DD96E5706 /* FMDatabaseAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = D8874020FE6327DFF82AFBAFC4CCA311 /* FMDatabaseAdditions.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		240B750C35895B57E4059FF52C9B21DC /* SharedPreferencesPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB7D17E562FADD7DFCE814DC37AF69C /* SharedPreferencesPlugin.swift */; };
+		2FC119B1410E8A85EFF0F5C5022FF890 /* FMDB-FMDB_Privacy in Resources */ = {isa = PBXBuildFile; fileRef = 148D9AC15C4A9777E5ACBB46C03FE218 /* FMDB-FMDB_Privacy */; };
+		346F827AAEA15B1AFA1700D9C8CFEB55 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ECCE7B650B7DE32DD62282A4DD362A41 /* PrivacyInfo.xcprivacy */; };
+		35C5D63BAA9FAC0948FE082C21124F62 /* flutter_secure_storage_darwin-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 317352D6910FDFA5371E85629EFD3CB2 /* flutter_secure_storage_darwin-dummy.m */; };
+		3C7D796BB4B0F1353436D89BA69F576A /* SqfliteSqlCipherPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E752BC22ED330164EF21363141572B4 /* SqfliteSqlCipherPlugin.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		3F9CACF5F1957FC9E3680DF5D0B4D1EA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9B391495BB6443D353957E58579443E3 /* Foundation.framework */; };
+		43928F2E048146CD97F36717D1C6D7B9 /* FlutterSecureStorageDarwinPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B0F0BC97AC777F1C2C71D7D76E36A2 /* FlutterSecureStorageDarwinPlugin.swift */; };
+		44F193DE700879F2371DE0F36BDCCB80 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		48B2B292E50ABA65D639EC8A870660B7 /* sqflite_sqlcipher-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C9287C5B4FC430499BF3C9E3F9B6D06 /* sqflite_sqlcipher-dummy.m */; };
+		48CCF26692A63AE64E5A9AB451D8EF6F /* FMDB.h in Headers */ = {isa = PBXBuildFile; fileRef = 39D404738769E30024EEF95EEF7A3F2C /* FMDB.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4997F857BBBD8BBF8B69DD8059026962 /* sqlite3.h in Headers */ = {isa = PBXBuildFile; fileRef = E4F779FD6FF93600F4F441D158EA85C1 /* sqlite3.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4C493303EE9E3AB1B9CE38CAA2C92E3A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		4C6A5079510A90AEA672E6043F8A46EF /* FMDatabasePool.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C77E2F2E1F22F9C8C49CF93E32C6F6 /* FMDatabasePool.m */; };
+		4CF1C253F24E5AFA058A5D53064DCEDE /* shared_preferences_foundation-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = B4BA7E7FFD26B90E434A72853B1D00F1 /* shared_preferences_foundation-dummy.m */; };
+		520D0790C7BACCBB387B1DCC1DDF8B7A /* FMResultSet.h in Headers */ = {isa = PBXBuildFile; fileRef = 9D26AE180D45ADB6C0F8835A03E80547 /* FMResultSet.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		579AA70F4E429F3583C084F4A07A8E44 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 765FBD79B889AE9F35812AE747362A8B /* PrivacyInfo.xcprivacy */; };
+		5EBF6551B9BE431260731BE8FECD362A /* FMDatabaseQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = C36BE3F7F19BE1FEAB936D6BBA25A909 /* FMDatabaseQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		5F760C2D0DEBCC16982655F3F213E071 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE68FEB7FE913343D838FF55FAC3EBE3 /* Security.framework */; };
+		675A24D88FCE1AA077C9147436162C18 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DB906056B476B56BEF926029F20C1C88 /* PrivacyInfo.xcprivacy */; };
+		6AC81CE4F8A10FDAE42A22D89EAE1221 /* messages.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1271E3638D706D10726ADE3914A9A534 /* messages.g.swift */; };
+		6F356F0B4325BA7A08F4347920C2C26A /* SqfliteSqlCipherOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 407AA3F3D856EF21C91AF7A9805F404F /* SqfliteSqlCipherOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		718C12B03D90D536D2361B05C5F99E52 /* flutter_secure_storage_darwin-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = A4AA18AF4A6B734037701C386B320282 /* flutter_secure_storage_darwin-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		755D2531EADD3ECA25774C39D6B38CB2 /* FMResultSet.m in Sources */ = {isa = PBXBuildFile; fileRef = FE98C81CAB807215609A048A4837B762 /* FMResultSet.m */; };
+		830F681446B611124C8AAAAC662A8105 /* FMDatabase.m in Sources */ = {isa = PBXBuildFile; fileRef = 673808C5DE9755E03901352752A856F8 /* FMDatabase.m */; };
+		8895C9940C45913806093BDAB4279949 /* FMDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = E349B900701DBCA846064F2752BA8D69 /* FMDatabaseQueue.m */; };
+		8D0C74E93330B93887EEC1E4D7EB6329 /* FMDatabase.h in Headers */ = {isa = PBXBuildFile; fileRef = 10D844E6B695FE23045A78EBD867BB5E /* FMDatabase.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		92594150511EF7A12718095CDBA2DBCD /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = 95C5B4DC55B253F5DF7C6774BDF1A1E4 /* sqlite3.c */; settings = {COMPILER_FLAGS = "-DNDEBUG -DSQLITE_HAS_CODEC -DSQLITE_TEMP_STORE=2 -DSQLITE_SOUNDEX -DSQLITE_THREADSAFE -DSQLITE_ENABLE_RTREE -DSQLITE_ENABLE_STAT3 -DSQLITE_ENABLE_STAT4 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_ENABLE_MEMORY_MANAGEMENT -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS4_UNICODE61 -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_FTS5 -DSQLCIPHER_CRYPTO_CC -DHAVE_USLEEP=1 -DSQLITE_MAX_VARIABLE_NUMBER=99999 -DSQLITE_EXTRA_INIT=sqlcipher_extra_init -DSQLITE_EXTRA_SHUTDOWN=sqlcipher_extra_shutdown -fno-objc-arc"; }; };
+		948E18DA8242811425A11A87BC68C3C3 /* shared_preferences_foundation-shared_preferences_foundation_privacy in Resources */ = {isa = PBXBuildFile; fileRef = 0652FCE3FC19056983AABE058B3CC45B /* shared_preferences_foundation-shared_preferences_foundation_privacy */; };
+		953D73F026DE7DA2166304439F8F4F4F /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		9BAED7AFF9A3DE5E6B4D60FFB2F2E3BE /* SqfliteSqlCipherOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 663FFE25AD825B66D4DA019C0E2B2966 /* SqfliteSqlCipherOperation.m */; };
+		9F5D10372BAAA326CF7D44A2F4E787D5 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		A304D472ADE04608CDB808CDF5046987 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		A327E14BBF9D8AB6C9DD4C909F2BF1AD /* Pods-Runner-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 499E3722E8DACDC2AAA6C15AD1796520 /* Pods-Runner-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		A57C23D2C0E94FAEFE1BBEEEE35AD0F2 /* flutter_secure_storage_darwin-flutter_secure_storage in Resources */ = {isa = PBXBuildFile; fileRef = 0B9103ECC6898A200D8DD6F372CAB6CB /* flutter_secure_storage_darwin-flutter_secure_storage */; };
+		AA282758730192CFA33FE5B2D8D34367 /* FMDB-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 271F252C8CF7D7DE4EB580EAE506FE00 /* FMDB-dummy.m */; };
+		B28F1C79C712A2A9D6C800773719CAE6 /* FMDatabasePool.h in Headers */ = {isa = PBXBuildFile; fileRef = CB53AC7CBAC4C435BB2E66A2D539C144 /* FMDatabasePool.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		B375EA128E6579366091BAA390BBDD34 /* Pods-RunnerTests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D3DB54C128E3D88C0C9C7DDEA475ED7 /* Pods-RunnerTests-dummy.m */; };
+		BAA3FD12833985AA651D0751D8601DFD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7E405E91996A0BE80F0DA3BBA20B7EF1 /* PrivacyInfo.xcprivacy */; };
+		C05362FAE114AB80FCB2484C400F81A8 /* SqfliteSqlCipherPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 69F8211FA1ED0205E13401CB80BC7F9D /* SqfliteSqlCipherPlugin.m */; };
+		C3C26A2E6E4175063C3B95715BDB2DC1 /* shared_preferences_foundation-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = B33A1C0B3E27C3B291BDB01088D0F2DF /* shared_preferences_foundation-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		CC922ABB78BDDC66F8198428905047C3 /* FlutterSecureStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07441F9E90C899CE45A675820A8047F7 /* FlutterSecureStorage.swift */; };
+		D1473F124C9E84B8841AD29E2114D58F /* SQLCipher-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 5994B3EDD574F204465A5B442CE82EF3 /* SQLCipher-dummy.m */; };
+		D6A81B1D484D3ED85004C64FE972B4D8 /* SQLCipher-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = B3BBAD694C847D81CB49D44777C8A389 /* SQLCipher-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D855FE24F64078F975AFB5A34E036E7D /* FMDatabaseAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EB83CDBB6C212498E364E4007BBA9FD /* FMDatabaseAdditions.m */; };
+		D8618F9C8299757B5DE0B1D96C3DF2D4 /* sqflite_sqlcipher-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 7E785B7ABD0E0761C80D137EDA8FEF21 /* sqflite_sqlcipher-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D9D6CF51501E9D25A49158EE6BA6C437 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */; };
+		E0CAA80417D066702500876C19F6EDB4 /* Pods-Runner-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = E794494AB90477BA94C681E994ADF341 /* Pods-Runner-dummy.m */; };
+		EA97F1499AD9D0F3E4117056BFFB614B /* FMDB-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = D30E7D9C963853A45557A29887B3D1B0 /* FMDB-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		EB2DC96CDCF638AB89007D2DB0F3119A /* Pods-RunnerTests-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E9B12BCE5540D02A80250C3EC16D399 /* Pods-RunnerTests-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		F8097E30AEEC7391C9895216B7D3649B /* SQLCipher-SQLCipher in Resources */ = {isa = PBXBuildFile; fileRef = 40B6E82B558CAB2B289F5BD57C9E2223 /* SQLCipher-SQLCipher */; };
+		FB1ECC55F8CAA0A2472B12729BE3FF55 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 171BBB5057CDA8C73C68560C00CCD2F2 /* PrivacyInfo.xcprivacy */; };
+		FC8D569CD5F0EC183A43CE4935E0526A /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy in Resources */ = {isa = PBXBuildFile; fileRef = 3E9BA40D6100CB8E9FC80C6ED8F6DA7E /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1558FA4CA2DDF12C3B369880F8B2D2AB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8592E0E389D40AC17881400ADC67ABC0;
+			remoteInfo = FMDB;
+		};
+		2BC0C87FD5B6B61A3821F06712B261FE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 10D198228C63A1D26FC305EF3A06AA90;
+			remoteInfo = flutter_secure_storage_darwin;
+		};
+		3421B1F9117CA7164F96520233F4E193 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8592E0E389D40AC17881400ADC67ABC0;
+			remoteInfo = FMDB;
+		};
+		4D5374E1E380B47914159E2C2B9E2EE7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA272E8348BAB4CE0B0C804FB7B818C4;
+			remoteInfo = FlutterMacOS;
+		};
+		56494DB96A7420F50529CD3A5BD4315A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6F3B8DF35E08C8A4AEBB88EF74C7499C;
+			remoteInfo = "flutter_secure_storage_darwin-flutter_secure_storage";
+		};
+		564B1D133DD30021A419B51FFD9C7177 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EFD8316599F3CDCE4488CEDD8FC6CFCE;
+			remoteInfo = "sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy";
+		};
+		5D2CC372399EF067B17E5591228404BA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 973B9A51B49701F13767694DCAF5C37D;
+			remoteInfo = "FMDB-FMDB_Privacy";
+		};
+		668C412894AD980F6CDE42D566E31FAB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D21962D0DE148A440FADB55935BD4264;
+			remoteInfo = SQLCipher;
+		};
+		718B4EA6D0E86418B32C42121C418DE2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA272E8348BAB4CE0B0C804FB7B818C4;
+			remoteInfo = FlutterMacOS;
+		};
+		908B6D0516144F5D619BAD4321494CD5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA272E8348BAB4CE0B0C804FB7B818C4;
+			remoteInfo = FlutterMacOS;
+		};
+		9A2191211644C8E8AF52AB347C4F5FB9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 87FC595F8D2A5960F7C8C0F0CBCFBC8D;
+			remoteInfo = "SQLCipher-SQLCipher";
+		};
+		A63BC947F613CF7A372048C0AD6C9C31 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA272E8348BAB4CE0B0C804FB7B818C4;
+			remoteInfo = FlutterMacOS;
+		};
+		A855C3081CA990A0A161CF35D949B0CA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB5EE685B22D01885ADD930538E8DD3C;
+			remoteInfo = shared_preferences_foundation;
+		};
+		CD0D2406D6D463091EE0946AE9B751DC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A65A51B947BFAB6EDF732E3831CBB71;
+			remoteInfo = sqflite_sqlcipher;
+		};
+		D5AFF5CFA6D40532B438A652D13004F5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B6AF8B7CEAF6321719ABBC7E770624DA;
+			remoteInfo = "shared_preferences_foundation-shared_preferences_foundation_privacy";
+		};
+		EAF17870484FD1E4DC254459EACE6B1E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D21962D0DE148A440FADB55935BD4264;
+			remoteInfo = SQLCipher;
+		};
+		EC7AC3424D938361FEA72478DBE9D229 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B74B458B450D74B75744B87BD747314;
+			remoteInfo = "Pods-Runner";
+		};
+		F5493A4BBE3D051523DCAA0C9A25FDA7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D21962D0DE148A440FADB55935BD4264;
+			remoteInfo = SQLCipher;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0101D2FB61424F53B40311A736BFCCC4 /* sqflite_sqlcipher.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = sqflite_sqlcipher.release.xcconfig; sourceTree = "<group>"; };
+		03E8AD2E8B75443E12D3D3BD12A9900E /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
+		0652FCE3FC19056983AABE058B3CC45B /* shared_preferences_foundation-shared_preferences_foundation_privacy */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "shared_preferences_foundation-shared_preferences_foundation_privacy"; path = shared_preferences_foundation_privacy.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		0662A80D1B288EACD3F890E6CD8E0F9D /* ResourceBundle-sqflite_sqlcipher_ios_privacy-sqflite_sqlcipher-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "ResourceBundle-sqflite_sqlcipher_ios_privacy-sqflite_sqlcipher-Info.plist"; sourceTree = "<group>"; };
+		07441F9E90C899CE45A675820A8047F7 /* FlutterSecureStorage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FlutterSecureStorage.swift; path = "../../../../../../../../../../../../../.pub-cache/hosted/pub.dev/flutter_secure_storage_darwin-0.2.0/darwin/flutter_secure_storage_darwin/Sources/flutter_secure_storage_darwin/FlutterSecureStorage.swift"; sourceTree = "<group>"; };
+		0AB7D17E562FADD7DFCE814DC37AF69C /* SharedPreferencesPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SharedPreferencesPlugin.swift; path = "../../../../../../../../../../../../../.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/darwin/shared_preferences_foundation/Sources/shared_preferences_foundation/SharedPreferencesPlugin.swift"; sourceTree = "<group>"; };
+		0AFB643DA4919253F749E2836A5AAFDC /* Pods-Runner-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-Runner-Info.plist"; sourceTree = "<group>"; };
+		0B9103ECC6898A200D8DD6F372CAB6CB /* flutter_secure_storage_darwin-flutter_secure_storage */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "flutter_secure_storage_darwin-flutter_secure_storage"; path = flutter_secure_storage.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		0C8A806029EDA51705B08F07F2024DF8 /* sqflite_sqlcipher */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = sqflite_sqlcipher; path = sqflite_sqlcipher.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		104C065E25CCE0C93B64DCF3110D7440 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; name = LICENSE; path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/LICENSE"; sourceTree = "<group>"; };
+		10D844E6B695FE23045A78EBD867BB5E /* FMDatabase.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FMDatabase.h; path = src/fmdb/FMDatabase.h; sourceTree = "<group>"; };
+		11AA7018F95317D959D9D2E76CBB2377 /* Pods-RunnerTests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-RunnerTests-acknowledgements.markdown"; sourceTree = "<group>"; };
+		1271E3638D706D10726ADE3914A9A534 /* messages.g.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = messages.g.swift; path = "../../../../../../../../../../../../../.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/darwin/shared_preferences_foundation/Sources/shared_preferences_foundation/messages.g.swift"; sourceTree = "<group>"; };
+		148D9AC15C4A9777E5ACBB46C03FE218 /* FMDB-FMDB_Privacy */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "FMDB-FMDB_Privacy"; path = FMDB_Privacy.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		14D69A109DA88F0A4951546EB2BA3787 /* shared_preferences_foundation-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "shared_preferences_foundation-prefix.pch"; sourceTree = "<group>"; };
+		171BBB5057CDA8C73C68560C00CCD2F2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = "../../../../../../../../../../../../../../.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/darwin/shared_preferences_foundation/Sources/shared_preferences_foundation/Resources/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+		18C72E138AA87EADAA3C7E09EDB76096 /* SQLCipher.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = SQLCipher.debug.xcconfig; sourceTree = "<group>"; };
+		1B136F41D5B5FAE96EA576E768A5771D /* Pods-Runner-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-Runner-acknowledgements.plist"; sourceTree = "<group>"; };
+		1B67419C5ECD621ABC37BC15DA7C0184 /* FMDB.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = FMDB.release.xcconfig; sourceTree = "<group>"; };
+		1E752BC22ED330164EF21363141572B4 /* SqfliteSqlCipherPlugin.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = SqfliteSqlCipherPlugin.h; path = "../../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos/Classes/SqfliteSqlCipherPlugin.h"; sourceTree = "<group>"; };
+		1EB83CDBB6C212498E364E4007BBA9FD /* FMDatabaseAdditions.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FMDatabaseAdditions.m; path = src/fmdb/FMDatabaseAdditions.m; sourceTree = "<group>"; };
+		1FD5F5B0E4809A3AE2ECDE142F44A6BB /* SQLCipher */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = SQLCipher; path = SQLCipher.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		20D2718FBCD90633004C5E6E1C7702AD /* FMDB.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = FMDB.debug.xcconfig; sourceTree = "<group>"; };
+		271F252C8CF7D7DE4EB580EAE506FE00 /* FMDB-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "FMDB-dummy.m"; sourceTree = "<group>"; };
+		280B18C5880FC6F356B5C11D60A11B4A /* ResourceBundle-SQLCipher-SQLCipher-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "ResourceBundle-SQLCipher-SQLCipher-Info.plist"; sourceTree = "<group>"; };
+		2C9287C5B4FC430499BF3C9E3F9B6D06 /* sqflite_sqlcipher-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "sqflite_sqlcipher-dummy.m"; sourceTree = "<group>"; };
+		317352D6910FDFA5371E85629EFD3CB2 /* flutter_secure_storage_darwin-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "flutter_secure_storage_darwin-dummy.m"; sourceTree = "<group>"; };
+		3491E1A84D1B8594548F066086ED5315 /* flutter_secure_storage_darwin */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = flutter_secure_storage_darwin; path = flutter_secure_storage_darwin.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		39D404738769E30024EEF95EEF7A3F2C /* FMDB.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FMDB.h; path = src/fmdb/FMDB.h; sourceTree = "<group>"; };
+		3E9BA40D6100CB8E9FC80C6ED8F6DA7E /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy"; path = sqflite_sqlcipher_ios_privacy.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		407AA3F3D856EF21C91AF7A9805F404F /* SqfliteSqlCipherOperation.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = SqfliteSqlCipherOperation.h; path = "../../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos/Classes/SqfliteSqlCipherOperation.h"; sourceTree = "<group>"; };
+		40B6E82B558CAB2B289F5BD57C9E2223 /* SQLCipher-SQLCipher */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "SQLCipher-SQLCipher"; path = SQLCipher.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		473550EB302D980696DA32282CFF2E90 /* ResourceBundle-flutter_secure_storage-flutter_secure_storage_darwin-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "ResourceBundle-flutter_secure_storage-flutter_secure_storage_darwin-Info.plist"; sourceTree = "<group>"; };
+		499E3722E8DACDC2AAA6C15AD1796520 /* Pods-Runner-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-Runner-umbrella.h"; sourceTree = "<group>"; };
+		4D3DB54C128E3D88C0C9C7DDEA475ED7 /* Pods-RunnerTests-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-RunnerTests-dummy.m"; sourceTree = "<group>"; };
+		4FE766195557D997852FC5620787AEA5 /* shared_preferences_foundation-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "shared_preferences_foundation-Info.plist"; sourceTree = "<group>"; };
+		50E047AA4AD582C3F9238168DA2979B0 /* sqflite_sqlcipher.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = sqflite_sqlcipher.podspec; path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos/sqflite_sqlcipher.podspec"; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		5119FD6FC8F1A4AEEED25A82626598B6 /* shared_preferences_foundation.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = shared_preferences_foundation.debug.xcconfig; sourceTree = "<group>"; };
+		55B0481CAECD75309A234FC77E2A50EE /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; name = LICENSE; path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/LICENSE"; sourceTree = "<group>"; };
+		5994B3EDD574F204465A5B442CE82EF3 /* SQLCipher-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "SQLCipher-dummy.m"; sourceTree = "<group>"; };
+		5FA1BB756FE80B71EAC443E6051C58C3 /* flutter_secure_storage_darwin.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = flutter_secure_storage_darwin.debug.xcconfig; sourceTree = "<group>"; };
+		623B3CDE173FBE64A8A1BCA249DC9220 /* flutter_secure_storage_darwin-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "flutter_secure_storage_darwin-prefix.pch"; sourceTree = "<group>"; };
+		65AC9EFC1A2B3E856CA0141CF19037D6 /* shared_preferences_foundation.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = shared_preferences_foundation.modulemap; sourceTree = "<group>"; };
+		663FFE25AD825B66D4DA019C0E2B2966 /* SqfliteSqlCipherOperation.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = SqfliteSqlCipherOperation.m; path = "../../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos/Classes/SqfliteSqlCipherOperation.m"; sourceTree = "<group>"; };
+		669E8F25E1897672BDB80B7EB784DA24 /* Pods-Runner */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-Runner"; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		673808C5DE9755E03901352752A856F8 /* FMDatabase.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FMDatabase.m; path = src/fmdb/FMDatabase.m; sourceTree = "<group>"; };
+		69F8211FA1ED0205E13401CB80BC7F9D /* SqfliteSqlCipherPlugin.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = SqfliteSqlCipherPlugin.m; path = "../../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos/Classes/SqfliteSqlCipherPlugin.m"; sourceTree = "<group>"; };
+		6BF6AEB9FA5368FC431325C0C9F07B54 /* flutter_secure_storage_darwin.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = flutter_secure_storage_darwin.release.xcconfig; sourceTree = "<group>"; };
+		6C3345B1B3CAEDF5B03B1F731FDC492E /* Pods-RunnerTests */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-RunnerTests"; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		71A9944180C6FDA10A8AE2EDED1A3153 /* shared_preferences_foundation.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = shared_preferences_foundation.podspec; path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/darwin/shared_preferences_foundation.podspec"; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		728A5ED1DD60BAC8C8F382A87B976F84 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		765FBD79B889AE9F35812AE747362A8B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = privacy/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		773BFCE41424EB8EBB72EF3F6A5FB719 /* Pods-Runner-frameworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Pods-Runner-frameworks.sh"; sourceTree = "<group>"; };
+		775BD57D6629DB71FB2F4DF9C46A09FF /* FMDB-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "FMDB-Info.plist"; sourceTree = "<group>"; };
+		79D13CBC81DE612C84544A75568106D6 /* sqflite_sqlcipher.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = sqflite_sqlcipher.debug.xcconfig; sourceTree = "<group>"; };
+		79F83F4D505FA40C1CD18A8029181D59 /* Pods-RunnerTests-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-RunnerTests-acknowledgements.plist"; sourceTree = "<group>"; };
+		7E405E91996A0BE80F0DA3BBA20B7EF1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = "sqlcipher-resources/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+		7E785B7ABD0E0761C80D137EDA8FEF21 /* sqflite_sqlcipher-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "sqflite_sqlcipher-umbrella.h"; sourceTree = "<group>"; };
+		87B0F0BC97AC777F1C2C71D7D76E36A2 /* FlutterSecureStorageDarwinPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FlutterSecureStorageDarwinPlugin.swift; path = "../../../../../../../../../../../../../.pub-cache/hosted/pub.dev/flutter_secure_storage_darwin-0.2.0/darwin/flutter_secure_storage_darwin/Sources/flutter_secure_storage_darwin/FlutterSecureStorageDarwinPlugin.swift"; sourceTree = "<group>"; };
+		8ED476B85D4731BA594765F8BC626190 /* sqflite_sqlcipher-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "sqflite_sqlcipher-prefix.pch"; sourceTree = "<group>"; };
+		93C6A45C6E4792269BE9BE0073839BF0 /* shared_preferences_foundation */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = shared_preferences_foundation; path = shared_preferences_foundation.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		94C77E2F2E1F22F9C8C49CF93E32C6F6 /* FMDatabasePool.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FMDatabasePool.m; path = src/fmdb/FMDatabasePool.m; sourceTree = "<group>"; };
+		95C5B4DC55B253F5DF7C6774BDF1A1E4 /* sqlite3.c */ = {isa = PBXFileReference; includeInIndex = 1; path = sqlite3.c; sourceTree = "<group>"; };
+		95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		9654E5151A8F626C644563579B8F51CF /* FlutterMacOS.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; path = FlutterMacOS.podspec; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		98788293255A495007110BFC633ECED1 /* FlutterMacOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = FlutterMacOS.release.xcconfig; sourceTree = "<group>"; };
+		99C3B9D31A52CAA6AE6B0A7304EA0BA8 /* SQLCipher-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "SQLCipher-prefix.pch"; sourceTree = "<group>"; };
+		9A036FD0C66521AE74756C7AD0B27A65 /* sqflite_sqlcipher.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = sqflite_sqlcipher.modulemap; sourceTree = "<group>"; };
+		9B391495BB6443D353957E58579443E3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		9D26AE180D45ADB6C0F8835A03E80547 /* FMResultSet.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FMResultSet.h; path = src/fmdb/FMResultSet.h; sourceTree = "<group>"; };
+		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		9DE1ACD112E37006DCA6A3A3BA595946 /* FMDB-prefix.pch */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "FMDB-prefix.pch"; sourceTree = "<group>"; };
+		9E9B12BCE5540D02A80250C3EC16D399 /* Pods-RunnerTests-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-RunnerTests-umbrella.h"; sourceTree = "<group>"; };
+		A3A80BA70CFB7F75C5391BEBBBA8C9DA /* FMDB */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = FMDB; path = FMDB.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A4AA18AF4A6B734037701C386B320282 /* flutter_secure_storage_darwin-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "flutter_secure_storage_darwin-umbrella.h"; sourceTree = "<group>"; };
+		A640F1B997F04E0E4F03A7C23F0E04D6 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; name = LICENSE; path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/flutter_secure_storage_darwin-0.2.0/LICENSE"; sourceTree = "<group>"; };
+		AC8FE152530FBDCE460186B326C1A8FB /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		AD52A1F3DA7FD0A806D6B3B9E2DA7763 /* FMDB.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = FMDB.modulemap; sourceTree = "<group>"; };
+		B00A5ECAED4CA0C16FF7C65365BC0334 /* Pods-RunnerTests-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-RunnerTests-Info.plist"; sourceTree = "<group>"; };
+		B0BD57AB3672E53828D11C2A3368023A /* Pods-RunnerTests.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-RunnerTests.modulemap"; sourceTree = "<group>"; };
+		B33A1C0B3E27C3B291BDB01088D0F2DF /* shared_preferences_foundation-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "shared_preferences_foundation-umbrella.h"; sourceTree = "<group>"; };
+		B3BBAD694C847D81CB49D44777C8A389 /* SQLCipher-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "SQLCipher-umbrella.h"; sourceTree = "<group>"; };
+		B4BA7E7FFD26B90E434A72853B1D00F1 /* shared_preferences_foundation-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "shared_preferences_foundation-dummy.m"; sourceTree = "<group>"; };
+		B703785507B22BAF0B800737429577EC /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		B867567EDC66C6564C06EF6703638073 /* ResourceBundle-shared_preferences_foundation_privacy-shared_preferences_foundation-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "ResourceBundle-shared_preferences_foundation_privacy-shared_preferences_foundation-Info.plist"; sourceTree = "<group>"; };
+		C24C1A035F22D24883C6F1876F274C6F /* Pods-Runner.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-Runner.modulemap"; sourceTree = "<group>"; };
+		C36BE3F7F19BE1FEAB936D6BBA25A909 /* FMDatabaseQueue.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FMDatabaseQueue.h; path = src/fmdb/FMDatabaseQueue.h; sourceTree = "<group>"; };
+		C50FD10CD19FF6999637BA5ECAF1681B /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		CB53AC7CBAC4C435BB2E66A2D539C144 /* FMDatabasePool.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FMDatabasePool.h; path = src/fmdb/FMDatabasePool.h; sourceTree = "<group>"; };
+		CE68FEB7FE913343D838FF55FAC3EBE3 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Security.framework; sourceTree = DEVELOPER_DIR; };
+		CECDF16E6B1A7418CAF87F4D610E1D19 /* SQLCipher.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = SQLCipher.modulemap; sourceTree = "<group>"; };
+		D30E7D9C963853A45557A29887B3D1B0 /* FMDB-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "FMDB-umbrella.h"; sourceTree = "<group>"; };
+		D8874020FE6327DFF82AFBAFC4CCA311 /* FMDatabaseAdditions.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = FMDatabaseAdditions.h; path = src/fmdb/FMDatabaseAdditions.h; sourceTree = "<group>"; };
+		D94226D083F27EF5BCE7EC8EA9F2ED15 /* SQLCipher.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = SQLCipher.release.xcconfig; sourceTree = "<group>"; };
+		D9B465A7C76434C2267AC50F6D0D7CDE /* ResourceBundle-FMDB_Privacy-FMDB-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "ResourceBundle-FMDB_Privacy-FMDB-Info.plist"; sourceTree = "<group>"; };
+		DB906056B476B56BEF926029F20C1C88 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = "../../../../../../../../../../../../../../.pub-cache/hosted/pub.dev/flutter_secure_storage_darwin-0.2.0/darwin/flutter_secure_storage_darwin/Sources/flutter_secure_storage_darwin/Resources/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+		E349B900701DBCA846064F2752BA8D69 /* FMDatabaseQueue.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FMDatabaseQueue.m; path = src/fmdb/FMDatabaseQueue.m; sourceTree = "<group>"; };
+		E4F779FD6FF93600F4F441D158EA85C1 /* sqlite3.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = sqlite3.h; sourceTree = "<group>"; };
+		E736E0C9C5B73D27B8865E363E2108AC /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		E794494AB90477BA94C681E994ADF341 /* Pods-Runner-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-Runner-dummy.m"; sourceTree = "<group>"; };
+		EA0ED6AFE57D0739908FC120713ABF53 /* shared_preferences_foundation.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = shared_preferences_foundation.release.xcconfig; sourceTree = "<group>"; };
+		EB563BA0E7630F92DF2D38FF25E1F1D2 /* flutter_secure_storage_darwin.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = flutter_secure_storage_darwin.modulemap; sourceTree = "<group>"; };
+		EC0668B150169D7B68F929D03E5FF3AD /* flutter_secure_storage_darwin.podspec */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = flutter_secure_storage_darwin.podspec; path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/flutter_secure_storage_darwin-0.2.0/darwin/flutter_secure_storage_darwin.podspec"; sourceTree = "<group>"; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		ECCE7B650B7DE32DD62282A4DD362A41 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = "../../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos/Resources/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+		ECDF6AA713870989438BA93B395DC557 /* Pods-Runner-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-Runner-acknowledgements.markdown"; sourceTree = "<group>"; };
+		ED9AF375DBBCB717E6E4DEA30ADAC2D4 /* sqflite_sqlcipher-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "sqflite_sqlcipher-Info.plist"; sourceTree = "<group>"; };
+		F872D68DF33D9939CB2B50BDDA0633DA /* flutter_secure_storage_darwin-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "flutter_secure_storage_darwin-Info.plist"; sourceTree = "<group>"; };
+		FB187AE6FD17C18CA3DD298BDE36767C /* SQLCipher-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "SQLCipher-Info.plist"; sourceTree = "<group>"; };
+		FE98C81CAB807215609A048A4837B762 /* FMResultSet.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = FMResultSet.m; path = src/fmdb/FMResultSet.m; sourceTree = "<group>"; };
+		FED431727A4B25EFC9735A011D74E07C /* FlutterMacOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = FlutterMacOS.debug.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		003B2DEEEF7AC889A76E080192AFD9E5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C493303EE9E3AB1B9CE38CAA2C92E3A /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0230049C2EE5F5137F1773369A39B9C8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		214CF711B18F9219CDDA7715DB0EED42 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D9D6CF51501E9D25A49158EE6BA6C437 /* Cocoa.framework in Frameworks */,
+				3F9CACF5F1957FC9E3680DF5D0B4D1EA /* Foundation.framework in Frameworks */,
+				5F760C2D0DEBCC16982655F3F213E071 /* Security.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		356C418AB739584090A3827AFCB8A9B6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		35E1E87EAAB77216AB5DA0387A300C1C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44F193DE700879F2371DE0F36BDCCB80 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		385D6C4904B4554AB16074AE2222BAA8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A304D472ADE04608CDB808CDF5046987 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A5AEF8F11DC3E5A88E6AAF7253E6AA2A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9F5D10372BAAA326CF7D44A2F4E787D5 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0BBAAFDE4F49179479134721AE79644 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				953D73F026DE7DA2166304439F8F4F4F /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D080E44DEB03A8B308B76DA6E27311ED /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E513195899A7D4C5A504D74C039A09FB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EAC0834F7252D8143E0E41335E53F3B8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				03FF65672874530A3E9AE6BAB1764A4A /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC84375F7875755EF0D202D3C1809320 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		01422FEEC4CA17AA60AED8A8D29324CD /* workspace */ = {
+			isa = PBXGroup;
+			children = (
+				D730E603CDB5D7C1C8393579EE70C927 /* paw */,
+			);
+			name = workspace;
+			path = workspace;
+			sourceTree = "<group>";
+		};
+		02817A336CBB7FC1FA602B6A04196FB5 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				A27DC93C15B51320047180C53E6B20A6 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		028E039C00136705FD6D5D1449B80809 /* darwin */ = {
+			isa = PBXGroup;
+			children = (
+				CB705548FEB433C930A466660101A74C /* flutter_secure_storage_darwin */,
+			);
+			name = darwin;
+			path = darwin;
+			sourceTree = "<group>";
+		};
+		0307C754D76EBDEFF009B4902D8F8304 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				885BD6487081C36D788073BC7210F251 /* workspace */,
+			);
+			name = ..;
+			path = .;
+			sourceTree = "<group>";
+		};
+		088ABC2E995F1A59F34C7A6710EF77ED /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				280B18C5880FC6F356B5C11D60A11B4A /* ResourceBundle-SQLCipher-SQLCipher-Info.plist */,
+				CECDF16E6B1A7418CAF87F4D610E1D19 /* SQLCipher.modulemap */,
+				5994B3EDD574F204465A5B442CE82EF3 /* SQLCipher-dummy.m */,
+				FB187AE6FD17C18CA3DD298BDE36767C /* SQLCipher-Info.plist */,
+				99C3B9D31A52CAA6AE6B0A7304EA0BA8 /* SQLCipher-prefix.pch */,
+				B3BBAD694C847D81CB49D44777C8A389 /* SQLCipher-umbrella.h */,
+				18C72E138AA87EADAA3C7E09EDB76096 /* SQLCipher.debug.xcconfig */,
+				D94226D083F27EF5BCE7EC8EA9F2ED15 /* SQLCipher.release.xcconfig */,
+			);
+			name = "Support Files";
+			path = "../Target Support Files/SQLCipher";
+			sourceTree = "<group>";
+		};
+		0ACDAE543D041DCBC2F9D15AF0E7D211 /* workspace */ = {
+			isa = PBXGroup;
+			children = (
+				DAC5757049D460115C5FE51602E30262 /* paw */,
+			);
+			name = workspace;
+			path = workspace;
+			sourceTree = "<group>";
+		};
+		0AED9D94848D18F4772D55CB9BC8E45C /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				1DC3364A9534E7BF5A9FFB538AC9EADD /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		0BBD01A0F2D11E9547385922C79B02B6 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				30F1E079335088176444C84927E95526 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		0DCA07BD720591B719441215FDD0F5CA /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				E19144C5242506100FF0A115E48CB71A /* Resources */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = flutter_secure_storage_darwin;
+			sourceTree = "<group>";
+		};
+		0E0140FCB525D506C1DBD491520F5344 /* paw-client */ = {
+			isa = PBXGroup;
+			children = (
+				FF01DAB1240A795C2F45CCA197CF02F5 /* macos */,
+			);
+			name = "paw-client";
+			path = "paw-client";
+			sourceTree = "<group>";
+		};
+		110A1606F0812AC1C916128EFF7F4458 /* ephemeral */ = {
+			isa = PBXGroup;
+			children = (
+				C7D1A51C41FA19EAD650ABE05BA370FD /* .symlinks */,
+			);
+			name = ephemeral;
+			path = ephemeral;
+			sourceTree = "<group>";
+		};
+		147D96DDC0F72DA67F79CBE7DF4A9D23 /* Flutter */ = {
+			isa = PBXGroup;
+			children = (
+				9C28BD0768CF21879B07DC75B6FFC95F /* ephemeral */,
+			);
+			name = Flutter;
+			path = Flutter;
+			sourceTree = "<group>";
+		};
+		1489943462904421C66C1A821A7CC112 /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				C28EDC596CE9A595E120FCF4A41EF3C7 /* darwin */,
+			);
+			name = shared_preferences_foundation;
+			path = shared_preferences_foundation;
+			sourceTree = "<group>";
+		};
+		18F11920D2D4497C05192CD88644743C /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				98C51A73CC120CED00C7BAA7792B859B /* Flutter */,
+			);
+			name = macos;
+			path = macos;
+			sourceTree = "<group>";
+		};
+		19A6AFB91037CB1C746B9D67DC6116F7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				765FBD79B889AE9F35812AE747362A8B /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		1A0A21E444B241DA63DB09DBA20DF1B1 /* paw-client */ = {
+			isa = PBXGroup;
+			children = (
+				18F11920D2D4497C05192CD88644743C /* macos */,
+			);
+			name = "paw-client";
+			path = "paw-client";
+			sourceTree = "<group>";
+		};
+		1A2F4A4A4C494AD41B5FCC8D40F7336D /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				94F42F525D47683622842108DEEBF01E /* .. */,
+				B4A857B425A071DE8027C82BB064C3AB /* Pod */,
+				2EE739D2090811E66968388FC38D72F2 /* Support Files */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = ../Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_darwin/darwin;
+			sourceTree = "<group>";
+		};
+		1A69B6DC7D6F914F326DBE8773A7AB58 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				407AA3F3D856EF21C91AF7A9805F404F /* SqfliteSqlCipherOperation.h */,
+				663FFE25AD825B66D4DA019C0E2B2966 /* SqfliteSqlCipherOperation.m */,
+				1E752BC22ED330164EF21363141572B4 /* SqfliteSqlCipherPlugin.h */,
+				69F8211FA1ED0205E13401CB80BC7F9D /* SqfliteSqlCipherPlugin.m */,
+			);
+			name = Classes;
+			path = Classes;
+			sourceTree = "<group>";
+		};
+		1DC3364A9534E7BF5A9FFB538AC9EADD /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				B00A3C681A7636540EA196CDCA065C38 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		21A7D15DF3B2335A0C60A853DAD33A2F /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				B867567EDC66C6564C06EF6703638073 /* ResourceBundle-shared_preferences_foundation_privacy-shared_preferences_foundation-Info.plist */,
+				65AC9EFC1A2B3E856CA0141CF19037D6 /* shared_preferences_foundation.modulemap */,
+				B4BA7E7FFD26B90E434A72853B1D00F1 /* shared_preferences_foundation-dummy.m */,
+				4FE766195557D997852FC5620787AEA5 /* shared_preferences_foundation-Info.plist */,
+				14D69A109DA88F0A4951546EB2BA3787 /* shared_preferences_foundation-prefix.pch */,
+				B33A1C0B3E27C3B291BDB01088D0F2DF /* shared_preferences_foundation-umbrella.h */,
+				5119FD6FC8F1A4AEEED25A82626598B6 /* shared_preferences_foundation.debug.xcconfig */,
+				EA0ED6AFE57D0739908FC120713ABF53 /* shared_preferences_foundation.release.xcconfig */,
+			);
+			name = "Support Files";
+			path = "../../../../../../Pods/Target Support Files/shared_preferences_foundation";
+			sourceTree = "<group>";
+		};
+		22808DB91FDCAE659EF6F75ED80AB2D5 /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				0662A80D1B288EACD3F890E6CD8E0F9D /* ResourceBundle-sqflite_sqlcipher_ios_privacy-sqflite_sqlcipher-Info.plist */,
+				9A036FD0C66521AE74756C7AD0B27A65 /* sqflite_sqlcipher.modulemap */,
+				2C9287C5B4FC430499BF3C9E3F9B6D06 /* sqflite_sqlcipher-dummy.m */,
+				ED9AF375DBBCB717E6E4DEA30ADAC2D4 /* sqflite_sqlcipher-Info.plist */,
+				8ED476B85D4731BA594765F8BC626190 /* sqflite_sqlcipher-prefix.pch */,
+				7E785B7ABD0E0761C80D137EDA8FEF21 /* sqflite_sqlcipher-umbrella.h */,
+				79D13CBC81DE612C84544A75568106D6 /* sqflite_sqlcipher.debug.xcconfig */,
+				0101D2FB61424F53B40311A736BFCCC4 /* sqflite_sqlcipher.release.xcconfig */,
+			);
+			name = "Support Files";
+			path = "../../../../../../Pods/Target Support Files/sqflite_sqlcipher";
+			sourceTree = "<group>";
+		};
+		28445BF91738F3D2178F856E210AB9D8 /* Flutter */ = {
+			isa = PBXGroup;
+			children = (
+				73E9A9EEB7269068309155F42C8E9FFE /* ephemeral */,
+			);
+			name = Flutter;
+			path = Flutter;
+			sourceTree = "<group>";
+		};
+		2984E80E3B4EE4F3DB6934D2E79FB254 /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				8CA5D8FB6CAFDA2F266A662ADA816D3A /* flutter_secure_storage_darwin */,
+			);
+			name = plugins;
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		2A9C8D3591395CC4690B8129A725D9E0 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				C6B3EAB1602B304B770AFAD720E7DDB7 /* .. */,
+				0ACDAE543D041DCBC2F9D15AF0E7D211 /* workspace */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		2B6A134B3443F8909483C190088C2A0E /* SQLCipher */ = {
+			isa = PBXGroup;
+			children = (
+				78419DA1FD2AF9855DF4DF680E228F63 /* common */,
+				088ABC2E995F1A59F34C7A6710EF77ED /* Support Files */,
+			);
+			name = SQLCipher;
+			path = SQLCipher;
+			sourceTree = "<group>";
+		};
+		2DAABF3A58413B09B3CA8D896A4BF15E /* Flutter */ = {
+			isa = PBXGroup;
+			children = (
+				110A1606F0812AC1C916128EFF7F4458 /* ephemeral */,
+			);
+			name = Flutter;
+			path = Flutter;
+			sourceTree = "<group>";
+		};
+		2DB8426A477BA92773F00012EBA84D53 /* Targets Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				E806A4F97D48F5FD3B4CA1BC617EA1F5 /* Pods-Runner */,
+				537E840C4F4E30B706FD9D64B15C53A7 /* Pods-RunnerTests */,
+			);
+			name = "Targets Support Files";
+			sourceTree = "<group>";
+		};
+		2E50DFD023397A391CC09B19F966ADBD /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				3C7B25FDA129EA79EFFB6461AB7FBEFC /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		2EE739D2090811E66968388FC38D72F2 /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				EB563BA0E7630F92DF2D38FF25E1F1D2 /* flutter_secure_storage_darwin.modulemap */,
+				317352D6910FDFA5371E85629EFD3CB2 /* flutter_secure_storage_darwin-dummy.m */,
+				F872D68DF33D9939CB2B50BDDA0633DA /* flutter_secure_storage_darwin-Info.plist */,
+				623B3CDE173FBE64A8A1BCA249DC9220 /* flutter_secure_storage_darwin-prefix.pch */,
+				A4AA18AF4A6B734037701C386B320282 /* flutter_secure_storage_darwin-umbrella.h */,
+				5FA1BB756FE80B71EAC443E6051C58C3 /* flutter_secure_storage_darwin.debug.xcconfig */,
+				6BF6AEB9FA5368FC431325C0C9F07B54 /* flutter_secure_storage_darwin.release.xcconfig */,
+				473550EB302D980696DA32282CFF2E90 /* ResourceBundle-flutter_secure_storage-flutter_secure_storage_darwin-Info.plist */,
+			);
+			name = "Support Files";
+			path = "../../../../../../Pods/Target Support Files/flutter_secure_storage_darwin";
+			sourceTree = "<group>";
+		};
+		2F8569CA801F20F14C3056B53AAD740F /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				0BBD01A0F2D11E9547385922C79B02B6 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		306008A223BF219859E9F3636C707FDA /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				95EDE73637D6C3AEC8DCB33B9A873E07 /* Cocoa.framework */,
+				9B391495BB6443D353957E58579443E3 /* Foundation.framework */,
+				CE68FEB7FE913343D838FF55FAC3EBE3 /* Security.framework */,
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		30F1E079335088176444C84927E95526 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				02817A336CBB7FC1FA602B6A04196FB5 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		311009FB01588655D65DAAE7BE6B259E /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				443AA5EDAB0591B7EF90D7062B5BEDD2 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		34CC744F738B78D390023251A876F65F /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				79E54A5CF779D4F12B21B50964164D8B /* Flutter */,
+			);
+			name = macos;
+			path = macos;
+			sourceTree = "<group>";
+		};
+		3C7B25FDA129EA79EFFB6461AB7FBEFC /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				80B21B81261697AC9AEE9C4C0F7B91A8 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		41D3B018A7B5306E28CE7A062784C8AB /* Pod */ = {
+			isa = PBXGroup;
+			children = (
+				55B0481CAECD75309A234FC77E2A50EE /* LICENSE */,
+				50E047AA4AD582C3F9238168DA2979B0 /* sqflite_sqlcipher.podspec */,
+			);
+			name = Pod;
+			sourceTree = "<group>";
+		};
+		4362E29F52C60A33908E902FB50A096B /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				79CE352F2B6F1EEE740DDFD4942C5C63 /* Resources */,
+			);
+			name = shared_preferences_foundation;
+			path = shared_preferences_foundation;
+			sourceTree = "<group>";
+		};
+		441DD184F319993D0A4B2AB6F11C81AD /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				FED431727A4B25EFC9735A011D74E07C /* FlutterMacOS.debug.xcconfig */,
+				98788293255A495007110BFC633ECED1 /* FlutterMacOS.release.xcconfig */,
+			);
+			name = "Support Files";
+			path = "../../Pods/Target Support Files/FlutterMacOS";
+			sourceTree = "<group>";
+		};
+		443AA5EDAB0591B7EF90D7062B5BEDD2 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				01422FEEC4CA17AA60AED8A8D29324CD /* workspace */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		49F092E080F294B2EFD2C364141D86E2 /* paw-client */ = {
+			isa = PBXGroup;
+			children = (
+				5C3C85C2390A6EDA59BDD6BBAADE592B /* macos */,
+			);
+			name = "paw-client";
+			path = "paw-client";
+			sourceTree = "<group>";
+		};
+		4AA1CE5F3C2540C4531FC5B3C3EF2EB7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				ECCE7B650B7DE32DD62282A4DD362A41 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		4D08EF9E08780E4BCFD61E9A5F93DB1C /* .symlinks */ = {
+			isa = PBXGroup;
+			children = (
+				A79361237FAB08D08076E81C3AF3398F /* plugins */,
+			);
+			name = .symlinks;
+			path = .symlinks;
+			sourceTree = "<group>";
+		};
+		4FCB7BEA1F36A8604CCC67C715DAE488 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7E405E91996A0BE80F0DA3BBA20B7EF1 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		51CBF62604A67CDDBA631F7FA6079E1A /* sqflite_sqlcipher */ = {
+			isa = PBXGroup;
+			children = (
+				FB5F8BBF24555BBE2F8685803BD2401C /* macos */,
+			);
+			name = sqflite_sqlcipher;
+			path = sqflite_sqlcipher;
+			sourceTree = "<group>";
+		};
+		537E840C4F4E30B706FD9D64B15C53A7 /* Pods-RunnerTests */ = {
+			isa = PBXGroup;
+			children = (
+				B0BD57AB3672E53828D11C2A3368023A /* Pods-RunnerTests.modulemap */,
+				11AA7018F95317D959D9D2E76CBB2377 /* Pods-RunnerTests-acknowledgements.markdown */,
+				79F83F4D505FA40C1CD18A8029181D59 /* Pods-RunnerTests-acknowledgements.plist */,
+				4D3DB54C128E3D88C0C9C7DDEA475ED7 /* Pods-RunnerTests-dummy.m */,
+				B00A5ECAED4CA0C16FF7C65365BC0334 /* Pods-RunnerTests-Info.plist */,
+				9E9B12BCE5540D02A80250C3EC16D399 /* Pods-RunnerTests-umbrella.h */,
+				03E8AD2E8B75443E12D3D3BD12A9900E /* Pods-RunnerTests.debug.xcconfig */,
+				E736E0C9C5B73D27B8865E363E2108AC /* Pods-RunnerTests.profile.xcconfig */,
+				AC8FE152530FBDCE460186B326C1A8FB /* Pods-RunnerTests.release.xcconfig */,
+			);
+			name = "Pods-RunnerTests";
+			path = "Target Support Files/Pods-RunnerTests";
+			sourceTree = "<group>";
+		};
+		5587FC1BAF8018F10EE5777F80770CE5 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				56C26A448BE055BE7836C338AA025600 /* FMDB */,
+				2B6A134B3443F8909483C190088C2A0E /* SQLCipher */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
+		56C26A448BE055BE7836C338AA025600 /* FMDB */ = {
+			isa = PBXGroup;
+			children = (
+				78DE27CAC9A37892A74233C2C0785E60 /* Core */,
+				9C5FC077DC83B06D9E7BF343BFA59804 /* Support Files */,
+			);
+			name = FMDB;
+			path = FMDB;
+			sourceTree = "<group>";
+		};
+		56C7CFF86B5D01967AD603E7537B7DEE /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				CCB5332C2CAF4943AA7AA96BFDFAAD71 /* flutter_secure_storage_darwin */,
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		5C3C85C2390A6EDA59BDD6BBAADE592B /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				28445BF91738F3D2178F856E210AB9D8 /* Flutter */,
+			);
+			name = macos;
+			path = macos;
+			sourceTree = "<group>";
+		};
+		5CC5A8EE2888AD826DE12638C23FA119 /* workspace */ = {
+			isa = PBXGroup;
+			children = (
+				715557175D1065BE709BB789B518B538 /* paw */,
+			);
+			name = workspace;
+			path = workspace;
+			sourceTree = "<group>";
+		};
+		62B141A32D46A7FF3855A8A537B1215D /* sqflite_sqlcipher */ = {
+			isa = PBXGroup;
+			children = (
+				99EA97649A5194981D3BE801BC76693F /* .. */,
+				41D3B018A7B5306E28CE7A062784C8AB /* Pod */,
+				22808DB91FDCAE659EF6F75ED80AB2D5 /* Support Files */,
+			);
+			name = sqflite_sqlcipher;
+			path = ../Flutter/ephemeral/.symlinks/plugins/sqflite_sqlcipher/macos;
+			sourceTree = "<group>";
+		};
+		6D4E7C17F61AE48F21028C4D057258F2 /* .symlinks */ = {
+			isa = PBXGroup;
+			children = (
+				6DA0A450A435A88DD2BF4A5FB3C6AF1B /* plugins */,
+			);
+			name = .symlinks;
+			path = .symlinks;
+			sourceTree = "<group>";
+		};
+		6DA0A450A435A88DD2BF4A5FB3C6AF1B /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				F1660D1ED942BAE6E6DAE492DD48362E /* flutter_secure_storage_darwin */,
+			);
+			name = plugins;
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		6E77D9B7D1D9E66385685E78E18390BA /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				51CBF62604A67CDDBA631F7FA6079E1A /* sqflite_sqlcipher */,
+			);
+			name = plugins;
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		6EE6B575FD6D234D33338791B393DEE8 /* paw-client */ = {
+			isa = PBXGroup;
+			children = (
+				F1256EF0B022D5B673B190FB98E18781 /* macos */,
+			);
+			name = "paw-client";
+			path = "paw-client";
+			sourceTree = "<group>";
+		};
+		715557175D1065BE709BB789B518B538 /* paw */ = {
+			isa = PBXGroup;
+			children = (
+				0E0140FCB525D506C1DBD491520F5344 /* paw-client */,
+			);
+			name = paw;
+			path = paw;
+			sourceTree = "<group>";
+		};
+		73E9A9EEB7269068309155F42C8E9FFE /* ephemeral */ = {
+			isa = PBXGroup;
+			children = (
+				B8D89067044745797797217E177AE849 /* .symlinks */,
+			);
+			name = ephemeral;
+			path = ephemeral;
+			sourceTree = "<group>";
+		};
+		78419DA1FD2AF9855DF4DF680E228F63 /* common */ = {
+			isa = PBXGroup;
+			children = (
+				95C5B4DC55B253F5DF7C6774BDF1A1E4 /* sqlite3.c */,
+				E4F779FD6FF93600F4F441D158EA85C1 /* sqlite3.h */,
+				4FCB7BEA1F36A8604CCC67C715DAE488 /* Resources */,
+			);
+			name = common;
+			sourceTree = "<group>";
+		};
+		78DE27CAC9A37892A74233C2C0785E60 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				10D844E6B695FE23045A78EBD867BB5E /* FMDatabase.h */,
+				673808C5DE9755E03901352752A856F8 /* FMDatabase.m */,
+				D8874020FE6327DFF82AFBAFC4CCA311 /* FMDatabaseAdditions.h */,
+				1EB83CDBB6C212498E364E4007BBA9FD /* FMDatabaseAdditions.m */,
+				CB53AC7CBAC4C435BB2E66A2D539C144 /* FMDatabasePool.h */,
+				94C77E2F2E1F22F9C8C49CF93E32C6F6 /* FMDatabasePool.m */,
+				C36BE3F7F19BE1FEAB936D6BBA25A909 /* FMDatabaseQueue.h */,
+				E349B900701DBCA846064F2752BA8D69 /* FMDatabaseQueue.m */,
+				39D404738769E30024EEF95EEF7A3F2C /* FMDB.h */,
+				9D26AE180D45ADB6C0F8835A03E80547 /* FMResultSet.h */,
+				FE98C81CAB807215609A048A4837B762 /* FMResultSet.m */,
+				19A6AFB91037CB1C746B9D67DC6116F7 /* Resources */,
+			);
+			name = Core;
+			sourceTree = "<group>";
+		};
+		79CE352F2B6F1EEE740DDFD4942C5C63 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				171BBB5057CDA8C73C68560C00CCD2F2 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		79E54A5CF779D4F12B21B50964164D8B /* Flutter */ = {
+			isa = PBXGroup;
+			children = (
+				B4C1F185DAEC51FD5F16F74A8F93A5D7 /* ephemeral */,
+			);
+			name = Flutter;
+			path = Flutter;
+			sourceTree = "<group>";
+		};
+		7D50F3466245EDB68B4F550EAC6C5432 /* paw */ = {
+			isa = PBXGroup;
+			children = (
+				1A0A21E444B241DA63DB09DBA20DF1B1 /* paw-client */,
+			);
+			name = paw;
+			path = paw;
+			sourceTree = "<group>";
+		};
+		80B21B81261697AC9AEE9C4C0F7B91A8 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				311009FB01588655D65DAAE7BE6B259E /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		885BD6487081C36D788073BC7210F251 /* workspace */ = {
+			isa = PBXGroup;
+			children = (
+				C0C332560D74D4184C2D05B4E91FC8D6 /* paw */,
+			);
+			name = workspace;
+			path = workspace;
+			sourceTree = "<group>";
+		};
+		8CA5D8FB6CAFDA2F266A662ADA816D3A /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				B482F41E4F02E301099DC413922BDDA6 /* darwin */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = flutter_secure_storage_darwin;
+			sourceTree = "<group>";
+		};
+		936E0E8CBE9C2A9CA8875A80A838BB4F /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				E59B44504063E671C51956FA470E2E92 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		9416800CDAB7612AAE662C98AC298A6C /* Development Pods */ = {
+			isa = PBXGroup;
+			children = (
+				1A2F4A4A4C494AD41B5FCC8D40F7336D /* flutter_secure_storage_darwin */,
+				9FC7580D1713AA0749A05F00D9A75C9A /* FlutterMacOS */,
+				C788B74C03C12B461DD4F10FC08E3B60 /* shared_preferences_foundation */,
+				62B141A32D46A7FF3855A8A537B1215D /* sqflite_sqlcipher */,
+			);
+			name = "Development Pods";
+			sourceTree = "<group>";
+		};
+		94F42F525D47683622842108DEEBF01E /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				DCB2529727C4F4DE8B3BC86521FB6676 /* .. */,
+			);
+			name = ..;
+			path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/flutter_secure_storage_darwin-0.2.0/darwin/flutter_secure_storage_darwin/Sources";
+			sourceTree = "<group>";
+		};
+		98C51A73CC120CED00C7BAA7792B859B /* Flutter */ = {
+			isa = PBXGroup;
+			children = (
+				E0B4849055A6F1AFB5CA7D3B88B03304 /* ephemeral */,
+			);
+			name = Flutter;
+			path = Flutter;
+			sourceTree = "<group>";
+		};
+		99D8524A2628F38A7C4FD74EC5957747 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				C390C92869F1E89F0EDF94A07D65F93E /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		99EA97649A5194981D3BE801BC76693F /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				2E50DFD023397A391CC09B19F966ADBD /* .. */,
+			);
+			name = ..;
+			path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/sqflite_sqlcipher-3.4.0/macos";
+			sourceTree = "<group>";
+		};
+		9C28BD0768CF21879B07DC75B6FFC95F /* ephemeral */ = {
+			isa = PBXGroup;
+			children = (
+				6D4E7C17F61AE48F21028C4D057258F2 /* .symlinks */,
+			);
+			name = ephemeral;
+			path = ephemeral;
+			sourceTree = "<group>";
+		};
+		9C5FC077DC83B06D9E7BF343BFA59804 /* Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				AD52A1F3DA7FD0A806D6B3B9E2DA7763 /* FMDB.modulemap */,
+				271F252C8CF7D7DE4EB580EAE506FE00 /* FMDB-dummy.m */,
+				775BD57D6629DB71FB2F4DF9C46A09FF /* FMDB-Info.plist */,
+				9DE1ACD112E37006DCA6A3A3BA595946 /* FMDB-prefix.pch */,
+				D30E7D9C963853A45557A29887B3D1B0 /* FMDB-umbrella.h */,
+				20D2718FBCD90633004C5E6E1C7702AD /* FMDB.debug.xcconfig */,
+				1B67419C5ECD621ABC37BC15DA7C0184 /* FMDB.release.xcconfig */,
+				D9B465A7C76434C2267AC50F6D0D7CDE /* ResourceBundle-FMDB_Privacy-FMDB-Info.plist */,
+			);
+			name = "Support Files";
+			path = "../Target Support Files/FMDB";
+			sourceTree = "<group>";
+		};
+		9FC7580D1713AA0749A05F00D9A75C9A /* FlutterMacOS */ = {
+			isa = PBXGroup;
+			children = (
+				EF6C3B7828199874A453F3E57C8C9B59 /* Pod */,
+				441DD184F319993D0A4B2AB6F11C81AD /* Support Files */,
+			);
+			name = FlutterMacOS;
+			path = ../Flutter/ephemeral;
+			sourceTree = "<group>";
+		};
+		A27DC93C15B51320047180C53E6B20A6 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				2A9C8D3591395CC4690B8129A725D9E0 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		A37A469F097D49335B615D2595C7BA00 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				E2FB59E0E974739ED7919AC3F79BC309 /* shared_preferences_foundation */,
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A3CDB250FFEFB42CA2C68F1FBD92997D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				306008A223BF219859E9F3636C707FDA /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A79361237FAB08D08076E81C3AF3398F /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				1489943462904421C66C1A821A7CC112 /* shared_preferences_foundation */,
+			);
+			name = plugins;
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		AC0996809600EEB03C45E6023F26CFE1 /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				DDD795EAF0CF3B1D8013A92CF79C5901 /* shared_preferences_foundation */,
+			);
+			name = plugins;
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		AE7F0EE5C110FBCA08D554C6136DE116 /* .symlinks */ = {
+			isa = PBXGroup;
+			children = (
+				2984E80E3B4EE4F3DB6934D2E79FB254 /* plugins */,
+			);
+			name = .symlinks;
+			path = .symlinks;
+			sourceTree = "<group>";
+		};
+		B00A3C681A7636540EA196CDCA065C38 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				99D8524A2628F38A7C4FD74EC5957747 /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		B482F41E4F02E301099DC413922BDDA6 /* darwin */ = {
+			isa = PBXGroup;
+			children = (
+				CBC7F1F1E3EE3977A5071B1D9CDFC316 /* flutter_secure_storage_darwin */,
+			);
+			name = darwin;
+			path = darwin;
+			sourceTree = "<group>";
+		};
+		B4A857B425A071DE8027C82BB064C3AB /* Pod */ = {
+			isa = PBXGroup;
+			children = (
+				EC0668B150169D7B68F929D03E5FF3AD /* flutter_secure_storage_darwin.podspec */,
+				A640F1B997F04E0E4F03A7C23F0E04D6 /* LICENSE */,
+			);
+			name = Pod;
+			sourceTree = "<group>";
+		};
+		B4C1F185DAEC51FD5F16F74A8F93A5D7 /* ephemeral */ = {
+			isa = PBXGroup;
+			children = (
+				AE7F0EE5C110FBCA08D554C6136DE116 /* .symlinks */,
+			);
+			name = ephemeral;
+			path = ephemeral;
+			sourceTree = "<group>";
+		};
+		B8D89067044745797797217E177AE849 /* .symlinks */ = {
+			isa = PBXGroup;
+			children = (
+				6E77D9B7D1D9E66385685E78E18390BA /* plugins */,
+			);
+			name = .symlinks;
+			path = .symlinks;
+			sourceTree = "<group>";
+		};
+		BABC446E30D9AA89ADE2FB2A9500F8C4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3491E1A84D1B8594548F066086ED5315 /* flutter_secure_storage_darwin */,
+				0B9103ECC6898A200D8DD6F372CAB6CB /* flutter_secure_storage_darwin-flutter_secure_storage */,
+				A3A80BA70CFB7F75C5391BEBBBA8C9DA /* FMDB */,
+				148D9AC15C4A9777E5ACBB46C03FE218 /* FMDB-FMDB_Privacy */,
+				669E8F25E1897672BDB80B7EB784DA24 /* Pods-Runner */,
+				6C3345B1B3CAEDF5B03B1F731FDC492E /* Pods-RunnerTests */,
+				93C6A45C6E4792269BE9BE0073839BF0 /* shared_preferences_foundation */,
+				0652FCE3FC19056983AABE058B3CC45B /* shared_preferences_foundation-shared_preferences_foundation_privacy */,
+				0C8A806029EDA51705B08F07F2024DF8 /* sqflite_sqlcipher */,
+				3E9BA40D6100CB8E9FC80C6ED8F6DA7E /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */,
+				1FD5F5B0E4809A3AE2ECDE142F44A6BB /* SQLCipher */,
+				40B6E82B558CAB2B289F5BD57C9E2223 /* SQLCipher-SQLCipher */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C0C332560D74D4184C2D05B4E91FC8D6 /* paw */ = {
+			isa = PBXGroup;
+			children = (
+				6EE6B575FD6D234D33338791B393DEE8 /* paw-client */,
+			);
+			name = paw;
+			path = paw;
+			sourceTree = "<group>";
+		};
+		C145DD97CB4DB1E3EBC61BF7A78B4347 /* paw-client */ = {
+			isa = PBXGroup;
+			children = (
+				34CC744F738B78D390023251A876F65F /* macos */,
+			);
+			name = "paw-client";
+			path = "paw-client";
+			sourceTree = "<group>";
+		};
+		C28EDC596CE9A595E120FCF4A41EF3C7 /* darwin */ = {
+			isa = PBXGroup;
+			children = (
+				D09BD8A33F8258E2D3A0CBEE0E55D4A7 /* shared_preferences_foundation */,
+			);
+			name = darwin;
+			path = darwin;
+			sourceTree = "<group>";
+		};
+		C390C92869F1E89F0EDF94A07D65F93E /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				936E0E8CBE9C2A9CA8875A80A838BB4F /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		C55CBAD67F5430D7524CD2602628EF32 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				4362E29F52C60A33908E902FB50A096B /* shared_preferences_foundation */,
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		C6B3EAB1602B304B770AFAD720E7DDB7 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				5CC5A8EE2888AD826DE12638C23FA119 /* workspace */,
+			);
+			name = ..;
+			path = .;
+			sourceTree = "<group>";
+		};
+		C788B74C03C12B461DD4F10FC08E3B60 /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				D0CBA5F8AC798A8183431A41CD7623D8 /* .. */,
+				EC64BC5447451B1362EDB53A275EFE3A /* Pod */,
+				21A7D15DF3B2335A0C60A853DAD33A2F /* Support Files */,
+			);
+			name = shared_preferences_foundation;
+			path = ../Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin;
+			sourceTree = "<group>";
+		};
+		C7D1A51C41FA19EAD650ABE05BA370FD /* .symlinks */ = {
+			isa = PBXGroup;
+			children = (
+				AC0996809600EEB03C45E6023F26CFE1 /* plugins */,
+			);
+			name = .symlinks;
+			path = .symlinks;
+			sourceTree = "<group>";
+		};
+		CB705548FEB433C930A466660101A74C /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				FF5E88C63923890F01E2E39E671C5246 /* Sources */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = flutter_secure_storage_darwin;
+			sourceTree = "<group>";
+		};
+		CBC7F1F1E3EE3977A5071B1D9CDFC316 /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				56C7CFF86B5D01967AD603E7537B7DEE /* Sources */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = flutter_secure_storage_darwin;
+			sourceTree = "<group>";
+		};
+		CCB5332C2CAF4943AA7AA96BFDFAAD71 /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				07441F9E90C899CE45A675820A8047F7 /* FlutterSecureStorage.swift */,
+				87B0F0BC97AC777F1C2C71D7D76E36A2 /* FlutterSecureStorageDarwinPlugin.swift */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = flutter_secure_storage_darwin;
+			sourceTree = "<group>";
+		};
+		CF1408CF629C7361332E53B88F7BD30C = {
+			isa = PBXGroup;
+			children = (
+				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
+				9416800CDAB7612AAE662C98AC298A6C /* Development Pods */,
+				A3CDB250FFEFB42CA2C68F1FBD92997D /* Frameworks */,
+				5587FC1BAF8018F10EE5777F80770CE5 /* Pods */,
+				BABC446E30D9AA89ADE2FB2A9500F8C4 /* Products */,
+				2DB8426A477BA92773F00012EBA84D53 /* Targets Support Files */,
+			);
+			sourceTree = "<group>";
+		};
+		D09BD8A33F8258E2D3A0CBEE0E55D4A7 /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				A37A469F097D49335B615D2595C7BA00 /* Sources */,
+			);
+			name = shared_preferences_foundation;
+			path = shared_preferences_foundation;
+			sourceTree = "<group>";
+		};
+		D0CBA5F8AC798A8183431A41CD7623D8 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				0AED9D94848D18F4772D55CB9BC8E45C /* .. */,
+			);
+			name = ..;
+			path = "../../../../../../../../../../.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/darwin/shared_preferences_foundation/Sources";
+			sourceTree = "<group>";
+		};
+		D730E603CDB5D7C1C8393579EE70C927 /* paw */ = {
+			isa = PBXGroup;
+			children = (
+				49F092E080F294B2EFD2C364141D86E2 /* paw-client */,
+			);
+			name = paw;
+			path = paw;
+			sourceTree = "<group>";
+		};
+		DAC5757049D460115C5FE51602E30262 /* paw */ = {
+			isa = PBXGroup;
+			children = (
+				C145DD97CB4DB1E3EBC61BF7A78B4347 /* paw-client */,
+			);
+			name = paw;
+			path = paw;
+			sourceTree = "<group>";
+		};
+		DCB2529727C4F4DE8B3BC86521FB6676 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				2F8569CA801F20F14C3056B53AAD740F /* .. */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		DDD795EAF0CF3B1D8013A92CF79C5901 /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				FF1B342212D5A6245BFC028E9AEECFEF /* darwin */,
+			);
+			name = shared_preferences_foundation;
+			path = shared_preferences_foundation;
+			sourceTree = "<group>";
+		};
+		E0B4849055A6F1AFB5CA7D3B88B03304 /* ephemeral */ = {
+			isa = PBXGroup;
+			children = (
+				4D08EF9E08780E4BCFD61E9A5F93DB1C /* .symlinks */,
+			);
+			name = ephemeral;
+			path = ephemeral;
+			sourceTree = "<group>";
+		};
+		E19144C5242506100FF0A115E48CB71A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DB906056B476B56BEF926029F20C1C88 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E2FB59E0E974739ED7919AC3F79BC309 /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				1271E3638D706D10726ADE3914A9A534 /* messages.g.swift */,
+				0AB7D17E562FADD7DFCE814DC37AF69C /* SharedPreferencesPlugin.swift */,
+			);
+			name = shared_preferences_foundation;
+			path = shared_preferences_foundation;
+			sourceTree = "<group>";
+		};
+		E59B44504063E671C51956FA470E2E92 /* .. */ = {
+			isa = PBXGroup;
+			children = (
+				0307C754D76EBDEFF009B4902D8F8304 /* .. */,
+				E933DE97E19D7A00F1967D30DF482751 /* workspace */,
+			);
+			name = ..;
+			path = ..;
+			sourceTree = "<group>";
+		};
+		E806A4F97D48F5FD3B4CA1BC617EA1F5 /* Pods-Runner */ = {
+			isa = PBXGroup;
+			children = (
+				C24C1A035F22D24883C6F1876F274C6F /* Pods-Runner.modulemap */,
+				ECDF6AA713870989438BA93B395DC557 /* Pods-Runner-acknowledgements.markdown */,
+				1B136F41D5B5FAE96EA576E768A5771D /* Pods-Runner-acknowledgements.plist */,
+				E794494AB90477BA94C681E994ADF341 /* Pods-Runner-dummy.m */,
+				773BFCE41424EB8EBB72EF3F6A5FB719 /* Pods-Runner-frameworks.sh */,
+				0AFB643DA4919253F749E2836A5AAFDC /* Pods-Runner-Info.plist */,
+				499E3722E8DACDC2AAA6C15AD1796520 /* Pods-Runner-umbrella.h */,
+				728A5ED1DD60BAC8C8F382A87B976F84 /* Pods-Runner.debug.xcconfig */,
+				C50FD10CD19FF6999637BA5ECAF1681B /* Pods-Runner.profile.xcconfig */,
+				B703785507B22BAF0B800737429577EC /* Pods-Runner.release.xcconfig */,
+			);
+			name = "Pods-Runner";
+			path = "Target Support Files/Pods-Runner";
+			sourceTree = "<group>";
+		};
+		E933DE97E19D7A00F1967D30DF482751 /* workspace */ = {
+			isa = PBXGroup;
+			children = (
+				7D50F3466245EDB68B4F550EAC6C5432 /* paw */,
+			);
+			name = workspace;
+			path = workspace;
+			sourceTree = "<group>";
+		};
+		EC64BC5447451B1362EDB53A275EFE3A /* Pod */ = {
+			isa = PBXGroup;
+			children = (
+				104C065E25CCE0C93B64DCF3110D7440 /* LICENSE */,
+				71A9944180C6FDA10A8AE2EDED1A3153 /* shared_preferences_foundation.podspec */,
+			);
+			name = Pod;
+			sourceTree = "<group>";
+		};
+		EF6C3B7828199874A453F3E57C8C9B59 /* Pod */ = {
+			isa = PBXGroup;
+			children = (
+				9654E5151A8F626C644563579B8F51CF /* FlutterMacOS.podspec */,
+			);
+			name = Pod;
+			sourceTree = "<group>";
+		};
+		F1256EF0B022D5B673B190FB98E18781 /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				2DAABF3A58413B09B3CA8D896A4BF15E /* Flutter */,
+			);
+			name = macos;
+			path = macos;
+			sourceTree = "<group>";
+		};
+		F1660D1ED942BAE6E6DAE492DD48362E /* flutter_secure_storage_darwin */ = {
+			isa = PBXGroup;
+			children = (
+				028E039C00136705FD6D5D1449B80809 /* darwin */,
+			);
+			name = flutter_secure_storage_darwin;
+			path = flutter_secure_storage_darwin;
+			sourceTree = "<group>";
+		};
+		FA5720737C01797109FA368B0F763E98 /* shared_preferences_foundation */ = {
+			isa = PBXGroup;
+			children = (
+				C55CBAD67F5430D7524CD2602628EF32 /* Sources */,
+			);
+			name = shared_preferences_foundation;
+			path = shared_preferences_foundation;
+			sourceTree = "<group>";
+		};
+		FB5F8BBF24555BBE2F8685803BD2401C /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				1A69B6DC7D6F914F326DBE8773A7AB58 /* Classes */,
+				4AA1CE5F3C2540C4531FC5B3C3EF2EB7 /* Resources */,
+			);
+			name = macos;
+			path = macos;
+			sourceTree = "<group>";
+		};
+		FF01DAB1240A795C2F45CCA197CF02F5 /* macos */ = {
+			isa = PBXGroup;
+			children = (
+				147D96DDC0F72DA67F79CBE7DF4A9D23 /* Flutter */,
+			);
+			name = macos;
+			path = macos;
+			sourceTree = "<group>";
+		};
+		FF1B342212D5A6245BFC028E9AEECFEF /* darwin */ = {
+			isa = PBXGroup;
+			children = (
+				FA5720737C01797109FA368B0F763E98 /* shared_preferences_foundation */,
+			);
+			name = darwin;
+			path = darwin;
+			sourceTree = "<group>";
+		};
+		FF5E88C63923890F01E2E39E671C5246 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				0DCA07BD720591B719441215FDD0F5CA /* flutter_secure_storage_darwin */,
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		1B20A84A772EF3CE26AB59A133A95FCD /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D6A81B1D484D3ED85004C64FE972B4D8 /* SQLCipher-umbrella.h in Headers */,
+				4997F857BBBD8BBF8B69DD8059026962 /* sqlite3.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3001B68FD8DF1C6649D6EEA25FC0D09A /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D8618F9C8299757B5DE0B1D96C3DF2D4 /* sqflite_sqlcipher-umbrella.h in Headers */,
+				6F356F0B4325BA7A08F4347920C2C26A /* SqfliteSqlCipherOperation.h in Headers */,
+				3C7D796BB4B0F1353436D89BA69F576A /* SqfliteSqlCipherPlugin.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4D69D7604D618E7AAA17D3681F3B64BE /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D0C74E93330B93887EEC1E4D7EB6329 /* FMDatabase.h in Headers */,
+				17874DDEB47AB62C7B63A10DD96E5706 /* FMDatabaseAdditions.h in Headers */,
+				B28F1C79C712A2A9D6C800773719CAE6 /* FMDatabasePool.h in Headers */,
+				5EBF6551B9BE431260731BE8FECD362A /* FMDatabaseQueue.h in Headers */,
+				48CCF26692A63AE64E5A9AB451D8EF6F /* FMDB.h in Headers */,
+				EA97F1499AD9D0F3E4117056BFFB614B /* FMDB-umbrella.h in Headers */,
+				520D0790C7BACCBB387B1DCC1DDF8B7A /* FMResultSet.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		866391011C1EF4E27A50DD6527A10E32 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C3C26A2E6E4175063C3B95715BDB2DC1 /* shared_preferences_foundation-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA247C4E27470D11FC4678C05F67395F /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				718C12B03D90D536D2361B05C5F99E52 /* flutter_secure_storage_darwin-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D1C616B33BC55D843D871AEB9E7B254C /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A327E14BBF9D8AB6C9DD4C909F2BF1AD /* Pods-Runner-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC4DA9BD27A4914E75F803590E4C4B8B /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB2DC96CDCF638AB89007D2DB0F3119A /* Pods-RunnerTests-umbrella.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		0A65A51B947BFAB6EDF732E3831CBB71 /* sqflite_sqlcipher */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 839F7F8736AE8AE37458C0AFADC7F351 /* Build configuration list for PBXNativeTarget "sqflite_sqlcipher" */;
+			buildPhases = (
+				3001B68FD8DF1C6649D6EEA25FC0D09A /* Headers */,
+				F85F8B606E06701BCE5673EAA69683F7 /* Sources */,
+				A5AEF8F11DC3E5A88E6AAF7253E6AA2A /* Frameworks */,
+				86A3E48783AC4682FAC2450D738F9E6F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B1F5EDCA4C12D732B9E3BADD49C6106B /* PBXTargetDependency */,
+				58DFB5DBAE938DF26BDC78E981513B90 /* PBXTargetDependency */,
+				61BD22A01015EF46FEEF42416BD9EA16 /* PBXTargetDependency */,
+				AD89636F082F113D1AD23031F3E6152E /* PBXTargetDependency */,
+			);
+			name = sqflite_sqlcipher;
+			productName = sqflite_sqlcipher;
+			productReference = 0C8A806029EDA51705B08F07F2024DF8 /* sqflite_sqlcipher */;
+			productType = "com.apple.product-type.framework";
+		};
+		10D198228C63A1D26FC305EF3A06AA90 /* flutter_secure_storage_darwin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB0D2BA59873E318AACBDE13D926FA0C /* Build configuration list for PBXNativeTarget "flutter_secure_storage_darwin" */;
+			buildPhases = (
+				AA247C4E27470D11FC4678C05F67395F /* Headers */,
+				ED2005C21F44A8416CC6E1306ACD53C9 /* Sources */,
+				385D6C4904B4554AB16074AE2222BAA8 /* Frameworks */,
+				B8D4538E94F492799590937344CF855D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				198D5B9CAF05AB7CF054917887E7DA26 /* PBXTargetDependency */,
+				272EB49D748E6168D01EFFACD3C6774A /* PBXTargetDependency */,
+			);
+			name = flutter_secure_storage_darwin;
+			productName = flutter_secure_storage_darwin;
+			productReference = 3491E1A84D1B8594548F066086ED5315 /* flutter_secure_storage_darwin */;
+			productType = "com.apple.product-type.framework";
+		};
+		3232F0C0E7C65B232832393F9ADDD8C3 /* Pods-RunnerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D52099AA1537D0F3745166E1889F6CA3 /* Build configuration list for PBXNativeTarget "Pods-RunnerTests" */;
+			buildPhases = (
+				FC4DA9BD27A4914E75F803590E4C4B8B /* Headers */,
+				001CCB0FEA80CD1C6BF534C6D9C6283A /* Sources */,
+				EAC0834F7252D8143E0E41335E53F3B8 /* Frameworks */,
+				4A765108DEAFDEBF078F71CDDBE3414E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B4F2775608E02E4E067FDE2ECC829331 /* PBXTargetDependency */,
+			);
+			name = "Pods-RunnerTests";
+			productName = Pods_RunnerTests;
+			productReference = 6C3345B1B3CAEDF5B03B1F731FDC492E /* Pods-RunnerTests */;
+			productType = "com.apple.product-type.framework";
+		};
+		6F3B8DF35E08C8A4AEBB88EF74C7499C /* flutter_secure_storage_darwin-flutter_secure_storage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F57B8A0ABCB00D617A9CB836B590A6B8 /* Build configuration list for PBXNativeTarget "flutter_secure_storage_darwin-flutter_secure_storage" */;
+			buildPhases = (
+				1AD6EC543D4E070E7A92097FC3366299 /* Sources */,
+				D080E44DEB03A8B308B76DA6E27311ED /* Frameworks */,
+				D4EB8342C6477343B0E2BEB27F8BB657 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "flutter_secure_storage_darwin-flutter_secure_storage";
+			productName = flutter_secure_storage;
+			productReference = 0B9103ECC6898A200D8DD6F372CAB6CB /* flutter_secure_storage_darwin-flutter_secure_storage */;
+			productType = "com.apple.product-type.bundle";
+		};
+		8592E0E389D40AC17881400ADC67ABC0 /* FMDB */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 27CA7122E158D8B391A036AFBBD42137 /* Build configuration list for PBXNativeTarget "FMDB" */;
+			buildPhases = (
+				4D69D7604D618E7AAA17D3681F3B64BE /* Headers */,
+				3DD5C4A480E641194BE4832D6BE73863 /* Sources */,
+				35E1E87EAAB77216AB5DA0387A300C1C /* Frameworks */,
+				2934907C3586A237D6718B7B6CAC0B37 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				11AAA61C2086DB6C275D3A15E90329F9 /* PBXTargetDependency */,
+				E9739A089BC266F4C7838D6C7ED20DA4 /* PBXTargetDependency */,
+			);
+			name = FMDB;
+			productName = FMDB;
+			productReference = A3A80BA70CFB7F75C5391BEBBBA8C9DA /* FMDB */;
+			productType = "com.apple.product-type.framework";
+		};
+		87FC595F8D2A5960F7C8C0F0CBCFBC8D /* SQLCipher-SQLCipher */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3666AC91764DB60B3DC766BF71C147BC /* Build configuration list for PBXNativeTarget "SQLCipher-SQLCipher" */;
+			buildPhases = (
+				8B0ED44B8554C167EBA9B4D086C83B05 /* Sources */,
+				356C418AB739584090A3827AFCB8A9B6 /* Frameworks */,
+				3457DACEB6D07493727333350E67892B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SQLCipher-SQLCipher";
+			productName = SQLCipher;
+			productReference = 40B6E82B558CAB2B289F5BD57C9E2223 /* SQLCipher-SQLCipher */;
+			productType = "com.apple.product-type.bundle";
+		};
+		8B74B458B450D74B75744B87BD747314 /* Pods-Runner */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E7D5097EB7D6E932F79989226144D50F /* Build configuration list for PBXNativeTarget "Pods-Runner" */;
+			buildPhases = (
+				D1C616B33BC55D843D871AEB9E7B254C /* Headers */,
+				4D5E913CC7A6FBD9E7B0B51A64EC910D /* Sources */,
+				B0BBAAFDE4F49179479134721AE79644 /* Frameworks */,
+				0FC37114BA549A287903C68F21570868 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				393528B797FF2CC0F27876AAFAF04536 /* PBXTargetDependency */,
+				0EC6B8D545D773AC692D2FD62031F6EE /* PBXTargetDependency */,
+				6EA215B963099490EBA0D99786F53607 /* PBXTargetDependency */,
+				DBF974B3AF0A9AF30C3E5A758B49A8BC /* PBXTargetDependency */,
+				AB827666159C40C4223B487B3AF60916 /* PBXTargetDependency */,
+				E5BDFBE1B0A05033865B80F574EECCA2 /* PBXTargetDependency */,
+			);
+			name = "Pods-Runner";
+			productName = Pods_Runner;
+			productReference = 669E8F25E1897672BDB80B7EB784DA24 /* Pods-Runner */;
+			productType = "com.apple.product-type.framework";
+		};
+		973B9A51B49701F13767694DCAF5C37D /* FMDB-FMDB_Privacy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A73FBDBA73859AF48534A6845BA17C5B /* Build configuration list for PBXNativeTarget "FMDB-FMDB_Privacy" */;
+			buildPhases = (
+				F564CA62317BE85B61AA783E7ABDB271 /* Sources */,
+				0230049C2EE5F5137F1773369A39B9C8 /* Frameworks */,
+				1B64DE1CDEDD23F9FB0297E095B230B9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "FMDB-FMDB_Privacy";
+			productName = FMDB_Privacy;
+			productReference = 148D9AC15C4A9777E5ACBB46C03FE218 /* FMDB-FMDB_Privacy */;
+			productType = "com.apple.product-type.bundle";
+		};
+		AB5EE685B22D01885ADD930538E8DD3C /* shared_preferences_foundation */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C7E45411BD3AF270BCD4FF9D36D8CEB /* Build configuration list for PBXNativeTarget "shared_preferences_foundation" */;
+			buildPhases = (
+				866391011C1EF4E27A50DD6527A10E32 /* Headers */,
+				D9F17A8A4624CE48CE1B6406B65BF69E /* Sources */,
+				003B2DEEEF7AC889A76E080192AFD9E5 /* Frameworks */,
+				25A729305D66A5124E7260B520CECCFE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E508CC2023730EE087DF7FB1F516CCA9 /* PBXTargetDependency */,
+				1ADB346467616BA5D7800CB9E01BD5DE /* PBXTargetDependency */,
+			);
+			name = shared_preferences_foundation;
+			productName = shared_preferences_foundation;
+			productReference = 93C6A45C6E4792269BE9BE0073839BF0 /* shared_preferences_foundation */;
+			productType = "com.apple.product-type.framework";
+		};
+		B6AF8B7CEAF6321719ABBC7E770624DA /* shared_preferences_foundation-shared_preferences_foundation_privacy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9613E46E79805E23FE5181C5D7A55405 /* Build configuration list for PBXNativeTarget "shared_preferences_foundation-shared_preferences_foundation_privacy" */;
+			buildPhases = (
+				1E4C53FA7A2BF1D78DE5DF9FB01B4948 /* Sources */,
+				FC84375F7875755EF0D202D3C1809320 /* Frameworks */,
+				ADC1E0184AC4149657065222FE32F7CA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "shared_preferences_foundation-shared_preferences_foundation_privacy";
+			productName = shared_preferences_foundation_privacy;
+			productReference = 0652FCE3FC19056983AABE058B3CC45B /* shared_preferences_foundation-shared_preferences_foundation_privacy */;
+			productType = "com.apple.product-type.bundle";
+		};
+		D21962D0DE148A440FADB55935BD4264 /* SQLCipher */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 78FB362500491395DDCB9C9F91434CD0 /* Build configuration list for PBXNativeTarget "SQLCipher" */;
+			buildPhases = (
+				1B20A84A772EF3CE26AB59A133A95FCD /* Headers */,
+				F0C09A7CE585370AF41BD3805DAA1BDB /* Sources */,
+				214CF711B18F9219CDDA7715DB0EED42 /* Frameworks */,
+				B48EA5951B87DA34C6DD25815647CF37 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				75AA85629863750544DBFD7C345911A1 /* PBXTargetDependency */,
+			);
+			name = SQLCipher;
+			productName = SQLCipher;
+			productReference = 1FD5F5B0E4809A3AE2ECDE142F44A6BB /* SQLCipher */;
+			productType = "com.apple.product-type.framework";
+		};
+		EFD8316599F3CDCE4488CEDD8FC6CFCE /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9AF9593289CA553E0AE79BCF907F38B3 /* Build configuration list for PBXNativeTarget "sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy" */;
+			buildPhases = (
+				E4D6823735CE63351D270B7E07AED4E9 /* Sources */,
+				E513195899A7D4C5A504D74C039A09FB /* Frameworks */,
+				BC7057C100849BD8EFFCCB40DF26FBE6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy";
+			productName = sqflite_sqlcipher_ios_privacy;
+			productReference = 3E9BA40D6100CB8E9FC80C6ED8F6DA7E /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BFDFE7DC352907FC980B868725387E98 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */;
+			compatibilityVersion = "Xcode 12.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = CF1408CF629C7361332E53B88F7BD30C;
+			minimizedProjectReferenceProxies = 0;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BABC446E30D9AA89ADE2FB2A9500F8C4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				10D198228C63A1D26FC305EF3A06AA90 /* flutter_secure_storage_darwin */,
+				6F3B8DF35E08C8A4AEBB88EF74C7499C /* flutter_secure_storage_darwin-flutter_secure_storage */,
+				CA272E8348BAB4CE0B0C804FB7B818C4 /* FlutterMacOS */,
+				8592E0E389D40AC17881400ADC67ABC0 /* FMDB */,
+				973B9A51B49701F13767694DCAF5C37D /* FMDB-FMDB_Privacy */,
+				8B74B458B450D74B75744B87BD747314 /* Pods-Runner */,
+				3232F0C0E7C65B232832393F9ADDD8C3 /* Pods-RunnerTests */,
+				AB5EE685B22D01885ADD930538E8DD3C /* shared_preferences_foundation */,
+				B6AF8B7CEAF6321719ABBC7E770624DA /* shared_preferences_foundation-shared_preferences_foundation_privacy */,
+				0A65A51B947BFAB6EDF732E3831CBB71 /* sqflite_sqlcipher */,
+				EFD8316599F3CDCE4488CEDD8FC6CFCE /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */,
+				D21962D0DE148A440FADB55935BD4264 /* SQLCipher */,
+				87FC595F8D2A5960F7C8C0F0CBCFBC8D /* SQLCipher-SQLCipher */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0FC37114BA549A287903C68F21570868 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1B64DE1CDEDD23F9FB0297E095B230B9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				579AA70F4E429F3583C084F4A07A8E44 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		25A729305D66A5124E7260B520CECCFE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				948E18DA8242811425A11A87BC68C3C3 /* shared_preferences_foundation-shared_preferences_foundation_privacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2934907C3586A237D6718B7B6CAC0B37 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2FC119B1410E8A85EFF0F5C5022FF890 /* FMDB-FMDB_Privacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3457DACEB6D07493727333350E67892B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BAA3FD12833985AA651D0751D8601DFD /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A765108DEAFDEBF078F71CDDBE3414E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		86A3E48783AC4682FAC2450D738F9E6F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FC8D569CD5F0EC183A43CE4935E0526A /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ADC1E0184AC4149657065222FE32F7CA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB1ECC55F8CAA0A2472B12729BE3FF55 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B48EA5951B87DA34C6DD25815647CF37 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8097E30AEEC7391C9895216B7D3649B /* SQLCipher-SQLCipher in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B8D4538E94F492799590937344CF855D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A57C23D2C0E94FAEFE1BBEEEE35AD0F2 /* flutter_secure_storage_darwin-flutter_secure_storage in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC7057C100849BD8EFFCCB40DF26FBE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				346F827AAEA15B1AFA1700D9C8CFEB55 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4EB8342C6477343B0E2BEB27F8BB657 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				675A24D88FCE1AA077C9147436162C18 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		001CCB0FEA80CD1C6BF534C6D9C6283A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B375EA128E6579366091BAA390BBDD34 /* Pods-RunnerTests-dummy.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1AD6EC543D4E070E7A92097FC3366299 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E4C53FA7A2BF1D78DE5DF9FB01B4948 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3DD5C4A480E641194BE4832D6BE73863 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				830F681446B611124C8AAAAC662A8105 /* FMDatabase.m in Sources */,
+				D855FE24F64078F975AFB5A34E036E7D /* FMDatabaseAdditions.m in Sources */,
+				4C6A5079510A90AEA672E6043F8A46EF /* FMDatabasePool.m in Sources */,
+				8895C9940C45913806093BDAB4279949 /* FMDatabaseQueue.m in Sources */,
+				AA282758730192CFA33FE5B2D8D34367 /* FMDB-dummy.m in Sources */,
+				755D2531EADD3ECA25774C39D6B38CB2 /* FMResultSet.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4D5E913CC7A6FBD9E7B0B51A64EC910D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0CAA80417D066702500876C19F6EDB4 /* Pods-Runner-dummy.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8B0ED44B8554C167EBA9B4D086C83B05 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D9F17A8A4624CE48CE1B6406B65BF69E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AC81CE4F8A10FDAE42A22D89EAE1221 /* messages.g.swift in Sources */,
+				4CF1C253F24E5AFA058A5D53064DCEDE /* shared_preferences_foundation-dummy.m in Sources */,
+				240B750C35895B57E4059FF52C9B21DC /* SharedPreferencesPlugin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E4D6823735CE63351D270B7E07AED4E9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ED2005C21F44A8416CC6E1306ACD53C9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				35C5D63BAA9FAC0948FE082C21124F62 /* flutter_secure_storage_darwin-dummy.m in Sources */,
+				CC922ABB78BDDC66F8198428905047C3 /* FlutterSecureStorage.swift in Sources */,
+				43928F2E048146CD97F36717D1C6D7B9 /* FlutterSecureStorageDarwinPlugin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0C09A7CE585370AF41BD3805DAA1BDB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D1473F124C9E84B8841AD29E2114D58F /* SQLCipher-dummy.m in Sources */,
+				92594150511EF7A12718095CDBA2DBCD /* sqlite3.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F564CA62317BE85B61AA783E7ABDB271 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F85F8B606E06701BCE5673EAA69683F7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				48B2B292E50ABA65D639EC8A870660B7 /* sqflite_sqlcipher-dummy.m in Sources */,
+				9BAED7AFF9A3DE5E6B4D60FFB2F2E3BE /* SqfliteSqlCipherOperation.m in Sources */,
+				C05362FAE114AB80FCB2484C400F81A8 /* SqfliteSqlCipherPlugin.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0EC6B8D545D773AC692D2FD62031F6EE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FlutterMacOS;
+			target = CA272E8348BAB4CE0B0C804FB7B818C4 /* FlutterMacOS */;
+			targetProxy = 908B6D0516144F5D619BAD4321494CD5 /* PBXContainerItemProxy */;
+		};
+		11AAA61C2086DB6C275D3A15E90329F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "FMDB-FMDB_Privacy";
+			target = 973B9A51B49701F13767694DCAF5C37D /* FMDB-FMDB_Privacy */;
+			targetProxy = 5D2CC372399EF067B17E5591228404BA /* PBXContainerItemProxy */;
+		};
+		198D5B9CAF05AB7CF054917887E7DA26 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FlutterMacOS;
+			target = CA272E8348BAB4CE0B0C804FB7B818C4 /* FlutterMacOS */;
+			targetProxy = 4D5374E1E380B47914159E2C2B9E2EE7 /* PBXContainerItemProxy */;
+		};
+		1ADB346467616BA5D7800CB9E01BD5DE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "shared_preferences_foundation-shared_preferences_foundation_privacy";
+			target = B6AF8B7CEAF6321719ABBC7E770624DA /* shared_preferences_foundation-shared_preferences_foundation_privacy */;
+			targetProxy = D5AFF5CFA6D40532B438A652D13004F5 /* PBXContainerItemProxy */;
+		};
+		272EB49D748E6168D01EFFACD3C6774A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "flutter_secure_storage_darwin-flutter_secure_storage";
+			target = 6F3B8DF35E08C8A4AEBB88EF74C7499C /* flutter_secure_storage_darwin-flutter_secure_storage */;
+			targetProxy = 56494DB96A7420F50529CD3A5BD4315A /* PBXContainerItemProxy */;
+		};
+		393528B797FF2CC0F27876AAFAF04536 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FMDB;
+			target = 8592E0E389D40AC17881400ADC67ABC0 /* FMDB */;
+			targetProxy = 3421B1F9117CA7164F96520233F4E193 /* PBXContainerItemProxy */;
+		};
+		58DFB5DBAE938DF26BDC78E981513B90 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FlutterMacOS;
+			target = CA272E8348BAB4CE0B0C804FB7B818C4 /* FlutterMacOS */;
+			targetProxy = 718B4EA6D0E86418B32C42121C418DE2 /* PBXContainerItemProxy */;
+		};
+		61BD22A01015EF46FEEF42416BD9EA16 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SQLCipher;
+			target = D21962D0DE148A440FADB55935BD4264 /* SQLCipher */;
+			targetProxy = F5493A4BBE3D051523DCAA0C9A25FDA7 /* PBXContainerItemProxy */;
+		};
+		6EA215B963099490EBA0D99786F53607 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SQLCipher;
+			target = D21962D0DE148A440FADB55935BD4264 /* SQLCipher */;
+			targetProxy = 668C412894AD980F6CDE42D566E31FAB /* PBXContainerItemProxy */;
+		};
+		75AA85629863750544DBFD7C345911A1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "SQLCipher-SQLCipher";
+			target = 87FC595F8D2A5960F7C8C0F0CBCFBC8D /* SQLCipher-SQLCipher */;
+			targetProxy = 9A2191211644C8E8AF52AB347C4F5FB9 /* PBXContainerItemProxy */;
+		};
+		AB827666159C40C4223B487B3AF60916 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = shared_preferences_foundation;
+			target = AB5EE685B22D01885ADD930538E8DD3C /* shared_preferences_foundation */;
+			targetProxy = A855C3081CA990A0A161CF35D949B0CA /* PBXContainerItemProxy */;
+		};
+		AD89636F082F113D1AD23031F3E6152E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy";
+			target = EFD8316599F3CDCE4488CEDD8FC6CFCE /* sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy */;
+			targetProxy = 564B1D133DD30021A419B51FFD9C7177 /* PBXContainerItemProxy */;
+		};
+		B1F5EDCA4C12D732B9E3BADD49C6106B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FMDB;
+			target = 8592E0E389D40AC17881400ADC67ABC0 /* FMDB */;
+			targetProxy = 1558FA4CA2DDF12C3B369880F8B2D2AB /* PBXContainerItemProxy */;
+		};
+		B4F2775608E02E4E067FDE2ECC829331 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Pods-Runner";
+			target = 8B74B458B450D74B75744B87BD747314 /* Pods-Runner */;
+			targetProxy = EC7AC3424D938361FEA72478DBE9D229 /* PBXContainerItemProxy */;
+		};
+		DBF974B3AF0A9AF30C3E5A758B49A8BC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = flutter_secure_storage_darwin;
+			target = 10D198228C63A1D26FC305EF3A06AA90 /* flutter_secure_storage_darwin */;
+			targetProxy = 2BC0C87FD5B6B61A3821F06712B261FE /* PBXContainerItemProxy */;
+		};
+		E508CC2023730EE087DF7FB1F516CCA9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FlutterMacOS;
+			target = CA272E8348BAB4CE0B0C804FB7B818C4 /* FlutterMacOS */;
+			targetProxy = A63BC947F613CF7A372048C0AD6C9C31 /* PBXContainerItemProxy */;
+		};
+		E5BDFBE1B0A05033865B80F574EECCA2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = sqflite_sqlcipher;
+			target = 0A65A51B947BFAB6EDF732E3831CBB71 /* sqflite_sqlcipher */;
+			targetProxy = CD0D2406D6D463091EE0946AE9B751DC /* PBXContainerItemProxy */;
+		};
+		E9739A089BC266F4C7838D6C7ED20DA4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SQLCipher;
+			target = D21962D0DE148A440FADB55935BD4264 /* SQLCipher */;
+			targetProxy = EAF17870484FD1E4DC254459EACE6B1E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		07AD40A4677FB80E95DF81E94F42B5EE /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E736E0C9C5B73D27B8865E363E2108AC /* Pods-RunnerTests.profile.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		0AE172D8F2A4843BFACAD21A0ED26541 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"POD_CONFIGURATION_RELEASE=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				SYMROOT = "${SRCROOT}/../build";
+			};
+			name = Release;
+		};
+		12CC0241B5CE396FB69AE752B1CF10FE /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6BF6AEB9FA5368FC431325C0C9F07B54 /* flutter_secure_storage_darwin.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/flutter_secure_storage_darwin";
+				IBSC_MODULE = flutter_secure_storage_darwin;
+				INFOPLIST_FILE = "Target Support Files/flutter_secure_storage_darwin/ResourceBundle-flutter_secure_storage-flutter_secure_storage_darwin-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				PRODUCT_NAME = flutter_secure_storage;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		2766FF0AA21421CD36D6372E1DC93E59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EA0ED6AFE57D0739908FC120713ABF53 /* shared_preferences_foundation.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/shared_preferences_foundation";
+				IBSC_MODULE = shared_preferences_foundation;
+				INFOPLIST_FILE = "Target Support Files/shared_preferences_foundation/ResourceBundle-shared_preferences_foundation_privacy-shared_preferences_foundation-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_NAME = shared_preferences_foundation_privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		3098B213BA3C9956541CB0499C82F8CB /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C50FD10CD19FF6999637BA5ECAF1681B /* Pods-Runner.profile.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Target Support Files/Pods-Runner/Pods-Runner-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/Pods-Runner/Pods-Runner.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		3FE9FE37C531727B8C2EF1D16BB8DE7F /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B703785507B22BAF0B800737429577EC /* Pods-Runner.release.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Target Support Files/Pods-Runner/Pods-Runner-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/Pods-Runner/Pods-Runner.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		43782893052115A68EAAE309704E87DC /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6BF6AEB9FA5368FC431325C0C9F07B54 /* flutter_secure_storage_darwin.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MODULEMAP_FILE = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin.modulemap";
+				PRODUCT_MODULE_NAME = flutter_secure_storage_darwin;
+				PRODUCT_NAME = flutter_secure_storage_darwin;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		44E568488BFD7ECF5A24F8B646196120 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0101D2FB61424F53B40311A736BFCCC4 /* sqflite_sqlcipher.release.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/sqflite_sqlcipher";
+				IBSC_MODULE = sqflite_sqlcipher;
+				INFOPLIST_FILE = "Target Support Files/sqflite_sqlcipher/ResourceBundle-sqflite_sqlcipher_ios_privacy-sqflite_sqlcipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = sqflite_sqlcipher_ios_privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Profile;
+		};
+		4C7FE60E0BD71E17578F6AD719EAE0A3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5FA1BB756FE80B71EAC443E6051C58C3 /* flutter_secure_storage_darwin.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MODULEMAP_FILE = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin.modulemap";
+				PRODUCT_MODULE_NAME = flutter_secure_storage_darwin;
+				PRODUCT_NAME = flutter_secure_storage_darwin;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		59EAC9C854C62E0F9B814230C6199E93 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 18C72E138AA87EADAA3C7E09EDB76096 /* SQLCipher.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/SQLCipher";
+				IBSC_MODULE = SQLCipher;
+				INFOPLIST_FILE = "Target Support Files/SQLCipher/ResourceBundle-SQLCipher-SQLCipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = SQLCipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		5F5275B9F517AA93F146B7BD1F975BC2 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0101D2FB61424F53B40311A736BFCCC4 /* sqflite_sqlcipher.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MODULEMAP_FILE = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher.modulemap";
+				PRODUCT_MODULE_NAME = sqflite_sqlcipher;
+				PRODUCT_NAME = sqflite_sqlcipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		7230AA608F04787157416D2320A060F6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1B67419C5ECD621ABC37BC15DA7C0184 /* FMDB.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/FMDB/FMDB-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/FMDB/FMDB-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MODULEMAP_FILE = "Target Support Files/FMDB/FMDB.modulemap";
+				PRODUCT_MODULE_NAME = FMDB;
+				PRODUCT_NAME = FMDB;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		7240A8579D4E173D4895EA679806EC07 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AC8FE152530FBDCE460186B326C1A8FB /* Pods-RunnerTests.release.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		73A146472CC9628F31295209925776B4 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 98788293255A495007110BFC633ECED1 /* FlutterMacOS.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				SDKROOT = macosx;
+			};
+			name = Profile;
+		};
+		782DDF41ADD42413C4C6A789B0BAA7AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 79D13CBC81DE612C84544A75568106D6 /* sqflite_sqlcipher.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/sqflite_sqlcipher";
+				IBSC_MODULE = sqflite_sqlcipher;
+				INFOPLIST_FILE = "Target Support Files/sqflite_sqlcipher/ResourceBundle-sqflite_sqlcipher_ios_privacy-sqflite_sqlcipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = sqflite_sqlcipher_ios_privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		7F0DEC135776A36337F69A6B207B930B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 18C72E138AA87EADAA3C7E09EDB76096 /* SQLCipher.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/SQLCipher/SQLCipher-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/SQLCipher/SQLCipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MODULEMAP_FILE = "Target Support Files/SQLCipher/SQLCipher.modulemap";
+				PRODUCT_MODULE_NAME = SQLCipher;
+				PRODUCT_NAME = SQLCipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		808E544862838153672EA12FCC127D9A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"POD_CONFIGURATION_DEBUG=1",
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				SYMROOT = "${SRCROOT}/../build";
+			};
+			name = Debug;
+		};
+		842B4B9E94478EE2682DF8ED78818537 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5119FD6FC8F1A4AEEED25A82626598B6 /* shared_preferences_foundation.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/shared_preferences_foundation";
+				IBSC_MODULE = shared_preferences_foundation;
+				INFOPLIST_FILE = "Target Support Files/shared_preferences_foundation/ResourceBundle-shared_preferences_foundation_privacy-shared_preferences_foundation-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_NAME = shared_preferences_foundation_privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		8717AE9D98E33F36B7BB74A77DA8AE9E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = FED431727A4B25EFC9735A011D74E07C /* FlutterMacOS.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		8CD62471C7AD91010486C05D2094CC04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0101D2FB61424F53B40311A736BFCCC4 /* sqflite_sqlcipher.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MODULEMAP_FILE = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher.modulemap";
+				PRODUCT_MODULE_NAME = sqflite_sqlcipher;
+				PRODUCT_NAME = sqflite_sqlcipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		9410B47A8F868F1A6278E26CB550D60D /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1B67419C5ECD621ABC37BC15DA7C0184 /* FMDB.release.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/FMDB";
+				IBSC_MODULE = FMDB;
+				INFOPLIST_FILE = "Target Support Files/FMDB/ResourceBundle-FMDB_Privacy-FMDB-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = FMDB_Privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Profile;
+		};
+		9435FA13F4A93F2325EE186E56DC08F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5FA1BB756FE80B71EAC443E6051C58C3 /* flutter_secure_storage_darwin.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/flutter_secure_storage_darwin";
+				IBSC_MODULE = flutter_secure_storage_darwin;
+				INFOPLIST_FILE = "Target Support Files/flutter_secure_storage_darwin/ResourceBundle-flutter_secure_storage-flutter_secure_storage_darwin-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				PRODUCT_NAME = flutter_secure_storage;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		9AEF9405743EAA0BA86ECE9F82AC50CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EA0ED6AFE57D0739908FC120713ABF53 /* shared_preferences_foundation.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation.modulemap";
+				PRODUCT_MODULE_NAME = shared_preferences_foundation;
+				PRODUCT_NAME = shared_preferences_foundation;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		A2DFBB851CEDC3CC8D2E57A129ADA603 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EA0ED6AFE57D0739908FC120713ABF53 /* shared_preferences_foundation.release.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/shared_preferences_foundation";
+				IBSC_MODULE = shared_preferences_foundation;
+				INFOPLIST_FILE = "Target Support Files/shared_preferences_foundation/ResourceBundle-shared_preferences_foundation_privacy-shared_preferences_foundation-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_NAME = shared_preferences_foundation_privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Profile;
+		};
+		A42DBE0248D1EDB6320162287C5DDF01 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1B67419C5ECD621ABC37BC15DA7C0184 /* FMDB.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/FMDB";
+				IBSC_MODULE = FMDB;
+				INFOPLIST_FILE = "Target Support Files/FMDB/ResourceBundle-FMDB_Privacy-FMDB-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = FMDB_Privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		AA9791D462F37FC631F28CFF5C6F8312 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D94226D083F27EF5BCE7EC8EA9F2ED15 /* SQLCipher.release.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/SQLCipher";
+				IBSC_MODULE = SQLCipher;
+				INFOPLIST_FILE = "Target Support Files/SQLCipher/ResourceBundle-SQLCipher-SQLCipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = SQLCipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Profile;
+		};
+		AB7EFE68D65D54F841357EC62F878DA4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0101D2FB61424F53B40311A736BFCCC4 /* sqflite_sqlcipher.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/sqflite_sqlcipher";
+				IBSC_MODULE = sqflite_sqlcipher;
+				INFOPLIST_FILE = "Target Support Files/sqflite_sqlcipher/ResourceBundle-sqflite_sqlcipher_ios_privacy-sqflite_sqlcipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = sqflite_sqlcipher_ios_privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		AF5B76B31CAF4546B42C34718BA67232 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"POD_CONFIGURATION_PROFILE=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				SYMROOT = "${SRCROOT}/../build";
+			};
+			name = Profile;
+		};
+		B166ADA058C10C409CD691114F17151D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 728A5ED1DD60BAC8C8F382A87B976F84 /* Pods-Runner.debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Target Support Files/Pods-Runner/Pods-Runner-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/Pods-Runner/Pods-Runner.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		B3CEFF22308E28A512F43AB80C45B6A3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20D2718FBCD90633004C5E6E1C7702AD /* FMDB.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/FMDB/FMDB-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/FMDB/FMDB-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MODULEMAP_FILE = "Target Support Files/FMDB/FMDB.modulemap";
+				PRODUCT_MODULE_NAME = FMDB;
+				PRODUCT_NAME = FMDB;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		B5B745C065A43470793D2DB2C2BF444B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5119FD6FC8F1A4AEEED25A82626598B6 /* shared_preferences_foundation.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation.modulemap";
+				PRODUCT_MODULE_NAME = shared_preferences_foundation;
+				PRODUCT_NAME = shared_preferences_foundation;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		BEE1CB4B1F9DADD84946E7B337488F9D /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1B67419C5ECD621ABC37BC15DA7C0184 /* FMDB.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/FMDB/FMDB-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/FMDB/FMDB-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MODULEMAP_FILE = "Target Support Files/FMDB/FMDB.modulemap";
+				PRODUCT_MODULE_NAME = FMDB;
+				PRODUCT_NAME = FMDB;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		C0073E8A8EE9F08DBCCC798EB28E05B8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D94226D083F27EF5BCE7EC8EA9F2ED15 /* SQLCipher.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/SQLCipher";
+				IBSC_MODULE = SQLCipher;
+				INFOPLIST_FILE = "Target Support Files/SQLCipher/ResourceBundle-SQLCipher-SQLCipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = SQLCipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		C29FB40C3396AE03ECC1DB7EFACC9BA6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 20D2718FBCD90633004C5E6E1C7702AD /* FMDB.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/FMDB";
+				IBSC_MODULE = FMDB;
+				INFOPLIST_FILE = "Target Support Files/FMDB/ResourceBundle-FMDB_Privacy-FMDB-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = FMDB_Privacy;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		CD9AD3236A5D64668C12AF3EAA4F5CEB /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EA0ED6AFE57D0739908FC120713ABF53 /* shared_preferences_foundation.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/shared_preferences_foundation/shared_preferences_foundation.modulemap";
+				PRODUCT_MODULE_NAME = shared_preferences_foundation;
+				PRODUCT_NAME = shared_preferences_foundation;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		CEAEF0BB86C6BBA81D6E17A5B8618EB0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 98788293255A495007110BFC633ECED1 /* FlutterMacOS.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D763D3BB2B15267C035573C7AD85B19A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6BF6AEB9FA5368FC431325C0C9F07B54 /* flutter_secure_storage_darwin.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MODULEMAP_FILE = "Target Support Files/flutter_secure_storage_darwin/flutter_secure_storage_darwin.modulemap";
+				PRODUCT_MODULE_NAME = flutter_secure_storage_darwin;
+				PRODUCT_NAME = flutter_secure_storage_darwin;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		D94E237A169B629F8E61D4FACDEBF970 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6BF6AEB9FA5368FC431325C0C9F07B54 /* flutter_secure_storage_darwin.release.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/flutter_secure_storage_darwin";
+				IBSC_MODULE = flutter_secure_storage_darwin;
+				INFOPLIST_FILE = "Target Support Files/flutter_secure_storage_darwin/ResourceBundle-flutter_secure_storage-flutter_secure_storage_darwin-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				PRODUCT_NAME = flutter_secure_storage;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Profile;
+		};
+		DB30FF787455A7DE73E82890D74B5033 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 79D13CBC81DE612C84544A75568106D6 /* sqflite_sqlcipher.debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				GCC_PREFIX_HEADER = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MODULEMAP_FILE = "Target Support Files/sqflite_sqlcipher/sqflite_sqlcipher.modulemap";
+				PRODUCT_MODULE_NAME = sqflite_sqlcipher;
+				PRODUCT_NAME = sqflite_sqlcipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		DD7BB5EF5AF5BDAA030CF3A55093BF7E /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D94226D083F27EF5BCE7EC8EA9F2ED15 /* SQLCipher.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/SQLCipher/SQLCipher-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/SQLCipher/SQLCipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MODULEMAP_FILE = "Target Support Files/SQLCipher/SQLCipher.modulemap";
+				PRODUCT_MODULE_NAME = SQLCipher;
+				PRODUCT_NAME = SQLCipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		E3492020E6C8FFFAA75EF20124A3E54A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 03E8AD2E8B75443E12D3D3BD12A9900E /* Pods-RunnerTests.debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"\"/opt/homebrew/share/flutter/bin/cache/artifacts/engine/darwin-x64/FlutterMacOS.xcframework/macos-arm64_x86_64\"",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MODULEMAP_FILE = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		E9A85B01A83AAF4B8FA9C94B2F4A9B14 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D94226D083F27EF5BCE7EC8EA9F2ED15 /* SQLCipher.release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_PREFIX_HEADER = "Target Support Files/SQLCipher/SQLCipher-prefix.pch";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Target Support Files/SQLCipher/SQLCipher-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MODULEMAP_FILE = "Target Support Files/SQLCipher/SQLCipher.modulemap";
+				PRODUCT_MODULE_NAME = SQLCipher;
+				PRODUCT_NAME = SQLCipher;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ";
+				SWIFT_INSTALL_OBJC_HEADER = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		27CA7122E158D8B391A036AFBBD42137 /* Build configuration list for PBXNativeTarget "FMDB" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B3CEFF22308E28A512F43AB80C45B6A3 /* Debug */,
+				BEE1CB4B1F9DADD84946E7B337488F9D /* Profile */,
+				7230AA608F04787157416D2320A060F6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3666AC91764DB60B3DC766BF71C147BC /* Build configuration list for PBXNativeTarget "SQLCipher-SQLCipher" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59EAC9C854C62E0F9B814230C6199E93 /* Debug */,
+				AA9791D462F37FC631F28CFF5C6F8312 /* Profile */,
+				C0073E8A8EE9F08DBCCC798EB28E05B8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				808E544862838153672EA12FCC127D9A /* Debug */,
+				AF5B76B31CAF4546B42C34718BA67232 /* Profile */,
+				0AE172D8F2A4843BFACAD21A0ED26541 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		624022EE1C2EAB1C3CC38699E1368C5F /* Build configuration list for PBXAggregateTarget "FlutterMacOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8717AE9D98E33F36B7BB74A77DA8AE9E /* Debug */,
+				73A146472CC9628F31295209925776B4 /* Profile */,
+				CEAEF0BB86C6BBA81D6E17A5B8618EB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6C7E45411BD3AF270BCD4FF9D36D8CEB /* Build configuration list for PBXNativeTarget "shared_preferences_foundation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B5B745C065A43470793D2DB2C2BF444B /* Debug */,
+				CD9AD3236A5D64668C12AF3EAA4F5CEB /* Profile */,
+				9AEF9405743EAA0BA86ECE9F82AC50CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		78FB362500491395DDCB9C9F91434CD0 /* Build configuration list for PBXNativeTarget "SQLCipher" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7F0DEC135776A36337F69A6B207B930B /* Debug */,
+				DD7BB5EF5AF5BDAA030CF3A55093BF7E /* Profile */,
+				E9A85B01A83AAF4B8FA9C94B2F4A9B14 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		839F7F8736AE8AE37458C0AFADC7F351 /* Build configuration list for PBXNativeTarget "sqflite_sqlcipher" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DB30FF787455A7DE73E82890D74B5033 /* Debug */,
+				5F5275B9F517AA93F146B7BD1F975BC2 /* Profile */,
+				8CD62471C7AD91010486C05D2094CC04 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9613E46E79805E23FE5181C5D7A55405 /* Build configuration list for PBXNativeTarget "shared_preferences_foundation-shared_preferences_foundation_privacy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				842B4B9E94478EE2682DF8ED78818537 /* Debug */,
+				A2DFBB851CEDC3CC8D2E57A129ADA603 /* Profile */,
+				2766FF0AA21421CD36D6372E1DC93E59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9AF9593289CA553E0AE79BCF907F38B3 /* Build configuration list for PBXNativeTarget "sqflite_sqlcipher-sqflite_sqlcipher_ios_privacy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				782DDF41ADD42413C4C6A789B0BAA7AD /* Debug */,
+				44E568488BFD7ECF5A24F8B646196120 /* Profile */,
+				AB7EFE68D65D54F841357EC62F878DA4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A73FBDBA73859AF48534A6845BA17C5B /* Build configuration list for PBXNativeTarget "FMDB-FMDB_Privacy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C29FB40C3396AE03ECC1DB7EFACC9BA6 /* Debug */,
+				9410B47A8F868F1A6278E26CB550D60D /* Profile */,
+				A42DBE0248D1EDB6320162287C5DDF01 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D52099AA1537D0F3745166E1889F6CA3 /* Build configuration list for PBXNativeTarget "Pods-RunnerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E3492020E6C8FFFAA75EF20124A3E54A /* Debug */,
+				07AD40A4677FB80E95DF81E94F42B5EE /* Profile */,
+				7240A8579D4E173D4895EA679806EC07 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E7D5097EB7D6E932F79989226144D50F /* Build configuration list for PBXNativeTarget "Pods-Runner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B166ADA058C10C409CD691114F17151D /* Debug */,
+				3098B213BA3C9956541CB0499C82F8CB /* Profile */,
+				3FE9FE37C531727B8C2EF1D16BB8DE7F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F57B8A0ABCB00D617A9CB836B590A6B8 /* Build configuration list for PBXNativeTarget "flutter_secure_storage_darwin-flutter_secure_storage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9435FA13F4A93F2325EE186E56DC08F1 /* Debug */,
+				D94E237A169B629F8E61D4FACDEBF970 /* Profile */,
+				12CC0241B5CE396FB69AE752B1CF10FE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FB0D2BA59873E318AACBDE13D926FA0C /* Build configuration list for PBXNativeTarget "flutter_secure_storage_darwin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C7FE60E0BD71E17578F6AD719EAE0A3 /* Debug */,
+				43782893052115A68EAAE309704E87DC /* Profile */,
+				D763D3BB2B15267C035573C7AD85B19A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BFDFE7DC352907FC980B868725387E98 /* Project object */;
+}

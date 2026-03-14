@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="dev.paw.android.PawBootstrapInstrumentationTest" tests="3" failures="0" errors="0" skipped="0" time="2.726" timestamp="2026-03-14T11:17:40" hostname="localhost">
+  <properties>
+    <property name="device" value="Pixel_7_API35(AVD) - 15" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="phoneChip_returnsToPhoneInputAfterReset" classname="dev.paw.android.PawBootstrapInstrumentationTest" time="1.121" />
+  <testcase name="launch_showsBootstrapShell" classname="dev.paw.android.PawBootstrapInstrumentationTest" time="0.534" />
+  <testcase name="continueWithPhone_transitionsToPhoneInput" classname="dev.paw.android.PawBootstrapInstrumentationTest" time="0.589" />
+</testsuite>

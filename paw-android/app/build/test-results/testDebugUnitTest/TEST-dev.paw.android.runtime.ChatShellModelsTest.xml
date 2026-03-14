@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.paw.android.runtime.ChatShellModelsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-14T11:30:41.985Z" hostname="haruna.local" time="0.019">
+  <properties/>
+  <testcase name="select conversation falls back to first item" classname="dev.paw.android.runtime.ChatShellModelsTest" time="0.005"/>
+  <testcase name="runtime snapshot adds cursor for selected conversation" classname="dev.paw.android.runtime.ChatShellModelsTest" time="0.011"/>
+  <testcase name="select conversation keeps current when still present" classname="dev.paw.android.runtime.ChatShellModelsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

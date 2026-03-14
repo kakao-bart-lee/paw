@@ -1,8 +1,0 @@
-{
-  "include": [
-    "paw_agent_sdk",
-    "tests",
-    "examples"
-  ],
-  "typeCheckingMode": "off"
-}

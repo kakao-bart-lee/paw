@@ -1,0 +1,191 @@
+03-14 20:17:35.235 14030 14044 I TestRunner: started: phoneChip_returnsToPhoneInputAfterReset(dev.paw.android.PawBootstrapInstrumentationTest)
+03-14 20:17:35.263 14030 14044 I Tracing : Tracer added: class androidx.test.platform.tracing.AndroidXTracer
+03-14 20:17:35.269 14030 14030 W dev.paw.android: Accessing hidden method Landroid/os/MessageQueue;->next()Landroid/os/Message; (unsupported, reflection, allowed)
+03-14 20:17:35.269 14030 14030 W dev.paw.android: Accessing hidden field Landroid/os/MessageQueue;->mMessages:Landroid/os/Message; (unsupported, reflection, allowed)
+03-14 20:17:35.269 14030 14030 W dev.paw.android: Accessing hidden method Landroid/os/Message;->recycleUnchecked()V (unsupported, reflection, allowed)
+03-14 20:17:35.270 14030 14044 D IdlingRegistry: Registering idling resources: [androidx.compose.ui.test.EspressoLink@a32f296]
+03-14 20:17:35.279 14030 14044 W Settings: Setting always_finish_activities has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+03-14 20:17:35.292   558  1105 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@828a73d2 does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+03-14 20:17:35.303  1223  1223 W SplitSelectStateCtor: Missing session instanceIds
+03-14 20:17:35.303  1223  1223 D StatsLog: LAUNCHER_SPLIT_SELECTION_EXIT_INTERRUPTED
+03-14 20:17:35.307   430   430 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+03-14 20:17:35.310  1223  1223 I TopTaskTracker: onTaskMovedToFront: (moved taskInfo to front) taskId=72, baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10008000 cmp=dev.paw.android/.MainActivity }
+03-14 20:17:35.313   452   514 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:35.331 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: PRE_ON_CREATE
+03-14 20:17:35.331 14030 14030 V ActivityScenario: Activity lifecycle changed event received but ignored because the reported transition was not ON_CREATE while the last known transition was PRE_ON_CREATE
+03-14 20:17:35.344  1223  1676 D EGL_emulation: app_time_stats: avg=30.14ms min=0.99ms max=851.11ms count=41
+03-14 20:17:35.353 14030 14030 D nativeloader: Load /data/app/~~9bDJa1kfX9MUXGzdGwcH6w==/dev.paw.android-wdojEIVvi3Og8ODzlp-4kQ==/base.apk!/lib/arm64-v8a/libjnidispatch.so using ns clns-7 from class loader (caller=/data/app/~~9bDJa1kfX9MUXGzdGwcH6w==/dev.paw.android-wdojEIVvi3Og8ODzlp-4kQ==/base.apk!classes6.dex): ok
+03-14 20:17:35.378  1223  1676 D EGL_emulation: app_time_stats: avg=68.05ms min=2.54ms max=1102.09ms count=19
+03-14 20:17:35.379   930  1044 D EGL_emulation: app_time_stats: avg=17766.67ms min=17766.67ms max=17766.67ms count=1
+03-14 20:17:35.419 14030 14030 D CompatChangeReporter: Compat change id reported: 309578419; UID 10223; state: ENABLED
+03-14 20:17:35.427 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: CREATED
+03-14 20:17:35.428 14030 14030 V ActivityScenario: Update currentActivityStage to CREATED, currentActivity=dev.paw.android.MainActivity@fcbd9fc
+03-14 20:17:35.429 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: STARTED
+03-14 20:17:35.429 14030 14030 V ActivityScenario: Update currentActivityStage to STARTED, currentActivity=dev.paw.android.MainActivity@fcbd9fc
+03-14 20:17:35.432 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: RESUMED
+03-14 20:17:35.432 14030 14030 V ActivityScenario: Update currentActivityStage to RESUMED, currentActivity=dev.paw.android.MainActivity@fcbd9fc
+03-14 20:17:35.437 14030 14030 W HWUI    : Unknown dataspace 0
+03-14 20:17:35.469 14030 14030 W dev.paw.android: Method void androidx.compose.runtime.snapshots.SnapshotStateListKt.clearImpl(androidx.compose.runtime.snapshots.SnapshotStateList) failed lock verification and will run slower.
+03-14 20:17:35.469 14030 14030 W dev.paw.android: Common causes for lock verification issues are non-optimized dex code
+03-14 20:17:35.469 14030 14030 W dev.paw.android: and incorrect proguard optimizations.
+03-14 20:17:35.514 14030 14034 I dev.paw.android: Compiler allocated 5250KB to compile void android.view.ViewRootImpl.performTraversals()
+03-14 20:17:35.526 14030 14030 W dev.paw.android: Accessing hidden method Landroid/os/SystemProperties;->addChangeCallback(Ljava/lang/Runnable;)V (unsupported, reflection, allowed)
+03-14 20:17:35.643  1223  1223 D VRI[NexusLauncherActivity]: visibilityChanged oldVisibility=true newVisibility=false
+03-14 20:17:35.657  1223  1223 D NexusLauncherModelDelegate: notifySmartspaceEvent: SmartspaceTargetEvent{mSmartspaceTarget=null, mSmartspaceActionId='null', mEventType=7}
+03-14 20:17:35.665 14030 14046 I EGL_emulation: Opening libGLESv1_CM_emulation.so
+03-14 20:17:35.666 14030 14046 I EGL_emulation: Opening libGLESv2_emulation.so
+03-14 20:17:35.671 14030 14046 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+03-14 20:17:35.671 14030 14046 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+03-14 20:17:35.690   157   157 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.mapper@4.0::IMapper/default in either framework or device VINTF manifest.
+03-14 20:17:35.691 14030 14046 I Gralloc4: mapper 4.x is not supported
+03-14 20:17:35.744  1223  1223 D BaseDepthController: setSurface:
+03-14 20:17:35.744  1223  1223 D BaseDepthController: 	mWaitingOnSurfaceValidity: false
+03-14 20:17:35.744  1223  1223 D BaseDepthController: 	mSurface: null
+03-14 20:17:35.744  1223  1223 D BaseDepthController: mSurface is null and mCurrentBlur is: 0
+03-14 20:17:35.745   452   514 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:35.745   558   576 W ziparchive: Unable to open '/data/app/~~9bDJa1kfX9MUXGzdGwcH6w==/dev.paw.android-wdojEIVvi3Og8ODzlp-4kQ==/base.dm': No such file or directory
+03-14 20:17:35.747   558   576 I ActivityTaskManager: Displayed dev.paw.android/.MainActivity for user 0: +454ms
+03-14 20:17:35.748  1223  1223 D StateManager: goToState - fromState: Normal, toState: Normal, partial trace:
+03-14 20:17:35.748  1223  1223 D StateManager: 	at com.android.launcher3.statemanager.StateManager.moveToRestState(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:4)
+03-14 20:17:35.748  1223  1223 D StateManager: 	at com.android.launcher3.statemanager.StateManager.moveToRestState(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:1)
+03-14 20:17:35.748  1223  1223 D StateManager: 	at com.android.launcher3.statemanager.StatefulActivity.onStop(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:34)
+03-14 20:17:35.748  1223  1223 D StatsLog: LAUNCHER_ONSTOP
+03-14 20:17:35.750  1223  3073 D GmsPlayProvider: Shut down the binder channel
+03-14 20:17:35.751  1223  1929 D OneSearchSuggestProvider: Shut down the binder channel
+03-14 20:17:35.752  1223  1223 D StatsLog: LAUNCHER_GOOGLE_SEARCH_RESTORE_LIST_SIZE_AFTER_ACTIVITY_RESTART
+03-14 20:17:35.754  1223  1891 I IPCThreadState: oneway function results for code 2 on binder at 0xb400006f89c44ee0 will be dropped but finished with status UNKNOWN_TRANSACTION
+03-14 20:17:35.778   558   666 I ImeTracker: dev.paw.android:e6de075e: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+03-14 20:17:35.778   558   666 I ImeTracker: dev.paw.android:e6de075e: onCancelled at PHASE_SERVER_SHOULD_HIDE
+03-14 20:17:35.787  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3157
+03-14 20:17:35.790  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2248 repeatCheckTimes = 0, locked = false
+03-14 20:17:35.791  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1986 onStartInput(EditorInfo{EditorInfo{packageName=dev.paw.android, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+03-14 20:17:35.792  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2248 repeatCheckTimes = 1, locked = false
+03-14 20:17:35.792  7208  7208 I AndroidIME: InputBundleManager.loadActiveInputBundleId():450 loadActiveInputBundleId: und-Latn-x-password, password
+03-14 20:17:35.942   452  2571 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:35.946  6790  8888 I FontLog : (REDACTED) Received query %s, URI %s
+03-14 20:17:35.948  6790  8888 I FontLog : (REDACTED) Query [%s] resolved to %s
+03-14 20:17:35.955  6790  8888 I FontLog : (REDACTED) Fetch %s end status %s
+03-14 20:17:35.964  6790  6799 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+03-14 20:17:35.969  6790  6799 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+03-14 20:17:36.025   452   514 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:36.028   930   983 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@6d8e50a
+03-14 20:17:36.029   558  1583 W InputManager-JNI: Input channel object '2fc07fe Splash Screen dev.paw.android (client)' was disposed without first being removed with the input manager!
+03-14 20:17:36.146   558  1583 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@843f4c71 does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+03-14 20:17:36.149   558   579 V GrammaticalInflectionUtils: AttributionSource: android.content.AttributionSource@843f4c71 does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+03-14 20:17:36.150 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: PAUSED
+03-14 20:17:36.150 14030 14030 V ActivityScenario: Update currentActivityStage to PAUSED, currentActivity=dev.paw.android.MainActivity@fcbd9fc
+03-14 20:17:36.150  1223  1223 I TopTaskTracker: onTaskMovedToFront: (moved taskInfo to front) taskId=73, baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=dev.paw.android.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity }
+03-14 20:17:36.152   452   514 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:36.157   430   430 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+03-14 20:17:36.157   365   365 D Zygote  : Forked child process 14060
+03-14 20:17:36.178 14060 14060 I aw.android.test: Late-enabling -Xcheck:jni
+03-14 20:17:36.187 14060 14060 I aw.android.test: Using CollectorTypeCMC GC.
+03-14 20:17:36.189  1963  1974 I adbd    : jdwp connection from 14060
+03-14 20:17:36.193 14060 14060 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+03-14 20:17:36.209 14060 14060 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+03-14 20:17:36.210 14060 14060 D nativeloader: Configuring clns-7 for other apk /system/framework/android.test.mock.jar. target_sdk_version=35, uses_libraries=ALL, library_path=/data/app/~~6q2JaN2NZPnVYPdS-s803Q==/dev.paw.android.test-rpzF1_r4nygbSj4p49MfCg==/lib/arm64, permitted_path=/data:/mnt/expand:/data/user/0/dev.paw.android.test
+03-14 20:17:36.211 14060 14060 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+03-14 20:17:36.212 14060 14060 D nativeloader: Configuring clns-8 for other apk /system/framework/android.test.runner.jar. target_sdk_version=35, uses_libraries=ALL, library_path=/data/app/~~6q2JaN2NZPnVYPdS-s803Q==/dev.paw.android.test-rpzF1_r4nygbSj4p49MfCg==/lib/arm64, permitted_path=/data:/mnt/expand:/data/user/0/dev.paw.android.test
+03-14 20:17:36.213 14060 14060 W ziparchive: Unable to open '/data/app/~~6q2JaN2NZPnVYPdS-s803Q==/dev.paw.android.test-rpzF1_r4nygbSj4p49MfCg==/base.dm': No such file or directory
+03-14 20:17:36.213 14060 14060 W ziparchive: Unable to open '/data/app/~~6q2JaN2NZPnVYPdS-s803Q==/dev.paw.android.test-rpzF1_r4nygbSj4p49MfCg==/base.dm': No such file or directory
+03-14 20:17:36.221 14060 14060 D nativeloader: Configuring clns-9 for other apk /data/app/~~6q2JaN2NZPnVYPdS-s803Q==/dev.paw.android.test-rpzF1_r4nygbSj4p49MfCg==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~6q2JaN2NZPnVYPdS-s803Q==/dev.paw.android.test-rpzF1_r4nygbSj4p49MfCg==/lib/arm64, permitted_path=/data:/mnt/expand:/data/user/0/dev.paw.android.test
+03-14 20:17:36.222 14060 14060 D CompatChangeReporter: Compat change id reported: 202956589; UID 10224; state: ENABLED
+03-14 20:17:36.230 14060 14060 V GraphicsEnvironment: Currently set values for:
+03-14 20:17:36.231 14060 14060 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+03-14 20:17:36.231 14060 14060 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+03-14 20:17:36.231 14060 14060 V GraphicsEnvironment: Global.Settings values are invalid: number of packages: 0, number of values: 0
+03-14 20:17:36.231 14060 14060 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+03-14 20:17:36.253 14060 14060 D CompatChangeReporter: Compat change id reported: 279646685; UID 10224; state: ENABLED
+03-14 20:17:36.254 14060 14060 D CompatChangeReporter: Compat change id reported: 309578419; UID 10224; state: ENABLED
+03-14 20:17:36.266 14060 14060 W HWUI    : Unknown dataspace 0
+03-14 20:17:36.268   452   514 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:36.271  1223  1223 I TopTaskTracker: onTaskMovedToFront: (moved taskInfo to front) taskId=7, baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10000100 cmp=com.google.android.apps.nexuslauncher/.NexusLauncherActivity }
+03-14 20:17:36.277   430  1351 W ServiceManagerCppClient: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10224 pid=14060
+03-14 20:17:36.277   430  1351 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10224 => denied (120 us)
+03-14 20:17:36.277   430   490 W ServiceManagerCppClient: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10224 pid=0
+03-14 20:17:36.277   430   490 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10224 => denied (284 us)
+03-14 20:17:36.277   430   490 W ServiceManagerCppClient: Permission failure: android.permission.ROTATE_SURFACE_FLINGER from uid=10224 pid=0
+03-14 20:17:36.277   430   490 D PermissionCache: checking android.permission.ROTATE_SURFACE_FLINGER for uid=10224 => denied (137 us)
+03-14 20:17:36.277   430  1351 W ServiceManagerCppClient: Permission failure: android.permission.ROTATE_SURFACE_FLINGER from uid=10224 pid=14060
+03-14 20:17:36.277   430  1351 D PermissionCache: checking android.permission.ROTATE_SURFACE_FLINGER for uid=10224 => denied (211 us)
+03-14 20:17:36.277   430   490 W ServiceManagerCppClient: Permission failure: android.permission.INTERNAL_SYSTEM_WINDOW from uid=10224 pid=0
+03-14 20:17:36.277   430   490 D PermissionCache: checking android.permission.INTERNAL_SYSTEM_WINDOW for uid=10224 => denied (92 us)
+03-14 20:17:36.277   430  1351 W ServiceManagerCppClient: Permission failure: android.permission.INTERNAL_SYSTEM_WINDOW from uid=10224 pid=14060
+03-14 20:17:36.277   430  1351 D PermissionCache: checking android.permission.INTERNAL_SYSTEM_WINDOW for uid=10224 => denied (113 us)
+03-14 20:17:36.278 14060 14074 I EGL_emulation: Opening libGLESv1_CM_emulation.so
+03-14 20:17:36.278 14060 14074 I EGL_emulation: Opening libGLESv2_emulation.so
+03-14 20:17:36.281 14060 14074 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+03-14 20:17:36.282 14060 14074 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+03-14 20:17:36.290   157   157 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.mapper@4.0::IMapper/default in either framework or device VINTF manifest.
+03-14 20:17:36.290 14060 14074 I Gralloc4: mapper 4.x is not supported
+03-14 20:17:36.301   558  1105 W ServiceManagerCppClient: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10224 pid=0
+03-14 20:17:36.301   558  1105 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10224 => denied (69 us)
+03-14 20:17:36.301   558  1105 W ServiceManagerCppClient: Permission failure: android.permission.ROTATE_SURFACE_FLINGER from uid=10224 pid=0
+03-14 20:17:36.301   558  1105 D PermissionCache: checking android.permission.ROTATE_SURFACE_FLINGER for uid=10224 => denied (10 us)
+03-14 20:17:36.301   558  1105 W ServiceManagerCppClient: Permission failure: android.permission.INTERNAL_SYSTEM_WINDOW from uid=10224 pid=0
+03-14 20:17:36.301   558  1105 D PermissionCache: checking android.permission.INTERNAL_SYSTEM_WINDOW for uid=10224 => denied (4 us)
+03-14 20:17:36.304  1223  1223 D StatsLog: LAUNCHER_ONRESUME
+03-14 20:17:36.306   558  1591 W AppSearchIcing: icing-search-engine.cc:321: Error: 5, Message: Document (com.google.android.googlequicksearchbox$OneSearchZeroStateGoogleSuggestions/default, zp) not found.
+03-14 20:17:36.306   452   514 W IPCThreadState: Sending oneway calls to frozen process.
+03-14 20:17:36.307  1223  1223 D NexusLauncherModelDelegate: notifySmartspaceEvent: SmartspaceTargetEvent{mSmartspaceTarget=null, mSmartspaceActionId='null', mEventType=6}
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: AppSearch 0-state cache not available, fallback to AGA
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: java.util.concurrent.CompletionException: java.util.NoSuchElementException: No value present
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at java.util.concurrent.CompletableFuture.encodeThrowable(CompletableFuture.java:308)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at java.util.concurrent.CompletableFuture.completeThrowable(CompletableFuture.java:323)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at java.util.concurrent.CompletableFuture$UniAccept.tryFire(CompletableFuture.java:684)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:486)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at java.util.concurrent.CompletableFuture.completeExceptionally(CompletableFuture.java:2138)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at com.google.android.apps.nexuslauncher.allapps.E0.onResult(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:67)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.app.appsearch.SearchSessionUtil$1.lambda$onResult$0(go/retraceme 64eee9e9f568ff45978879ad2ff83146f2618ee8a88278736fbdf5fae931976e:144)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.app.appsearch.SearchSessionUtil$1.$r8$lambda$CEk3q8sDAQVhU3rQwVueB8FAj_M(go/retraceme 64eee9e9f568ff45978879ad2ff83146f2618ee8a88278736fbdf5fae931976e:1)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.app.appsearch.SearchSessionUtil$1$$ExternalSyntheticLambda0.run(go/retraceme 64eee9e9f568ff45978879ad2ff83146f2618ee8a88278736fbdf5fae931976e:22)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.os.Handler.handleCallback(Handler.java:959)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.os.Looper.loopOnce(Looper.java:232)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.os.Looper.loop(Looper.java:317)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: Caused by: java.util.NoSuchElementException: No value present
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at java.util.Optional.get(Optional.java:143)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	at com.google.android.apps.nexuslauncher.allapps.E0.onResult(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:28)
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: 	... 8 more
+03-14 20:17:36.309  1223  1929 D OneSearchSuggestProvider: Created the binder channel successfully for end point service =com.google.android.apps.search.googleapp.search.suggest.plugins.onesearch.server.OneSearchSuggestService , mChannel=i1{delegate=f{logId=103, target=directaddress:///AndroidComponentAddress%5BIntent%20%7B%20act=grpc.io.action.BIND%20cmp=com.google.android.googlequicksearchbox/com.google.android.apps.search.googleapp.search.suggest.plugins.onesearch.server.OneSearchSuggestService%20%7D%5D}} , mOneSearchConnection=l2.Z@3e8e505
+03-14 20:17:36.312  1223  1223 D BaseDepthController: setSurface:
+03-14 20:17:36.312  1223  1223 D BaseDepthController: 	mWaitingOnSurfaceValidity: false
+03-14 20:17:36.312  1223  1223 D BaseDepthController: 	mSurface: Surface(name=com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity)/@0x7f10afc
+03-14 20:17:36.317  1506  1639 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+03-14 20:17:36.319  1223  1265 D QuickstepModelDelegate: notifyAppTargetEvent action=1 launchLocation=workspace/0/[-1,-1]/[1,1]
+03-14 20:17:36.320  1506  1639 I AiAiEcho: EchoTargets:
+03-14 20:17:36.320  1506  1639 I AiAiEcho: Filtered by AiAi flag check:
+03-14 20:17:36.320  1506  1639 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+03-14 20:17:36.320  1506  1639 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+03-14 20:17:36.320  1506  1639 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+03-14 20:17:36.326  7172  7172 I A       : (REDACTED) Created gRPC endpoint for service %s
+03-14 20:17:36.329 14030 14030 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+03-14 20:17:36.329  1506  1639 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+03-14 20:17:36.331  1223  1223 D StateManager: createAtomicAnimation - fromState: Background, toState: Normal, partial trace:
+03-14 20:17:36.331  1223  1223 D StateManager: 	at com.android.quickstep.util.WorkspaceRevealAnim.prepareToAnimate(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:22)
+03-14 20:17:36.331  1223  1223 D StateManager: 	at com.android.quickstep.util.WorkspaceRevealAnim.<init>(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:11)
+03-14 20:17:36.331  1223  1223 D StateManager: 	at com.android.launcher3.QuickstepTransitionManager.createWallpaperOpenAnimations(go/retraceme 2855a437b73635ce9cad76b9289087e631bbb67fc90008a0da13d343a00e5041:735)
+03-14 20:17:36.341 14030 14046 D HWUI    : endAllActiveAnimators on 0xb400006fc9c08020 (UnprojectedRipple) with handle 0xb400006f89c30510
+03-14 20:17:36.341  1223  1223 D SsBaseTemplateCard: No text view can be set up
+03-14 20:17:36.342  1223  1223 D SsBaseTemplateCard: Passed-in item info is null
+03-14 20:17:36.342  1223  1223 D SsBaseTemplateCard: Passed-in item info is null
+03-14 20:17:36.342  1223  1223 D SsBaseTemplateCard: Passed-in item info is null
+03-14 20:17:36.342  1223  1223 I SsBaseTemplateCard: Secondary card pane is null
+03-14 20:17:36.349 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: STOPPED
+03-14 20:17:36.349 14030 14030 V ActivityScenario: Update currentActivityStage to STOPPED, currentActivity=dev.paw.android.MainActivity@fcbd9fc
+03-14 20:17:36.357   391   509 I RanchuHwc: logCompositionFallbackIfChanged: layer 275 CompositionType fallback from 2 to 1
+03-14 20:17:36.357   391   509 I RanchuHwc: logCompositionFallbackIfChanged: layer 276 CompositionType fallback from 2 to 1
+03-14 20:17:36.365   558   666 I ImeTracker: com.google.android.apps.nexuslauncher:ec60b8b9: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+03-14 20:17:36.365   558   666 I ImeTracker: com.google.android.apps.nexuslauncher:ec60b8b9: onCancelled at PHASE_SERVER_SHOULD_HIDE
+03-14 20:17:36.367  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3157
+03-14 20:17:36.368  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2248 repeatCheckTimes = 0, locked = false
+03-14 20:17:36.368  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1986 onStartInput(EditorInfo{EditorInfo{packageName=com.google.android.apps.nexuslauncher, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+03-14 20:17:36.368  7208  7208 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2248 repeatCheckTimes = 1, locked = false
+03-14 20:17:36.368 14030 14030 D LifecycleMonitor: Lifecycle status change: dev.paw.android.MainActivity@fcbd9fc in: DESTROYED
+03-14 20:17:36.368  7208  7208 I AndroidIME: InputBundleManager.loadActiveInputBundleId():450 loadActiveInputBundleId: und-Latn-x-password, password
+03-14 20:17:36.368 14030 14030 V ActivityScenario: Update currentActivityStage to DESTROYED, currentActivity=null
+03-14 20:17:36.370 14030 14044 D IdlingRegistry: Unregistering idling resources: [androidx.compose.ui.test.EspressoLink@a32f296]
+03-14 20:17:36.370 14030 14030 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@241cf5e
+03-14 20:17:36.371   558  1922 W InputManager-JNI: Input channel object '3aec6e5 dev.paw.android/dev.paw.android.MainActivity (client)' was disposed without first being removed with the input manager!
+03-14 20:17:36.373 14030 14044 I TestRunner: finished: phoneChip_returnsToPhoneInputAfterReset(dev.paw.android.PawBootstrapInstrumentationTest)

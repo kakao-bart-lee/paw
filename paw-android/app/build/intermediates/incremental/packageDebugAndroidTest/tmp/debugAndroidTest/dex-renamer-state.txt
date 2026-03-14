@@ -1,0 +1,13 @@
+#Sat Mar 14 05:53:54 KST 2026
+base.0=/Users/haruna/workspace/paw/paw-android/app/build/intermediates/dex/debugAndroidTest/mergeExtDexDebugAndroidTest/classes.dex
+base.1=/Users/haruna/workspace/paw/paw-android/app/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/0/classes.dex
+base.2=/Users/haruna/workspace/paw/paw-android/app/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/3/classes.dex
+base.3=/Users/haruna/workspace/paw/paw-android/app/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/5/classes.dex
+path.0=classes.dex
+path.1=0/classes.dex
+path.2=3/classes.dex
+path.3=5/classes.dex
+renamed.0=classes.dex
+renamed.1=classes2.dex
+renamed.2=classes3.dex
+renamed.3=classes4.dex

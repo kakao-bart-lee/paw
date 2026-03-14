@@ -1,0 +1,172 @@
+# 2026-03-14T11:17:40.351535Z:
+test_suite_meta_data {
+  scheduled_test_case_count: 3
+}
+test_status: PASSED
+test_result {
+  test_case {
+    test_class: "PawBootstrapInstrumentationTest"
+    test_package: "dev.paw.android"
+    test_method: "phoneChip_returnsToPhoneInputAfterReset"
+    start_time {
+      seconds: 1773487057
+      nanos: 598000000
+    }
+    end_time {
+      seconds: 1773487058
+      nanos: 727000000
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/logcat-dev.paw.android.PawBootstrapInstrumentationTest-phoneChip_returnsToPhoneInputAfterReset.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "PawBootstrapInstrumentationTest"
+    test_package: "dev.paw.android"
+    test_method: "launch_showsBootstrapShell"
+    start_time {
+      seconds: 1773487058
+      nanos: 737000000
+    }
+    end_time {
+      seconds: 1773487059
+      nanos: 275000000
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/logcat-dev.paw.android.PawBootstrapInstrumentationTest-launch_showsBootstrapShell.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/cpuinfo"
+    }
+  }
+}
+test_result {
+  test_case {
+    test_class: "PawBootstrapInstrumentationTest"
+    test_package: "dev.paw.android"
+    test_method: "continueWithPhone_transitionsToPhoneInput"
+    start_time {
+      seconds: 1773487059
+      nanos: 276000000
+    }
+    end_time {
+      seconds: 1773487059
+      nanos: 863000000
+    }
+  }
+  test_status: PASSED
+  output_artifact {
+    label {
+      label: "logcat"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/logcat-dev.paw.android.PawBootstrapInstrumentationTest-continueWithPhone_transitionsToPhoneInput.txt"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/device-info.pb"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.meminfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/meminfo"
+    }
+  }
+  output_artifact {
+    label {
+      label: "device-info.cpuinfo"
+      namespace: "android"
+    }
+    source_path {
+      path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/cpuinfo"
+    }
+  }
+}
+output_artifact {
+  label {
+    label: "test-results.log"
+    namespace: "com.google.testing.platform.runtime.android.driver.AndroidInstrumentationDriver"
+  }
+  source_path {
+    path: "/Users/haruna/workspace/paw/paw-android/app/build/outputs/androidTest-results/connected/debug/Pixel_7_API35(AVD) - 15/testlog/test-results.log"
+  }
+  type: TEST_DATA
+  mime_type: "text/plain"
+}
