@@ -6,7 +6,7 @@ Updated: 2026-03-14
 
 `feat/native-foundation` was merged into `main` via PR #2.
 
-- PR: https://github.com/kakao-bart-lee/paw/pull/2
+- PR: https://github.com/talelapse/paw/pull/2
 - Merge commit: `14d48dd`
 
 This branch completed the repository-wide foundation work for the Flutter Web/Desktop + native mobile split.
