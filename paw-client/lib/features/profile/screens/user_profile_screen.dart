@@ -28,6 +28,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   }
 
   Future<void> _loadUser() async {
+    setState(() {
+      _userAsync = const AsyncValue.loading();
+    });
+
     try {
       final apiClient = GetIt.instance<ApiClient>();
       Map<String, dynamic>? result;
@@ -108,8 +112,22 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('프로필')),
       body: _userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('오류: $e')),
+        loading: () => const _UserProfileAsyncState(
+          icon: Icons.person_search_rounded,
+          title: '프로필을 찾는 중입니다',
+          subtitle: '대화 가능 여부와 사용자 정보를 불러오고 있습니다.',
+          loading: true,
+        ),
+        error: (e, _) => _UserProfileAsyncState(
+          icon: Icons.error_outline_rounded,
+          title: '프로필을 불러오지 못했습니다',
+          subtitle: '$e',
+          action: FilledButton.tonalIcon(
+            onPressed: _loadUser,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('다시 시도'),
+          ),
+        ),
         data: (user) {
           final displayName = (user['display_name'] as String?) ?? '';
           final avatarUrl = user['avatar_url'] as String?;
@@ -168,9 +186,148 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 18),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.surface2,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                  border: Border.all(color: AppTheme.outline),
+                ),
+                child: const Column(
+                  children: [
+                    _UserProfileInfoRow(
+                      icon: Icons.verified_user_outlined,
+                      title: '안전한 연락처',
+                      subtitle: '대화 생성 전 사용자 검색과 권한 흐름을 한 번 더 확인합니다.',
+                    ),
+                    _UserProfileInfoRow(
+                      icon: Icons.auto_awesome_outlined,
+                      title: 'Agent 분리',
+                      subtitle: '개인 프로필과 Agent 대화는 분리된 맥락으로 유지됩니다.',
+                      last: true,
+                    ),
+                  ],
+                ),
+              ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _UserProfileAsyncState extends StatelessWidget {
+  const _UserProfileAsyncState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.loading = false,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool loading;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface2,
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface3,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                    border: Border.all(color: AppTheme.outline),
+                  ),
+                  child: loading
+                      ? const Padding(
+                          padding: EdgeInsets.all(18),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(icon, color: AppTheme.mutedText),
+                ),
+                const SizedBox(height: 16),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (action != null) ...[const SizedBox(height: 16), action!],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UserProfileInfoRow extends StatelessWidget {
+  const _UserProfileInfoRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.last = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        border: last
+            ? null
+            : const Border(bottom: BorderSide(color: AppTheme.outline)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.surface4,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            ),
+            child: Icon(icon, color: AppTheme.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

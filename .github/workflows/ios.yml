@@ -1,5 +1,9 @@
 name: ios
 
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, develop]
@@ -31,8 +35,8 @@ jobs:
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim
 
-      - name: Generate bindings
-        run: ./scripts/gen-ffi-bindings.sh
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: Build paw-core iOS artifacts
         run: ./scripts/build-core-ios.sh

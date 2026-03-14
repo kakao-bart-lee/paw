@@ -14,6 +14,7 @@ import '../../features/chat/screens/create_group_screen.dart';
 import '../../features/chat/screens/search_screen.dart';
 import '../../features/agent/screens/agent_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/settings/screens/help_center_screen.dart';
 import '../../features/profile/screens/my_profile_screen.dart';
 import '../../features/profile/screens/user_profile_screen.dart';
 import '../shell/main_shell.dart';
@@ -90,6 +91,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/profile/:userId',
         builder: (context, state) =>
             UserProfileScreen(userId: state.pathParameters['userId']!),
+      ),
+      GoRoute(
+        path: '/settings/help',
+        builder: (context, state) => const HelpCenterScreen(),
       ),
 
       // Main shell with adaptive compact/wide navigation

@@ -1,5 +1,9 @@
 name: flutter
 
+concurrency:
+  group: flutter-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, develop]
@@ -27,6 +31,7 @@ jobs:
         with:
           flutter-version: "3.41.4"
           channel: stable
+          cache: true
 
       - name: Get dependencies
         run: cd paw-client && flutter pub get

@@ -65,8 +65,22 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('내 프로필')),
       body: profileState.userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('오류: $e')),
+        loading: () => const _ProfileAsyncState(
+          icon: Icons.person_outline_rounded,
+          title: '프로필을 불러오는 중입니다',
+          subtitle: '계정 정보와 보안 상태를 정리하고 있습니다.',
+          loading: true,
+        ),
+        error: (e, _) => _ProfileAsyncState(
+          icon: Icons.error_outline_rounded,
+          title: '프로필을 불러오지 못했습니다',
+          subtitle: '오류: $e',
+          action: FilledButton.tonalIcon(
+            onPressed: () => ref.read(profileProvider.notifier).loadProfile(),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('다시 시도'),
+          ),
+        ),
         data: (user) {
           final displayName = (user['display_name'] as String?) ?? '';
           final phone = (user['phone'] as String?) ?? '';
@@ -146,17 +160,26 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                     BorderSide(color: AppTheme.outline),
                   ),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
-                    _ProfileInfoRow(
+                    const _ProfileInfoRow(
                       icon: Icons.lock_outline_rounded,
                       title: '기본 보안',
                       subtitle: '종단간 암호화 대화와 기기 잠금을 함께 사용 중',
                     ),
-                    _ProfileInfoRow(
+                    const _ProfileInfoRow(
                       icon: Icons.auto_awesome_outlined,
                       title: 'Agent 활용',
                       subtitle: '권한은 대화별로 분리되어 안전하게 관리됩니다',
+                    ),
+                    _ProfileInfoRow(
+                      icon: Icons.help_outline_rounded,
+                      title: '지원 안내',
+                      subtitle: 'visual QA와 Web/Desktop 지원 메모는 도움말 센터에서 확인',
+                      trailing: TextButton(
+                        onPressed: () => context.push('/settings/help'),
+                        child: const Text('열기'),
+                      ),
                       last: true,
                     ),
                   ],
@@ -186,17 +209,85 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
   }
 }
 
+class _ProfileAsyncState extends StatelessWidget {
+  const _ProfileAsyncState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.loading = false,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool loading;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface2,
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface3,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                    border: Border.all(color: AppTheme.outline),
+                  ),
+                  child: loading
+                      ? const Padding(
+                          padding: EdgeInsets.all(18),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(icon, color: AppTheme.mutedText),
+                ),
+                const SizedBox(height: 16),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (action != null) ...[const SizedBox(height: 16), action!],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileInfoRow extends StatelessWidget {
   const _ProfileInfoRow({
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.trailing,
     this.last = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final Widget? trailing;
   final bool last;
 
   @override
@@ -230,6 +321,9 @@ class _ProfileInfoRow extends StatelessWidget {
               ],
             ),
           ),
+          if (trailing != null) ...[
+            trailing!,
+          ],
         ],
       ),
     );

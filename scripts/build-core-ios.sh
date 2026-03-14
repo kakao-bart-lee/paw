@@ -17,7 +17,7 @@ need_cmd rustup
 IOS_OUT="paw-ios/PawCore/Artifacts"
 mkdir -p "$IOS_OUT"
 
-./scripts/gen-ffi-bindings.sh
+./scripts/gen-ffi-bindings.sh swift
 
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 

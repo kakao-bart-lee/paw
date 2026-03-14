@@ -7,6 +7,8 @@ final class PawUITests: XCTestCase {
         static let shellBanner = "paw.conversations.banner"
         static let pushStatus = "paw.push.status"
         static let connectionState = "paw.runtime.connectionState"
+        static let profileSummary = "paw.profile.summary"
+        static let settingsSummary = "paw.settings.summary"
         static let authMethodSelect = "paw.auth.button.AuthMethodSelect"
         static let phoneInput = "paw.auth.button.PhoneInput"
         static let otpVerify = "paw.auth.button.OtpVerify"
@@ -32,6 +34,7 @@ final class PawUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts[Identifier.title].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. 로그인 방식 선택")
         XCTAssertFalse(app.staticTexts[Identifier.shellBanner].exists)
+        XCTAssertTrue(app.staticTexts["Unlock chat workspace"].exists)
 
         app.buttons[Identifier.phoneInput].tap()
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "2. 전화번호 입력")
@@ -51,10 +54,12 @@ final class PawUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "완료 · 채팅 진입 가능")
         XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Bootstrap Crew · Ready"))
         XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Connected")
+        XCTAssertTrue(app.staticTexts[Identifier.profileSummary].exists)
+        XCTAssertTrue(app.staticTexts[Identifier.settingsSummary].exists)
 
         revealIfNeeded(app.buttons[Identifier.registerPush], in: app)
         app.buttons[Identifier.registerPush].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.pushStatus].label, "Registered")
+        XCTAssertEqual(app.staticTexts.matching(identifier: Identifier.pushStatus).firstMatch.label, "Registered")
 
         revealIfNeeded(app.buttons[Identifier.nextConversation], in: app)
         app.buttons[Identifier.nextConversation].tap()
@@ -73,7 +78,8 @@ final class PawUITests: XCTestCase {
         app.buttons[Identifier.authMethodSelect].tap()
         XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. 로그인 방식 선택")
         XCTAssertFalse(app.staticTexts[Identifier.shellBanner].exists)
-        XCTAssertFalse(app.staticTexts[Identifier.pushStatus].exists)
+        XCTAssertTrue(app.staticTexts["Unlock chat workspace"].exists)
+        XCTAssertFalse(app.staticTexts.matching(identifier: Identifier.pushStatus).firstMatch.exists)
     }
 
     private func revealIfNeeded(_ element: XCUIElement, in app: XCUIApplication) {

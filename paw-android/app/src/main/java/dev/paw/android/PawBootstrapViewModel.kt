@@ -140,8 +140,25 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun sendMessage() {
+    fun retryConversations() {
+        viewModelScope.launch {
+            loadChatShell()
+        }
+    }
+
+    fun retryMessages() {
         val conversationId = uiState.chat.selectedConversationId ?: return
+        viewModelScope.launch {
+            loadMessages(conversationId)
+        }
+    }
+
+    fun sendMessage() {
+        val conversationId = uiState.chat.selectedConversationId
+        if (conversationId == null) {
+            uiState = uiState.copy(chat = uiState.chat.copy(messagesError = "먼저 대화를 선택하세요."))
+            return
+        }
         val draft = uiState.chat.messageDraft.trim()
         if (draft.isBlank()) {
             uiState = uiState.copy(chat = uiState.chat.copy(messagesError = "메시지를 입력하세요."))
@@ -515,6 +532,7 @@ class PawBootstrapViewModel(application: Application) : AndroidViewModel(applica
                     chat = uiState.chat.copy(
                         conversations = conversations,
                         selectedConversationId = selectedConversationId,
+                        messages = if (selectedConversationId == null) emptyList() else uiState.chat.messages,
                         conversationsLoading = false,
                         conversationsError = null,
                     ),

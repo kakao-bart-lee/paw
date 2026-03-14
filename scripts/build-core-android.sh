@@ -18,7 +18,7 @@ need_cmd cargo-ndk
 ANDROID_OUT="paw-android/app/src/main/jniLibs"
 mkdir -p "$ANDROID_OUT"
 
-./scripts/gen-ffi-bindings.sh
+./scripts/gen-ffi-bindings.sh kotlin
 
 rustup target add aarch64-linux-android x86_64-linux-android
 

@@ -22,6 +22,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<SearchResult> _results = const [];
   bool _loading = false;
   String _lastQuery = '';
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -40,7 +41,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onQueryChanged(String query) {
-    setState(() {});
+    setState(() {
+      _errorMessage = null;
+    });
     _debounce?.cancel();
     _debounce = Timer(
       const Duration(milliseconds: 300),
@@ -57,11 +60,15 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _results = const [];
         _loading = false;
+        _errorMessage = null;
       });
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
     try {
       final searchService = getIt<SearchService>();
       final results = await searchService.search(trimmed);
@@ -69,11 +76,16 @@ class _SearchScreenState extends State<SearchScreen> {
         setState(() {
           _results = results;
           _loading = false;
+          _errorMessage = null;
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (trimmed == _lastQuery) {
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _results = const [];
+          _errorMessage = '검색 결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+        });
       }
     }
   }
@@ -126,16 +138,48 @@ class _SearchScreenState extends State<SearchScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    if (_errorMessage != null) {
+      return _SearchFeedbackState(
+        icon: Icons.search_off_rounded,
+        title: '검색을 완료하지 못했습니다',
+        subtitle: _errorMessage!,
+        action: FilledButton.tonalIcon(
+          onPressed: () => _performSearch(_controller.text),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('다시 시도'),
+        ),
+      );
+    }
+
     if (_lastQuery.isEmpty) {
-      return const _SearchEmptyState(
+      return _SearchFeedbackState(
         icon: Icons.search_rounded,
         title: '대화 내용을 검색하세요',
         subtitle: '사람, 에이전트, 파일 설명까지 빠르게 탐색할 수 있습니다.',
+        action: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            ActionChip(
+              label: const Text('Agent'),
+              onPressed: () => context.go('/agent'),
+            ),
+            ActionChip(
+              label: const Text('내 프로필'),
+              onPressed: () => context.go('/profile/me'),
+            ),
+            ActionChip(
+              label: const Text('도움말 센터'),
+              onPressed: () => context.push('/settings/help'),
+            ),
+          ],
+        ),
       );
     }
 
     if (_results.isEmpty) {
-      return const _SearchEmptyState(
+      return const _SearchFeedbackState(
         icon: Icons.search_off_rounded,
         title: '검색 결과가 없습니다',
         subtitle: '다른 키워드나 더 짧은 검색어로 다시 시도해보세요.',
@@ -157,44 +201,59 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 }
 
-class _SearchEmptyState extends StatelessWidget {
-  const _SearchEmptyState({
+class _SearchFeedbackState extends StatelessWidget {
+  const _SearchFeedbackState({
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                border: Border.all(color: AppTheme.outline),
-              ),
-              child: Icon(icon, size: 30, color: AppTheme.mutedText),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface2,
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              border: Border.all(color: AppTheme.outline),
             ),
-            const SizedBox(height: 18),
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface3,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                    border: Border.all(color: AppTheme.outline),
+                  ),
+                  child: Icon(icon, size: 30, color: AppTheme.mutedText),
+                ),
+                const SizedBox(height: 18),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (action != null) ...[const SizedBox(height: 16), action!],
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -266,31 +325,33 @@ class _SearchResultTile extends StatelessWidget {
     BuildContext context,
     ColorScheme colorScheme,
   ) {
-    final spans = <InlineSpan>[];
-    final regex = RegExp(r'\[(.+?)\]');
-    int cursor = 0;
+    final regex = RegExp(r'\[(.*?)\]');
+    final spans = <TextSpan>[];
+    var start = 0;
 
     for (final match in regex.allMatches(text)) {
-      if (match.start > cursor) {
-        spans.add(TextSpan(text: text.substring(cursor, match.start)));
+      if (match.start > start) {
+        spans.add(TextSpan(text: text.substring(start, match.start)));
       }
       spans.add(
         TextSpan(
           text: match.group(1),
           style: TextStyle(
-            color: colorScheme.primary,
-            fontWeight: FontWeight.bold,
+            color: AppTheme.strongText,
+            backgroundColor: colorScheme.secondary.withValues(alpha: 0.22),
+            fontWeight: FontWeight.w700,
           ),
         ),
       );
-      cursor = match.end;
+      start = match.end;
     }
-    if (cursor < text.length) {
-      spans.add(TextSpan(text: text.substring(cursor)));
+
+    if (start < text.length) {
+      spans.add(TextSpan(text: text.substring(start)));
     }
 
     return RichText(
-      maxLines: 2,
+      maxLines: 3,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(
         style: Theme.of(context).textTheme.bodyMedium,
@@ -299,14 +360,19 @@ class _SearchResultTile extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
+  String _formatDate(DateTime date) {
     final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) {
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays}일 전';
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}일 전';
     }
-    return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
+    if (difference.inHours > 0) {
+      return '${difference.inHours}시간 전';
+    }
+    if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}분 전';
+    }
+    return '방금 전';
   }
 }

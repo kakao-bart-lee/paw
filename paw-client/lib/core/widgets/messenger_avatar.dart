@@ -54,7 +54,7 @@ class MessengerAvatar extends StatelessWidget {
                     ? Image.network(
                         imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _AvatarFallback(
+                        errorBuilder: (_, error, stackTrace) => _AvatarFallback(
                           initials: initials,
                           isAgent: isAgent,
                           fontSize: size * 0.3,
