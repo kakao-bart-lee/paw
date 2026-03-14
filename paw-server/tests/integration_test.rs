@@ -1041,10 +1041,14 @@ fn delta_size_limit_is_4096() {
 
 #[test]
 fn test_replenish_threshold() {
-    for count in 0..5u32 {
-        assert!(count < 5, "should replenish at count {}", count);
+    fn should_replenish(remaining: u32) -> bool {
+        remaining < 5
     }
-    assert!(5 >= 5, "should NOT replenish at count 5");
+
+    for count in 0..5u32 {
+        assert!(should_replenish(count), "should replenish at count {}", count);
+    }
+    assert!(!should_replenish(5), "should NOT replenish at count 5");
 }
 
 const MAX_GROUP_MEMBERS: usize = 100;
