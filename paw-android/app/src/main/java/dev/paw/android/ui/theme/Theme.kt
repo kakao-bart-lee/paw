@@ -1,38 +1,12 @@
+@file:Suppress("unused")
 package dev.paw.android.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val PawDarkColors = darkColorScheme(
-    primary = PawAccent,
-    onPrimary = PawBackground,
-    secondary = PawAccent,
-    onSecondary = PawBackground,
-    background = PawBackground,
-    surface = PawSurface1,
-    surfaceVariant = PawSurface3,
-    onSurface = PawStrongText,
-    onSurfaceVariant = PawMutedText,
-    outline = PawOutline,
-)
-
-private val PawShapes = Shapes(
-    extraSmall = RoundedCornerShape(6),
-    small = RoundedCornerShape(8),
-    medium = RoundedCornerShape(10),
-    large = RoundedCornerShape(12),
-    extraLarge = RoundedCornerShape(12),
-)
-
+/**
+ * Backward-compatibility re-export. New code should import from presentation.theme directly.
+ */
 @Composable
 fun PawAndroidTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = PawDarkColors,
-        typography = Typography,
-        shapes = PawShapes,
-        content = content,
-    )
+    dev.paw.android.presentation.theme.PawAndroidTheme(content)
 }

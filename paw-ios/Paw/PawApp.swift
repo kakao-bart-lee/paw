@@ -14,10 +14,16 @@ struct PawApp: App {
 
 private extension PawApp {
     static func makeCoreManager() -> PawCoreManager {
+        let manager: PawCoreManager
 #if DEBUG
         let environment = ProcessInfo.processInfo.environment
         guard environment["PAW_UI_TEST_MODE"] == "1" else {
-            return PawCoreManager()
+            manager = PawCoreManager()
+            if !manager.preview.auth.hasAccessToken {
+                manager.devQuickLogin()
+                manager.refresh()
+            }
+            return manager
         }
 
         let store = PawInMemorySecureStore()
@@ -25,13 +31,14 @@ private extension PawApp {
         let deviceKeyStore = PawKeychainDeviceKeyStore(secureStore: store)
         let pushRegistrar = PawApnsPushRegistrar(secureStore: store)
 
-        return PawCoreManager(
+        manager = PawCoreManager(
             tokenVault: tokenVault,
             deviceKeyStore: deviceKeyStore,
             pushRegistrar: pushRegistrar
         )
 #else
-        return PawCoreManager()
+        manager = PawCoreManager()
 #endif
+        return manager
     }
 }

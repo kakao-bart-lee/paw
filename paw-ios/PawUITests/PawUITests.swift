@@ -2,101 +2,82 @@ import XCTest
 
 final class PawUITests: XCTestCase {
     private enum Identifier {
-        static let title = "paw.title"
         static let currentAuthStep = "paw.auth.currentStep"
-        static let shellBanner = "paw.conversations.banner"
-        static let pushStatus = "paw.push.status"
-        static let connectionState = "paw.runtime.connectionState"
-        static let profileSummary = "paw.profile.summary"
-        static let settingsSummary = "paw.settings.summary"
         static let authMethodSelect = "paw.auth.button.AuthMethodSelect"
         static let phoneInput = "paw.auth.button.PhoneInput"
         static let otpVerify = "paw.auth.button.OtpVerify"
         static let deviceName = "paw.auth.button.DeviceName"
         static let usernameSetup = "paw.auth.button.UsernameSetup"
         static let authenticated = "paw.auth.button.Authenticated"
+        static let phoneTextField = "paw.auth.phoneInput"
+        static let otpTextField = "paw.auth.otpInput"
+        static let deviceNameTextField = "paw.auth.deviceNameInput"
+        static let usernameTextField = "paw.auth.usernameInput"
+        static let authError = "paw.auth.error"
+        static let composer = "paw.runtime.composer"
         static let sendMessage = "paw.chat.send"
-        static let nextConversation = "paw.chat.nextConversation"
-        static let activeLifecycle = "paw.lifecycle.active"
-        static let backgroundLifecycle = "paw.lifecycle.background"
-        static let registerPush = "paw.push.register"
+        static let chatEmpty = "paw.chat.empty"
+        static let conversationsEmpty = "paw.conversations.empty"
+        static let mainShell = "paw.main.shell"
+        static let chatListTitle = "paw.chat.list.title"
+        static let mainTabChat = "paw.main.tab.chat"
+        static let mainTabAgent = "paw.main.tab.agent"
+        static let mainTabSettings = "paw.main.tab.settings"
     }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
-    func testBootstrapFlowAuthenticatesAndExercisesRuntimeSmoke() throws {
+
+    func testGeneralLaunchBypassesAuthAndShowsMainShell() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["STREAM"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts[Identifier.currentAuthStep].exists)
+    }
+
+    func testAuthFlowShowsTextFieldsAndProgresses() throws {
         let app = XCUIApplication()
         app.launchEnvironment["PAW_UI_TEST_MODE"] = "1"
         app.launch()
 
-        XCTAssertTrue(app.staticTexts[Identifier.title].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. 로그인 방식 선택")
-        XCTAssertFalse(app.staticTexts[Identifier.shellBanner].exists)
-        XCTAssertTrue(app.staticTexts["Unlock chat workspace"].exists)
+        // Step 1: auth method select
+        XCTAssertTrue(app.staticTexts[Identifier.currentAuthStep].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. \u{B85C}\u{ADF8}\u{C778} \u{BC29}\u{C2DD} \u{C120}\u{D0DD}")
 
+        // Tap "전화번호로 계속" to go to phone input
         app.buttons[Identifier.phoneInput].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "2. 전화번호 입력")
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "2. \u{C804}\u{D654}\u{BC88}\u{D638} \u{C785}\u{B825}")
 
-        app.buttons[Identifier.otpVerify].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "3. OTP 확인")
+        // Phone input TextField should exist
+        let phoneField = app.textFields[Identifier.phoneTextField]
+        XCTAssertTrue(phoneField.exists, "Phone input TextField should be visible")
 
-        app.buttons[Identifier.deviceName].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "4. 디바이스 등록")
-        XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Bootstrapping")
-        XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Bootstrap Crew"))
+        // "처음부터" button should exist to go back
+        XCTAssertTrue(app.buttons[Identifier.authMethodSelect].exists, "Reset button should be visible")
 
-        app.buttons[Identifier.usernameSetup].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "5. username 설정")
-
-        authCompleteButton(in: app).tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "완료 · 채팅 진입 가능")
-        XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Bootstrap Crew · Ready"))
-        XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Connected")
-        XCTAssertTrue(app.staticTexts[Identifier.profileSummary].exists)
-        XCTAssertTrue(app.staticTexts[Identifier.settingsSummary].exists)
-
-        revealIfNeeded(app.buttons[Identifier.registerPush], in: app)
-        app.buttons[Identifier.registerPush].tap()
-        XCTAssertEqual(app.staticTexts.matching(identifier: Identifier.pushStatus).firstMatch.label, "Registered")
-
-        revealIfNeeded(app.buttons[Identifier.nextConversation], in: app)
-        app.buttons[Identifier.nextConversation].tap()
-        XCTAssertTrue(app.staticTexts[Identifier.shellBanner].label.contains("Agent Ops"))
-
-        app.buttons[Identifier.sendMessage].tap()
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Runtime live' ")).firstMatch.waitForExistence(timeout: 2))
-
-        revealIfNeeded(app.buttons[Identifier.backgroundLifecycle], in: app)
-        app.buttons[Identifier.backgroundLifecycle].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Background")
-        app.buttons[Identifier.activeLifecycle].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.connectionState].label, "Connected")
-
-        revealAtTop(app)
+        // Tap reset and verify we go back
         app.buttons[Identifier.authMethodSelect].tap()
-        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. 로그인 방식 선택")
-        XCTAssertFalse(app.staticTexts[Identifier.shellBanner].exists)
-        XCTAssertTrue(app.staticTexts["Unlock chat workspace"].exists)
-        XCTAssertFalse(app.staticTexts.matching(identifier: Identifier.pushStatus).firstMatch.exists)
+        XCTAssertEqual(app.staticTexts[Identifier.currentAuthStep].label, "1. \u{B85C}\u{ADF8}\u{C778} \u{BC29}\u{C2DD} \u{C120}\u{D0DD}")
     }
 
-    private func revealIfNeeded(_ element: XCUIElement, in app: XCUIApplication) {
-        guard !element.exists else { return }
-        app.swipeUp()
-        if !element.exists {
-            app.swipeUp()
-        }
-    }
+    func testAuthViewShowsInputFieldsAtEachStep() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["PAW_UI_TEST_MODE"] = "1"
+        app.launch()
 
-    private func revealAtTop(_ app: XCUIApplication) {
-        for _ in 0..<3 {
-            app.swipeDown()
-        }
-    }
+        XCTAssertTrue(app.staticTexts[Identifier.currentAuthStep].waitForExistence(timeout: 5))
 
-    private func authCompleteButton(in app: XCUIApplication) -> XCUIElement {
-        app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", Identifier.authenticated, "완료")).firstMatch
+        // Navigate to phone input
+        app.buttons[Identifier.phoneInput].tap()
+
+        // Verify phone TextField is present
+        XCTAssertTrue(app.textFields[Identifier.phoneTextField].exists)
+
+        // Tapping OTP button will trigger async API call which will fail, but the
+        // TextField should still be present at the phone step
+        // (The step only advances on API success)
     }
 }

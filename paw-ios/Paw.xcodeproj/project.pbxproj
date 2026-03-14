@@ -12,12 +12,33 @@
 		A00000000000000000000013 /* PawCoreManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000005 /* PawCoreManager.swift */; };
 		A00000000000000000000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000006 /* Assets.xcassets */; };
 		A00000000000000000000015 /* PawTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000008 /* PawTests.swift */; };
-		A00000000000000000000040 /* PawTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000041 /* PawTheme.swift */; };
-		A00000000000000000000042 /* PawTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000043 /* PawTypography.swift */; };
+		A00000000000000000000060 /* PawTestContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000061 /* PawTestContractTests.swift */; };
+
 		A00000000000000000000044 /* PawBootstrapModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000045 /* PawBootstrapModels.swift */; };
 		A00000000000000000000046 /* PawBootstrapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000047 /* PawBootstrapView.swift */; };
-		A00000000000000000000048 /* PawAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000049 /* PawAccessibility.swift */; };
+
 		A0000000000000000000004A /* PawUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000004B /* PawUITests.swift */; };
+		B00000000000000000000001 /* AuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000011 /* AuthModels.swift */; };
+		B00000000000000000000002 /* ChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000012 /* ChatModels.swift */; };
+		B00000000000000000000003 /* RuntimeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000013 /* RuntimeModels.swift */; };
+		B00000000000000000000004 /* TokenVaultProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000014 /* TokenVaultProtocol.swift */; };
+		B00000000000000000000005 /* DeviceKeyStoreProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000015 /* DeviceKeyStoreProtocol.swift */; };
+		B00000000000000000000006 /* PushRegistrarProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000016 /* PushRegistrarProtocol.swift */; };
+		B00000000000000000000007 /* PawKeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000017 /* PawKeychainStore.swift */; };
+		B00000000000000000000008 /* PawKeychainTokenVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000018 /* PawKeychainTokenVault.swift */; };
+		B00000000000000000000009 /* PawKeychainDeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000019 /* PawKeychainDeviceKeyStore.swift */; };
+		B0000000000000000000000A /* PawApnsPushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001A /* PawApnsPushRegistrar.swift */; };
+		B0000000000000000000000B /* PawInMemorySecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001B /* PawInMemorySecureStore.swift */; };
+		C00000000000000000000001 /* PawApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000002 /* PawApiClient.swift */; };
+		B0000000000000000000000C /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001C /* AuthViewModel.swift */; };
+		B0000000000000000000000D /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001D /* AuthView.swift */; };
+		B0000000000000000000000E /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001E /* ChatViewModel.swift */; };
+		B0000000000000000000000F /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000001F /* ChatView.swift */; };
+		B00000000000000000000010 /* BootstrapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000020 /* BootstrapViewModel.swift */; };
+		B00000000000000000000021 /* BootstrapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000022 /* BootstrapView.swift */; };
+		B00000000000000000000023 /* PawThemeNew.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000024 /* PawTheme.swift */; };
+		B00000000000000000000025 /* PawTypographyNew.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000026 /* PawTypography.swift */; };
+		B00000000000000000000027 /* PawAccessibilityNew.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000028 /* PawAccessibility.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,14 +48,35 @@
 		A00000000000000000000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A00000000000000000000007 /* Paw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Paw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000008 /* PawTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000061 /* PawTestContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTestContractTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000009 /* PawTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PawTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A00000000000000000000041 /* PawTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTheme.swift; sourceTree = "<group>"; };
-		A00000000000000000000043 /* PawTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTypography.swift; sourceTree = "<group>"; };
+
 		A00000000000000000000045 /* PawBootstrapModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawBootstrapModels.swift; sourceTree = "<group>"; };
 		A00000000000000000000047 /* PawBootstrapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawBootstrapView.swift; sourceTree = "<group>"; };
-		A00000000000000000000049 /* PawAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawAccessibility.swift; sourceTree = "<group>"; };
+
 		A0000000000000000000004B /* PawUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawUITests.swift; sourceTree = "<group>"; };
 		A0000000000000000000004C /* PawUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PawUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B00000000000000000000011 /* AuthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthModels.swift; sourceTree = "<group>"; };
+		B00000000000000000000012 /* ChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModels.swift; sourceTree = "<group>"; };
+		B00000000000000000000013 /* RuntimeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeModels.swift; sourceTree = "<group>"; };
+		B00000000000000000000014 /* TokenVaultProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenVaultProtocol.swift; sourceTree = "<group>"; };
+		B00000000000000000000015 /* DeviceKeyStoreProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKeyStoreProtocol.swift; sourceTree = "<group>"; };
+		B00000000000000000000016 /* PushRegistrarProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrarProtocol.swift; sourceTree = "<group>"; };
+		B00000000000000000000017 /* PawKeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawKeychainStore.swift; sourceTree = "<group>"; };
+		B00000000000000000000018 /* PawKeychainTokenVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawKeychainTokenVault.swift; sourceTree = "<group>"; };
+		B00000000000000000000019 /* PawKeychainDeviceKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawKeychainDeviceKeyStore.swift; sourceTree = "<group>"; };
+		B0000000000000000000001A /* PawApnsPushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawApnsPushRegistrar.swift; sourceTree = "<group>"; };
+		B0000000000000000000001B /* PawInMemorySecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawInMemorySecureStore.swift; sourceTree = "<group>"; };
+		C00000000000000000000002 /* PawApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawApiClient.swift; sourceTree = "<group>"; };
+		B0000000000000000000001C /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		B0000000000000000000001D /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+		B0000000000000000000001E /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		B0000000000000000000001F /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		B00000000000000000000020 /* BootstrapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BootstrapViewModel.swift; sourceTree = "<group>"; };
+		B00000000000000000000022 /* BootstrapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BootstrapView.swift; sourceTree = "<group>"; };
+		B00000000000000000000024 /* PawTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTheme.swift; sourceTree = "<group>"; };
+		B00000000000000000000026 /* PawTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawTypography.swift; sourceTree = "<group>"; };
+		B00000000000000000000028 /* PawAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PawAccessibility.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,12 +104,112 @@
 				A00000000000000000000003 /* PawApp.swift */,
 				A00000000000000000000004 /* ContentView.swift */,
 				A00000000000000000000005 /* PawCoreManager.swift */,
-				A00000000000000000000041 /* PawTheme.swift */,
-				A00000000000000000000043 /* PawTypography.swift */,
+
 				A00000000000000000000045 /* PawBootstrapModels.swift */,
 				A00000000000000000000047 /* PawBootstrapView.swift */,
-				A00000000000000000000049 /* PawAccessibility.swift */,
+
 				A00000000000000000000006 /* Assets.xcassets */,
+				B00000000000000000000030 /* Domain */,
+				B00000000000000000000040 /* Data */,
+				B00000000000000000000050 /* Features */,
+				B00000000000000000000060 /* Theme */,
+				B00000000000000000000070 /* Accessibility */,
+			);
+		};
+		B00000000000000000000030 /* Domain */ = {
+			isa = PBXGroup;
+			path = Domain;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000031 /* Models */,
+				B00000000000000000000032 /* Protocols */,
+			);
+		};
+		B00000000000000000000031 /* Models */ = {
+			isa = PBXGroup;
+			path = Models;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000011 /* AuthModels.swift */,
+				B00000000000000000000012 /* ChatModels.swift */,
+				B00000000000000000000013 /* RuntimeModels.swift */,
+			);
+		};
+		B00000000000000000000032 /* Protocols */ = {
+			isa = PBXGroup;
+			path = Protocols;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000014 /* TokenVaultProtocol.swift */,
+				B00000000000000000000015 /* DeviceKeyStoreProtocol.swift */,
+				B00000000000000000000016 /* PushRegistrarProtocol.swift */,
+			);
+		};
+		B00000000000000000000040 /* Data */ = {
+			isa = PBXGroup;
+			path = Data;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000017 /* PawKeychainStore.swift */,
+				B00000000000000000000018 /* PawKeychainTokenVault.swift */,
+				B00000000000000000000019 /* PawKeychainDeviceKeyStore.swift */,
+				B0000000000000000000001A /* PawApnsPushRegistrar.swift */,
+				B0000000000000000000001B /* PawInMemorySecureStore.swift */,
+				C00000000000000000000002 /* PawApiClient.swift */,
+			);
+		};
+		B00000000000000000000050 /* Features */ = {
+			isa = PBXGroup;
+			path = Features;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000051 /* Auth */,
+				B00000000000000000000052 /* Chat */,
+				B00000000000000000000053 /* Bootstrap */,
+			);
+		};
+		B00000000000000000000051 /* Auth */ = {
+			isa = PBXGroup;
+			path = Auth;
+			sourceTree = "<group>";
+			children = (
+				B0000000000000000000001C /* AuthViewModel.swift */,
+				B0000000000000000000001D /* AuthView.swift */,
+			);
+		};
+		B00000000000000000000052 /* Chat */ = {
+			isa = PBXGroup;
+			path = Chat;
+			sourceTree = "<group>";
+			children = (
+				B0000000000000000000001E /* ChatViewModel.swift */,
+				B0000000000000000000001F /* ChatView.swift */,
+			);
+		};
+		B00000000000000000000053 /* Bootstrap */ = {
+			isa = PBXGroup;
+			path = Bootstrap;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000020 /* BootstrapViewModel.swift */,
+				B00000000000000000000022 /* BootstrapView.swift */,
+			);
+		};
+		B00000000000000000000060 /* Theme */ = {
+			isa = PBXGroup;
+			path = Theme;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000024 /* PawTheme.swift */,
+				B00000000000000000000026 /* PawTypography.swift */,
+			);
+		};
+		B00000000000000000000070 /* Accessibility */ = {
+			isa = PBXGroup;
+			path = Accessibility;
+			sourceTree = "<group>";
+			children = (
+				B00000000000000000000028 /* PawAccessibility.swift */,
 			);
 		};
 		A0000000000000000000001A /* PawTests */ = {
@@ -76,6 +218,7 @@
 			sourceTree = "<group>";
 			children = (
 				A00000000000000000000008 /* PawTests.swift */,
+				A00000000000000000000061 /* PawTestContractTests.swift */,
 			);
 		};
 		A0000000000000000000004E /* PawUITests */ = {
@@ -204,11 +347,31 @@
 				A00000000000000000000011 /* PawApp.swift in Sources */,
 				A00000000000000000000012 /* ContentView.swift in Sources */,
 				A00000000000000000000013 /* PawCoreManager.swift in Sources */,
-				A00000000000000000000040 /* PawTheme.swift in Sources */,
-				A00000000000000000000042 /* PawTypography.swift in Sources */,
+
 				A00000000000000000000044 /* PawBootstrapModels.swift in Sources */,
 				A00000000000000000000046 /* PawBootstrapView.swift in Sources */,
-				A00000000000000000000048 /* PawAccessibility.swift in Sources */,
+
+				B00000000000000000000001 /* AuthModels.swift in Sources */,
+				B00000000000000000000002 /* ChatModels.swift in Sources */,
+				B00000000000000000000003 /* RuntimeModels.swift in Sources */,
+				B00000000000000000000004 /* TokenVaultProtocol.swift in Sources */,
+				B00000000000000000000005 /* DeviceKeyStoreProtocol.swift in Sources */,
+				B00000000000000000000006 /* PushRegistrarProtocol.swift in Sources */,
+				B00000000000000000000007 /* PawKeychainStore.swift in Sources */,
+				B00000000000000000000008 /* PawKeychainTokenVault.swift in Sources */,
+				B00000000000000000000009 /* PawKeychainDeviceKeyStore.swift in Sources */,
+				B0000000000000000000000A /* PawApnsPushRegistrar.swift in Sources */,
+				B0000000000000000000000B /* PawInMemorySecureStore.swift in Sources */,
+				B0000000000000000000000C /* AuthViewModel.swift in Sources */,
+				B0000000000000000000000D /* AuthView.swift in Sources */,
+				B0000000000000000000000E /* ChatViewModel.swift in Sources */,
+				B0000000000000000000000F /* ChatView.swift in Sources */,
+				B00000000000000000000010 /* BootstrapViewModel.swift in Sources */,
+				B00000000000000000000021 /* BootstrapView.swift in Sources */,
+				B00000000000000000000023 /* PawThemeNew.swift in Sources */,
+				B00000000000000000000025 /* PawTypographyNew.swift in Sources */,
+				B00000000000000000000027 /* PawAccessibilityNew.swift in Sources */,
+				C00000000000000000000001 /* PawApiClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +380,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A00000000000000000000015 /* PawTests.swift in Sources */,
+				A00000000000000000000060 /* PawTestContractTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,59 +1,22 @@
+@file:Suppress("unused")
 package dev.paw.android.runtime
 
-import uniffi.paw_core.ConversationCursorView
-import uniffi.paw_core.RuntimeSnapshot
-
-data class AndroidConversationItem(
-    val id: String,
-    val name: String,
-    val lastMessage: String?,
-    val unreadCount: Int,
-)
-
-data class AndroidChatMessage(
-    val id: String,
-    val conversationId: String,
-    val senderId: String,
-    val content: String,
-    val format: String,
-    val seq: Long,
-    val createdAt: String,
-    val isMe: Boolean,
-    val isAgent: Boolean,
-)
-
-data class AndroidChatShellState(
-    val conversations: List<AndroidConversationItem> = emptyList(),
-    val selectedConversationId: String? = null,
-    val messages: List<AndroidChatMessage> = emptyList(),
-    val messageDraft: String = "",
-    val conversationsLoading: Boolean = false,
-    val messagesLoading: Boolean = false,
-    val sendingMessage: Boolean = false,
-    val conversationsError: String? = null,
-    val messagesError: String? = null,
-)
+/**
+ * Backward-compatibility aliases. New code should import from domain.model directly.
+ */
+typealias AndroidConversationItem = dev.paw.android.domain.model.ConversationItem
+typealias AndroidChatMessage = dev.paw.android.domain.model.ChatMessage
+typealias AndroidChatShellState = dev.paw.android.domain.model.ChatShellState
 
 fun selectConversationId(
     current: String?,
     conversations: List<AndroidConversationItem>,
-): String? = conversations.firstOrNull { it.id == current }?.id ?: conversations.firstOrNull()?.id
+): String? = dev.paw.android.domain.model.selectConversationId(current, conversations)
 
 fun runtimeSnapshotWithChat(
-    base: RuntimeSnapshot,
+    base: uniffi.paw_core.RuntimeSnapshot,
     selectedConversationId: String?,
     messages: List<AndroidChatMessage>,
-): RuntimeSnapshot {
-    val lastSeq = selectedConversationId?.let { conversationId ->
-        messages
-            .asSequence()
-            .filter { it.conversationId == conversationId }
-            .maxOfOrNull { it.seq }
-    } ?: 0L
-
-    return base.copy(
-        cursors = selectedConversationId
-            ?.let { listOf(ConversationCursorView(conversationId = it, lastSeq = lastSeq)) }
-            ?: emptyList(),
-    )
-}
+): uniffi.paw_core.RuntimeSnapshot = dev.paw.android.domain.model.runtimeSnapshotWithChat(
+    base, selectedConversationId, messages,
+)
