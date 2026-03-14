@@ -25,6 +25,7 @@ components:
         id: { type: string, format: uuid }
         phone: { type: string, nullable: true }
         username: { type: string, nullable: true, description: "Public username (3-20 chars, lowercase/digits/_)" }
+        preferred_locale: { type: string, description: "BCP-47 style locale tag such as ko-KR or en-US" }
         discoverable_by_phone: { type: boolean }
         phone_verified_at: { type: string, format: date-time, nullable: true }
         display_name: { type: string }
@@ -183,6 +184,9 @@ paths:
                 username:
                   type: string
                   description: "3-20 chars, lowercase letters, digits, underscore"
+                preferred_locale:
+                  type: string
+                  description: "BCP-47 style locale tag such as ko-KR or en-US"
                 discoverable_by_phone:
                   type: boolean
                   description: "Default false. Phone search only works when true and phone_verified_at is set."

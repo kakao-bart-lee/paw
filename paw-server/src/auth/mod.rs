@@ -13,6 +13,7 @@ pub mod otp;
 pub struct AppState {
     pub db: DbPool,
     pub jwt_secret: String,
+    pub default_locale: String,
     pub hub: Arc<Hub>,
     pub media_service: Arc<MediaService>,
     pub nats: Option<Arc<async_nats::Client>>,

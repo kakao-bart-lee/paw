@@ -1,4 +1,5 @@
 use crate::auth::{middleware::UserId, AppState};
+use crate::i18n::{error_response, RequestLocale};
 use crate::moderation::{models::*, service};
 use axum::{
     extract::{Extension, Path, State},
@@ -6,11 +7,12 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use uuid::Uuid;
 
 pub async fn create_report(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Json(payload): Json<CreateReportRequest>,
 ) -> Response {
@@ -19,6 +21,7 @@ pub async fn create_report(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_target_type",
+            &locale,
             "target_type must be message, user, or agent",
         )
         .into_response();
@@ -28,6 +31,7 @@ pub async fn create_report(
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_reason",
+            &locale,
             "Reason is required",
         )
         .into_response();
@@ -54,6 +58,7 @@ pub async fn create_report(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "report_failed",
+                &locale,
                 "Could not submit report",
             )
             .into_response()
@@ -63,6 +68,7 @@ pub async fn create_report(
 
 pub async fn block_user(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(target_id): Path<Uuid>,
 ) -> Response {
@@ -70,6 +76,7 @@ pub async fn block_user(
         return error(
             StatusCode::BAD_REQUEST,
             "cannot_block_self",
+            &locale,
             "Cannot block yourself",
         )
         .into_response();
@@ -82,6 +89,7 @@ pub async fn block_user(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "block_failed",
+                &locale,
                 "Could not block user",
             )
             .into_response()
@@ -91,6 +99,7 @@ pub async fn block_user(
 
 pub async fn unblock_user(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path(target_id): Path<Uuid>,
 ) -> Response {
@@ -101,6 +110,7 @@ pub async fn unblock_user(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "unblock_failed",
+                &locale,
                 "Could not unblock user",
             )
             .into_response()
@@ -110,6 +120,7 @@ pub async fn unblock_user(
 
 pub async fn list_blocked_users(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
 ) -> Response {
     match service::list_blocked_users(&state.db, user_id).await {
@@ -119,6 +130,7 @@ pub async fn list_blocked_users(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "block_list_failed",
+                &locale,
                 "Could not list blocked users",
             )
             .into_response()
@@ -128,6 +140,7 @@ pub async fn list_blocked_users(
 
 pub async fn suspend_user(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(admin_id)): Extension<UserId>,
     Path(target_id): Path<Uuid>,
     Json(payload): Json<SuspendUserRequest>,
@@ -135,14 +148,20 @@ pub async fn suspend_user(
     match service::is_admin(&state.db, admin_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return error(StatusCode::FORBIDDEN, "forbidden", "Admin access required")
-                .into_response()
+            return error(
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                &locale,
+                "Admin access required",
+            )
+            .into_response()
         }
         Err(err) => {
             tracing::error!(%err, "admin check failed");
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "admin_check_failed",
+                &locale,
                 "Could not verify admin status",
             )
             .into_response();
@@ -164,6 +183,7 @@ pub async fn suspend_user(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "suspend_failed",
+                &locale,
                 "Could not suspend user",
             )
             .into_response()
@@ -173,20 +193,27 @@ pub async fn suspend_user(
 
 pub async fn unsuspend_user(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(admin_id)): Extension<UserId>,
     Path(target_id): Path<Uuid>,
 ) -> Response {
     match service::is_admin(&state.db, admin_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return error(StatusCode::FORBIDDEN, "forbidden", "Admin access required")
-                .into_response()
+            return error(
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                &locale,
+                "Admin access required",
+            )
+            .into_response()
         }
         Err(err) => {
             tracing::error!(%err, "admin check failed");
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "admin_check_failed",
+                &locale,
                 "Could not verify admin status",
             )
             .into_response();
@@ -200,6 +227,7 @@ pub async fn unsuspend_user(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "unsuspend_failed",
+                &locale,
                 "Could not unsuspend user",
             )
             .into_response()
@@ -209,19 +237,26 @@ pub async fn unsuspend_user(
 
 pub async fn list_pending_reports(
     State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(admin_id)): Extension<UserId>,
 ) -> Response {
     match service::is_admin(&state.db, admin_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return error(StatusCode::FORBIDDEN, "forbidden", "Admin access required")
-                .into_response()
+            return error(
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                &locale,
+                "Admin access required",
+            )
+            .into_response()
         }
         Err(err) => {
             tracing::error!(%err, "admin check failed");
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "admin_check_failed",
+                &locale,
                 "Could not verify admin status",
             )
             .into_response();
@@ -235,6 +270,7 @@ pub async fn list_pending_reports(
             error(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "reports_failed",
+                &locale,
                 "Could not list reports",
             )
             .into_response()
@@ -242,12 +278,6 @@ pub async fn list_pending_reports(
     }
 }
 
-fn error(status: StatusCode, code: &str, message: &str) -> (StatusCode, Json<Value>) {
-    (
-        status,
-        Json(json!({
-            "error": code,
-            "message": message,
-        })),
-    )
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
 }

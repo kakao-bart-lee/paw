@@ -114,6 +114,8 @@ pub struct HelloErrorMsg {
     pub v: u8,
     pub code: String,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub details: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

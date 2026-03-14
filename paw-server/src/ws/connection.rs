@@ -1,4 +1,5 @@
 use crate::auth::AppState;
+use crate::i18n::localized_message;
 use crate::messages::service::{self, Membership};
 use crate::ws::hub::WsSender;
 use axum::extract::ws::{close_code, CloseFrame, Message, WebSocket};
@@ -19,7 +20,13 @@ pub struct WsConnection {
     pub connected_at: DateTime<Utc>,
 }
 
-pub async fn handle_socket(socket: WebSocket, user_id: Uuid, device_id: Uuid, state: AppState) {
+pub async fn handle_socket(
+    socket: WebSocket,
+    user_id: Uuid,
+    device_id: Uuid,
+    locale: String,
+    state: AppState,
+) {
     let connection = WsConnection {
         user_id,
         device_id,
@@ -83,12 +90,27 @@ pub async fn handle_socket(socket: WebSocket, user_id: Uuid, device_id: Uuid, st
                     Some(Ok(Message::Text(text))) => {
                         match serde_json::from_str::<ClientMessage>(&text) {
                             Ok(client_msg) => {
-                                if let Err(err) = handle_client_message(&state, connection.user_id, &outbound_tx, client_msg).await {
+                                if let Err(err) = handle_client_message(&state, connection.user_id, &outbound_tx, client_msg, &locale).await {
                                     tracing::warn!(%err, user_id = %connection.user_id, "failed to handle client ws message");
+                                    if err.to_string().starts_with("unsupported protocol version") {
+                                        let _ = send_protocol_error(
+                                            &outbound_tx,
+                                            "unsupported_protocol_version",
+                                            &locale,
+                                            Some(&err.to_string()),
+                                            "Unsupported protocol version",
+                                        ).await;
+                                    }
                                 }
                             }
                             Err(err) => {
-                                let _ = send_protocol_error(&outbound_tx, "invalid_frame", format!("invalid json frame: {err}")).await;
+                                let _ = send_protocol_error(
+                                    &outbound_tx,
+                                    "invalid_frame",
+                                    &locale,
+                                    Some(&format!("invalid json frame: {err}")),
+                                    "Invalid websocket frame",
+                                ).await;
                             }
                         }
                     }
@@ -100,7 +122,13 @@ pub async fn handle_socket(socket: WebSocket, user_id: Uuid, device_id: Uuid, st
                     }
                     Some(Ok(Message::Close(_))) => break,
                     Some(Ok(Message::Binary(_))) => {
-                        let _ = send_protocol_error(&outbound_tx, "invalid_frame", "binary frames are not supported".to_owned()).await;
+                        let _ = send_protocol_error(
+                            &outbound_tx,
+                            "invalid_frame",
+                            &locale,
+                            Some("binary frames are not supported"),
+                            "Invalid websocket frame",
+                        ).await;
                     }
                     Some(Err(err)) => {
                         tracing::debug!(%err, user_id = %connection.user_id, "websocket receive error");
@@ -122,6 +150,7 @@ async fn handle_client_message(
     user_id: Uuid,
     outbound_tx: &WsSender,
     msg: ClientMessage,
+    locale: &str,
 ) -> anyhow::Result<()> {
     match msg {
         ClientMessage::Connect(connect) => {
@@ -176,7 +205,9 @@ async fn handle_client_message(
                     let _ = send_protocol_error(
                         outbound_tx,
                         "forbidden",
-                        "User is not a member of this conversation".to_owned(),
+                        locale,
+                        None,
+                        "User is not a member of this conversation",
                     )
                     .await;
                     return Ok(());
@@ -185,7 +216,9 @@ async fn handle_client_message(
                     let _ = send_protocol_error(
                         outbound_tx,
                         "not_found",
-                        "Conversation not found".to_owned(),
+                        locale,
+                        None,
+                        "Conversation not found",
                     )
                     .await;
                     return Ok(());
@@ -327,12 +360,15 @@ async fn conversation_members(
 async fn send_protocol_error(
     outbound_tx: &WsSender,
     code: &str,
-    message: String,
+    locale: &str,
+    details: Option<&str>,
+    fallback: &str,
 ) -> anyhow::Result<()> {
     let payload = serde_json::to_string(&ServerMessage::HelloError(HelloErrorMsg {
         v: PROTOCOL_VERSION,
         code: code.to_owned(),
-        message,
+        message: localized_message(code, locale, fallback).to_string(),
+        details: details.map(ToOwned::to_owned),
     }))?;
     let _ = outbound_tx.send(Message::Text(payload.into()));
     Ok(())
