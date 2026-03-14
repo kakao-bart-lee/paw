@@ -6,6 +6,7 @@ import 'core/di/service_locator.dart';
 import 'core/platform/desktop_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,13 +46,26 @@ class PawApp extends ConsumerWidget {
     }
 
     final router = ref.watch(appRouterProvider);
-    return MaterialApp.router(
+    final themeController = getIt.isRegistered<ThemeModeController>()
+        ? getIt<ThemeModeController>()
+        : null;
+
+    Widget buildApp() => MaterialApp.router(
       title: 'Paw',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.dark, // Dark mode by default
+      themeMode: themeController?.themeMode ?? ThemeMode.dark,
       routerConfig: router,
+    );
+
+    if (themeController == null) {
+      return buildApp();
+    }
+
+    return AnimatedBuilder(
+      animation: themeController,
+      builder: (context, _) => buildApp(),
     );
   }
 }

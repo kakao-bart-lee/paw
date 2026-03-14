@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/service_locator.dart';
 import '../../../core/platform/desktop_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_mode_controller.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -19,10 +21,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool previews = true;
   bool readReceipts = true;
   bool typingIndicators = true;
-  bool darkMode = true;
 
   @override
   Widget build(BuildContext context) {
+    final themeModeController = getIt.isRegistered<ThemeModeController>()
+        ? getIt<ThemeModeController>()
+        : null;
+    final darkMode = themeModeController?.isDarkMode ?? true;
     final isDesktopClient = DesktopService().isDesktop;
     final sessionSecurityTitle = isDesktopClient ? '데스크톱 세션' : '웹 세션';
     final sessionSecuritySubtitle = isDesktopClient
@@ -167,9 +172,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsToggleRow(
                 icon: Icons.dark_mode_outlined,
                 title: '다크 모드',
-                subtitle: 'Aether 스타일의 어두운 테마 유지',
+                subtitle: darkMode
+                    ? '현재 다크 테마를 사용 중입니다'
+                    : '현재 라이트 테마를 사용 중입니다',
                 value: darkMode,
-                onChanged: (value) => setState(() => darkMode = value),
+                onChanged: (value) async {
+                  if (themeModeController == null) return;
+                  await themeModeController.toggleDarkMode(value);
+                  if (mounted) {
+                    setState(() {});
+                  }
+                },
                 last: true,
               ),
             ],
