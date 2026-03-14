@@ -62,6 +62,12 @@ pub struct StreamingState {
 }
 
 impl StreamingState {
+    pub fn clear(&mut self) -> usize {
+        let cleared = self.active.len();
+        self.active.clear();
+        cleared
+    }
+
     pub fn handle_stream_start(&mut self, msg: &StreamStartMsg) {
         self.active.insert(
             msg.stream_id,
@@ -203,5 +209,26 @@ mod tests {
         assert_eq!(message.tool_calls.len(), 1);
         assert_eq!(message.tool_calls[0].tool, "search");
         assert!(state.active_session(stream_id).is_none());
+    }
+
+    #[test]
+    fn clear_discards_all_active_sessions() {
+        let conversation_id = Uuid::new_v4();
+        let agent_id = Uuid::new_v4();
+        let first_stream_id = Uuid::new_v4();
+        let second_stream_id = Uuid::new_v4();
+        let mut state = StreamingState::default();
+
+        for stream_id in [first_stream_id, second_stream_id] {
+            state.handle_stream_start(&StreamStartMsg {
+                v: PROTOCOL_VERSION,
+                conversation_id,
+                agent_id,
+                stream_id,
+            });
+        }
+
+        assert_eq!(state.clear(), 2);
+        assert!(state.active_sessions().is_empty());
     }
 }

@@ -3,7 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use thiserror::Error;
 
-use super::token_store::{StoredTokens, TokenStore};
+use super::{
+    run_session_reset,
+    token_store::{StoredTokens, TokenStore},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AuthStep {
@@ -374,9 +377,15 @@ impl AuthStateMachine {
         self.clear_session().await;
     }
 
+    /// Resets only the in-memory auth state for session invalidation.
+    ///
+    /// Persisted token clearing and transport disconnect are intentionally
+    /// owned by `CoreRuntime::handle_session_event`, so standalone callers
+    /// must perform those side effects separately if they do not route
+    /// unauthorized-session handling through the runtime.
     pub async fn handle_session_event(&mut self, event: SessionEvent) {
         if matches!(event.reason, SessionExpiryReason::Unauthorized) {
-            self.clear_session().await;
+            self.state = AuthState::initial();
         }
     }
 
@@ -396,8 +405,10 @@ impl AuthStateMachine {
     }
 
     async fn cleanup_persisted_session(&self) {
-        self.token_store.clear().await;
-        self.transport.disconnect().await;
+        run_session_reset(self.token_store.as_ref(), || async {
+            self.transport.disconnect().await;
+        })
+        .await;
     }
 }
 
@@ -649,6 +660,30 @@ mod tests {
                 reason: SessionExpiryReason::Unauthorized,
             })
             .await;
+
+        assert_eq!(machine.state(), &AuthState::initial());
+        assert_eq!(
+            store.snapshot().await,
+            Some(StoredTokens::new("access", "refresh"))
+        );
+        assert_eq!(*transport.disconnects.lock().await, 0);
+    }
+
+    #[tokio::test]
+    async fn logout_clears_persisted_session_and_disconnects_transport() {
+        let client = Arc::new(StubAuthClient::default());
+        let store = Arc::new(InMemoryTokenStore::new());
+        store.write(StoredTokens::new("access", "refresh")).await;
+        let transport = Arc::new(SpyTransport::default());
+        let mut machine = AuthStateMachine::new(client, store.clone(), transport.clone());
+        machine.state = AuthState {
+            step: AuthStep::Authenticated,
+            access_token: Some("access".to_string()),
+            refresh_token: Some("refresh".to_string()),
+            ..AuthState::initial()
+        };
+
+        machine.logout().await;
 
         assert_eq!(machine.state(), &AuthState::initial());
         assert_eq!(store.snapshot().await, None);

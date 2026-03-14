@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/search/search_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/feedback_state_card.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -216,46 +217,12 @@ class _SearchFeedbackState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-              border: Border.all(color: AppTheme.outline),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface3,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                    border: Border.all(color: AppTheme.outline),
-                  ),
-                  child: Icon(icon, size: 30, color: AppTheme.mutedText),
-                ),
-                const SizedBox(height: 18),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (action != null) ...[const SizedBox(height: 16), action!],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return FeedbackStateCard(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      action: action,
+      iconSize: 72,
     );
   }
 }

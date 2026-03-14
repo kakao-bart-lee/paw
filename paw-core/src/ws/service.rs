@@ -15,6 +15,7 @@ pub enum WsConnectionState {
     Connecting,
     Connected,
     Retrying,
+    Exhausted,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -22,6 +23,13 @@ pub struct ReconnectPlan {
     pub delay: Duration,
     pub uri: Url,
     pub attempt: usize,
+}
+
+pub fn public_endpoint_label(url: &Url) -> String {
+    let mut sanitized = url.clone();
+    sanitized.set_query(None);
+    sanitized.set_fragment(None);
+    sanitized.to_string()
 }
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
@@ -168,6 +176,11 @@ impl WsService {
         Ok(())
     }
 
+    pub async fn clear_session(&mut self) -> Result<(), WsServiceError> {
+        self.access_token = None;
+        self.disconnect().await
+    }
+
     pub async fn send_typing_start(
         &self,
         conversation_id: uuid::Uuid,
@@ -275,7 +288,7 @@ impl WsService {
 
         let Some(delay) = self.reconnection_manager.next_delay() else {
             self.pending_reconnect = None;
-            self.connection_state = WsConnectionState::Disconnected;
+            self.connection_state = WsConnectionState::Exhausted;
             return;
         };
 
@@ -290,7 +303,7 @@ impl WsService {
             }
             Err(_) => {
                 self.pending_reconnect = None;
-                self.connection_state = WsConnectionState::Disconnected;
+                self.connection_state = WsConnectionState::Exhausted;
             }
         }
     }
@@ -419,5 +432,101 @@ mod tests {
         assert_eq!(plan.delay, Duration::from_secs(1));
         assert_eq!(plan.attempt, 1);
         assert_eq!(plan.uri.as_str(), "ws://localhost:38173/ws?token=token-123");
+    }
+
+    #[tokio::test]
+    async fn hello_error_schedules_backoff_with_stored_token() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "https://paw.example",
+            transport,
+            ReconnectionManager::new(2, vec![Duration::from_secs(3)]),
+        );
+        service
+            .connect("https://paw.example", "token-123")
+            .await
+            .unwrap();
+
+        service
+            .handle_server_message(&ServerMessage::HelloError(HelloErrorMsg {
+                v: PROTOCOL_VERSION,
+                code: "invalid_version".into(),
+                message: "unsupported protocol".into(),
+            }))
+            .await
+            .unwrap();
+
+        let plan = service.pending_reconnect().expect("pending reconnect");
+        assert_eq!(service.connection_state(), WsConnectionState::Retrying);
+        assert_eq!(plan.delay, Duration::from_secs(3));
+        assert_eq!(plan.attempt, 1);
+        assert_eq!(plan.uri.as_str(), "wss://paw.example/ws?token=token-123");
+    }
+
+    #[tokio::test]
+    async fn disconnect_clears_pending_reconnect_and_resets_attempts() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "http://localhost:38173",
+            transport.clone(),
+            ReconnectionManager::new(3, vec![Duration::from_secs(1)]),
+        );
+        service
+            .connect("http://localhost:38173", "token-123")
+            .await
+            .unwrap();
+        service.on_transport_error();
+
+        assert_eq!(service.connection_state(), WsConnectionState::Retrying);
+        assert_eq!(service.attempts(), 1);
+        assert!(service.pending_reconnect().is_some());
+
+        service.disconnect().await.unwrap();
+
+        assert_eq!(service.connection_state(), WsConnectionState::Disconnected);
+        assert_eq!(service.attempts(), 0);
+        assert!(service.pending_reconnect().is_none());
+        assert_eq!(*transport.closes.lock().unwrap(), 2);
+    }
+
+    #[tokio::test]
+    async fn clear_session_drops_stored_token_and_prevents_reconnect_attempts() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "http://localhost:38173",
+            transport,
+            ReconnectionManager::new(3, vec![Duration::from_secs(1)]),
+        );
+        service
+            .connect("http://localhost:38173", "token-123")
+            .await
+            .unwrap();
+
+        service.clear_session().await.unwrap();
+
+        assert!(service.connect_with_stored_token().await.unwrap().is_none());
+        assert_eq!(service.connection_state(), WsConnectionState::Disconnected);
+    }
+
+    #[tokio::test]
+    async fn transport_error_marks_exhausted_when_retry_budget_is_spent() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "http://localhost:38173",
+            transport,
+            ReconnectionManager::new(1, vec![Duration::from_secs(1)]),
+        );
+        service
+            .connect("http://localhost:38173", "token-123")
+            .await
+            .unwrap();
+
+        service.on_transport_error();
+        assert_eq!(service.connection_state(), WsConnectionState::Retrying);
+        assert!(service.pending_reconnect().is_some());
+
+        service.on_transport_error();
+        assert_eq!(service.connection_state(), WsConnectionState::Exhausted);
+        assert!(service.pending_reconnect().is_none());
     }
 }
