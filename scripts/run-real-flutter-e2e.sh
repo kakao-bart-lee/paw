@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_LOG="/tmp/paw_server_real_flutter_e2e.log"
 SERVER_PID=""
 
+source "$ROOT_DIR/scripts/local-env.sh"
+FLUTTER_BIN="$(resolve_flutter_bin)"
+
 cleanup() {
   if [[ -n "$SERVER_PID" ]]; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
@@ -59,7 +62,7 @@ fi
 echo "[real-flutter-e2e] running integration_test/real_server_loop_test.dart on macOS"
 (
   cd paw-client
-  flutter test integration_test/real_server_loop_test.dart -d macos --dart-define=SERVER_URL="$SERVER_URL"
+  "$FLUTTER_BIN" test integration_test/real_server_loop_test.dart -d macos --dart-define=SERVER_URL="$SERVER_URL"
 )
 
 echo "[real-flutter-e2e] completed"

@@ -5,8 +5,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::models::{
-    AgentManifest, AgentProfile, InstalledAgent, MarketplaceAgent, MarketplaceAgentDetail,
-    RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse, is_valid_agent_token_format,
+    is_valid_agent_token_format, AgentManifest, AgentProfile, InstalledAgent, MarketplaceAgent,
+    MarketplaceAgentDetail, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
 };
 
 pub fn generate_agent_token() -> String {
@@ -80,10 +80,7 @@ pub async fn revoke_agent_token(
     }))
 }
 
-pub async fn verify_agent_token(
-    db: &PgPool,
-    raw_token: &str,
-) -> Result<Option<Uuid>, sqlx::Error> {
+pub async fn verify_agent_token(db: &PgPool, raw_token: &str) -> Result<Option<Uuid>, sqlx::Error> {
     if !is_valid_agent_token_format(raw_token) {
         return Ok(None);
     }
@@ -156,14 +153,13 @@ pub async fn remove_agent_from_conversation(
         return Err(anyhow!("not_owner"));
     }
 
-    let removed = sqlx::query(
-        "DELETE FROM conversation_agents WHERE conversation_id = $1 AND agent_id = $2",
-    )
-    .bind(conversation_id)
-    .bind(agent_id)
-    .execute(pool.as_ref())
-    .await?
-    .rows_affected();
+    let removed =
+        sqlx::query("DELETE FROM conversation_agents WHERE conversation_id = $1 AND agent_id = $2")
+            .bind(conversation_id)
+            .bind(agent_id)
+            .execute(pool.as_ref())
+            .await?
+            .rows_affected();
 
     Ok(removed > 0)
 }
@@ -213,11 +209,7 @@ pub async fn get_marketplace_agent_detail(
     .await
 }
 
-pub async fn install_agent(
-    db: &PgPool,
-    user_id: Uuid,
-    agent_id: Uuid,
-) -> anyhow::Result<bool> {
+pub async fn install_agent(db: &PgPool, user_id: Uuid, agent_id: Uuid) -> anyhow::Result<bool> {
     let is_public = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(SELECT 1 FROM agent_tokens WHERE id = $1 AND is_public = true AND revoked_at IS NULL)",
     )
@@ -248,18 +240,13 @@ pub async fn install_agent(
     Ok(result.rows_affected() > 0)
 }
 
-pub async fn uninstall_agent(
-    db: &PgPool,
-    user_id: Uuid,
-    agent_id: Uuid,
-) -> anyhow::Result<bool> {
-    let result = sqlx::query(
-        "DELETE FROM user_installed_agents WHERE user_id = $1 AND agent_id = $2",
-    )
-    .bind(user_id)
-    .bind(agent_id)
-    .execute(db)
-    .await?;
+pub async fn uninstall_agent(db: &PgPool, user_id: Uuid, agent_id: Uuid) -> anyhow::Result<bool> {
+    let result =
+        sqlx::query("DELETE FROM user_installed_agents WHERE user_id = $1 AND agent_id = $2")
+            .bind(user_id)
+            .bind(agent_id)
+            .execute(db)
+            .await?;
 
     if result.rows_affected() > 0 {
         sqlx::query(
@@ -298,8 +285,8 @@ pub async fn publish_agent(
     category: Option<&str>,
     tags: Option<&[String]>,
 ) -> anyhow::Result<bool> {
-    let manifest_json = serde_json::to_value(manifest)
-        .map_err(|e| anyhow!("invalid manifest: {e}"))?;
+    let manifest_json =
+        serde_json::to_value(manifest).map_err(|e| anyhow!("invalid manifest: {e}"))?;
 
     let empty_tags: Vec<String> = vec![];
     let tag_slice = tags.unwrap_or(&empty_tags);

@@ -75,8 +75,9 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pump();
 
-      // Two-panel → VerticalDivider present.
-      expect(find.byType(VerticalDivider), findsOneWidget);
+      // Two-panel → desktop master/detail placeholders are both visible.
+      expect(find.text('채팅'), findsWidgets);
+      expect(find.text('대화를 선택하세요'), findsOneWidget);
     });
   });
 }

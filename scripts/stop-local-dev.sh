@@ -17,6 +17,7 @@ stop_port() {
 }
 
 stop_port 38173
+stop_port 4100
 stop_port 38481
 
 echo "[stop-local-dev] stopping docker dependencies"

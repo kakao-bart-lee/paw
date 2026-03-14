@@ -2,7 +2,7 @@ use crate::db::DbPool;
 use crate::messages::models::{
     ConversationCreateResult, ConversationListItem, Message, MessageSendResult,
 };
-use anyhow::{Context, anyhow};
+use anyhow::{anyhow, Context};
 use sqlx::{Postgres, Transaction};
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -32,11 +32,12 @@ pub async fn check_member(
     conversation_id: Uuid,
     user_id: Uuid,
 ) -> anyhow::Result<Membership> {
-    let exists = sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM conversations WHERE id = $1)")
-        .bind(conversation_id)
-        .fetch_one(pool.as_ref())
-        .await
-        .context("check conversation exists")?;
+    let exists =
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM conversations WHERE id = $1)")
+            .bind(conversation_id)
+            .fetch_one(pool.as_ref())
+            .await
+            .context("check conversation exists")?;
 
     if !exists {
         return Ok(Membership::ConversationNotFound);
@@ -202,7 +203,9 @@ pub async fn create_conversation(
 
     insert_members(&mut tx, created.id, creator_id, &all_members).await?;
 
-    tx.commit().await.context("commit conversation transaction")?;
+    tx.commit()
+        .await
+        .context("commit conversation transaction")?;
     Ok(created)
 }
 
@@ -389,13 +392,12 @@ async fn get_role(
     conversation_id: Uuid,
     user_id: Uuid,
 ) -> anyhow::Result<Option<String>> {
-    let conversation_exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM conversations WHERE id = $1)",
-    )
-    .bind(conversation_id)
-    .fetch_one(pool.as_ref())
-    .await
-    .context("check conversation exists")?;
+    let conversation_exists =
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM conversations WHERE id = $1)")
+            .bind(conversation_id)
+            .fetch_one(pool.as_ref())
+            .await
+            .context("check conversation exists")?;
 
     if !conversation_exists {
         return Err(anyhow!("conversation_not_found"));

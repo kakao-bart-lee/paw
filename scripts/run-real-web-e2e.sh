@@ -7,6 +7,9 @@ WEB_LOG="/tmp/paw_web_e2e.log"
 SERVER_PID=""
 WEB_PID=""
 
+source "$ROOT_DIR/scripts/local-env.sh"
+FLUTTER_BIN="$(resolve_flutter_bin)"
+
 cleanup() {
   if [[ -n "$WEB_PID" ]]; then
     kill "$WEB_PID" >/dev/null 2>&1 || true
@@ -28,7 +31,7 @@ set -a
 source .env
 set +a
 
-export DATABASE_URL="${DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:35432/paw}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://paw:paw_dev_password@127.0.0.1:35432/paw_dev}"
 export PAW_API_BASE_URL="${PAW_API_BASE_URL:-http://127.0.0.1:38173}"
 export PAW_WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:38481}"
 
@@ -70,20 +73,38 @@ fi
 echo "[real-e2e] starting flutter web-server"
 (
   cd paw-client
-  flutter run -d web-server --web-port 38481 --dart-define=SERVER_URL="$PAW_API_BASE_URL" >"$WEB_LOG" 2>&1
+  "$FLUTTER_BIN" build web --no-wasm-dry-run --dart-define=SERVER_URL="$PAW_API_BASE_URL" >"$WEB_LOG" 2>&1
 ) &
 WEB_PID=$!
 
 for _ in {1..90}; do
-  if grep -q "lib/main.dart is being served at" "$WEB_LOG" 2>/dev/null && \
-     curl -sf "$PAW_WEB_BASE_URL" >/dev/null 2>&1; then
+  if ! kill -0 "$WEB_PID" >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
 
-if ! grep -q "lib/main.dart is being served at" "$WEB_LOG" 2>/dev/null || \
-   ! curl -sf "$PAW_WEB_BASE_URL" >/dev/null 2>&1; then
+wait "$WEB_PID"
+
+if [[ ! -f paw-client/build/web/index.html ]]; then
+  echo "[real-e2e] web build failed"
+  exit 1
+fi
+
+echo "[real-e2e] starting static web-server"
+cd paw-client
+python3 -m http.server 38481 --directory build/web >>"$WEB_LOG" 2>&1 &
+WEB_PID=$!
+cd "$ROOT_DIR"
+
+for _ in {1..90}; do
+  if curl -sf "$PAW_WEB_BASE_URL" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+if ! curl -sf "$PAW_WEB_BASE_URL" >/dev/null 2>&1; then
   echo "[real-e2e] web app failed to start"
   exit 1
 fi
@@ -91,7 +112,7 @@ fi
 echo "[real-e2e] running Playwright real full-loop"
 (
   cd paw-client/e2e/playwright
-  npm install
+  npm ci
   npm run test:real
 )
 

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/service_locator.dart';
+import '../../../core/platform/desktop_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_mode_controller.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -17,11 +21,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool previews = true;
   bool readReceipts = true;
   bool typingIndicators = true;
-  bool biometricLock = true;
-  bool darkMode = true;
 
   @override
   Widget build(BuildContext context) {
+    final themeModeController = getIt.isRegistered<ThemeModeController>()
+        ? getIt<ThemeModeController>()
+        : null;
+    final darkMode = themeModeController?.isDarkMode ?? true;
+    final isDesktopClient = DesktopService().isDesktop;
+    final sessionSecurityTitle = isDesktopClient ? '데스크톱 세션' : '웹 세션';
+    final sessionSecuritySubtitle = isDesktopClient
+        ? '앱 잠금은 네이티브 모바일 앱에서 제공됩니다'
+        : '브라우저와 운영체제의 보안 설정을 따릅니다';
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -40,13 +52,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
         children: [
           InkWell(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: () => context.go('/profile/me'),
             child: Ink(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Row(
@@ -56,16 +68,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     height: 54,
                     decoration: BoxDecoration(
                       color: AppTheme.primarySoft,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppTheme.primary.withValues(alpha: 0.28),
+                        color: AppTheme.accent.withValues(alpha: 0.28),
                       ),
                     ),
                     child: const Center(
                       child: Text(
                         'ME',
                         style: TextStyle(
-                          color: AppTheme.primary,
+                          color: AppTheme.accent,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -149,23 +161,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: '연결된 기기와 최근 세션 확인',
                 onTap: () {},
               ),
-              _SettingsToggleRow(
-                icon: Icons.fingerprint,
-                title: '생체 잠금',
-                subtitle: 'Face ID 또는 지문으로 앱 잠금',
-                value: biometricLock,
-                onChanged: (value) => setState(() => biometricLock = value),
+              _SettingsActionRow(
+                icon: isDesktopClient
+                    ? Icons.desktop_windows_outlined
+                    : Icons.web_asset_rounded,
+                title: sessionSecurityTitle,
+                subtitle: sessionSecuritySubtitle,
+                onTap: () {},
               ),
               _SettingsToggleRow(
                 icon: Icons.dark_mode_outlined,
                 title: '다크 모드',
-                subtitle: 'Aether 스타일의 어두운 테마 유지',
+                subtitle: darkMode
+                    ? '현재 다크 테마를 사용 중입니다'
+                    : '현재 라이트 테마를 사용 중입니다',
                 value: darkMode,
-                onChanged: (value) => setState(() => darkMode = value),
+                onChanged: (value) async {
+                  if (themeModeController == null) return;
+                  await themeModeController.toggleDarkMode(value);
+                  if (mounted) {
+                    setState(() {});
+                  }
+                },
                 last: true,
               ),
             ],
           ),
+          if (!kIsWeb && isDesktopClient)
+            const _SettingsSection(
+              title: '데스크톱',
+              children: [
+                _SettingsInfoRow(
+                  icon: Icons.keyboard_command_key_rounded,
+                  title: '키보드 단축키',
+                  subtitle: 'macOS 데스크톱 gate에서 단축키 등록 상태를 점검합니다',
+                  last: true,
+                ),
+              ],
+            ),
           _SettingsSection(
             title: 'AI & Agent',
             children: [
@@ -193,13 +226,67 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.danger,
-              side: const BorderSide(color: Color(0x55FF7A7A)),
+              side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.4)),
             ),
             icon: const Icon(Icons.logout_rounded),
             label: const Text('로그아웃'),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SettingsInfoRow extends StatelessWidget {
+  const _SettingsInfoRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.last = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.surface3,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                  border: Border.all(color: AppTheme.outline),
+                ),
+                child: Icon(icon, color: AppTheme.mutedText),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!last) const Divider(height: 1, indent: 16, endIndent: 16),
+      ],
     );
   }
 }
@@ -230,7 +317,7 @@ class _SettingsSection extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: AppTheme.surface2,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               border: Border.all(color: AppTheme.outline),
             ),
             child: Column(children: children),
@@ -348,9 +435,9 @@ class _SettingsIcon extends StatelessWidget {
       height: 38,
       decoration: BoxDecoration(
         color: AppTheme.surface4,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(icon, size: 20, color: AppTheme.primary),
+      child: Icon(icon, size: 20, color: AppTheme.accent),
     );
   }
 }

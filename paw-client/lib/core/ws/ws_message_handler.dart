@@ -92,7 +92,7 @@ class WsMessageHandler {
         final keys = await keyStorage.loadKeys();
         if (keys != null) {
           final ciphertext = base64Decode(message.content);
-          final decrypted = e2eeService.decryptFromSender(
+          final decrypted = await e2eeService.decryptFromSender(
             myPrivKey: keys.privKey,
             ciphertext: ciphertext,
           );

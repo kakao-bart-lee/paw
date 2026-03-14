@@ -7,12 +7,15 @@ TEST_TARGET="integration_test/app_flow_test.dart"
 DRIVER_TARGET="integration_test/test_driver/integration_test.dart"
 WEB_BASE_URL="${PAW_WEB_BASE_URL:-http://127.0.0.1:38481}"
 
+source "$ROOT_DIR/scripts/local-env.sh"
+FLUTTER_BIN="$(resolve_flutter_bin)"
+
 DEVICE="${1:-auto}"
 
 cd "$APP_DIR"
 
 if [[ "$DEVICE" == "auto" ]]; then
-  DEVICES="$(flutter devices --machine)"
+  DEVICES="$("$FLUTTER_BIN" devices --machine)"
   if echo "$DEVICES" | grep -q '"id"[[:space:]]*:[[:space:]]*"macos"'; then
     DEVICE="macos"
   elif echo "$DEVICES" | grep -q '"id"[[:space:]]*:[[:space:]]*"android"'; then
@@ -34,7 +37,7 @@ if [[ "$DEVICE" == "chrome" || "$DEVICE" == "web-server" ]]; then
     local server_pid=""
     if ! curl -sf "$WEB_BASE_URL" >/dev/null 2>&1; then
       echo "[e2e] starting Flutter web-server at $WEB_BASE_URL"
-      flutter run -d web-server --web-port 38481 >/tmp/paw_web_server.log 2>&1 &
+      "$FLUTTER_BIN" run -d web-server --web-port 38481 >/tmp/paw_web_server.log 2>&1 &
       server_pid=$!
       for _ in {1..60}; do
         if curl -sf "$WEB_BASE_URL" >/dev/null 2>&1; then
@@ -44,7 +47,7 @@ if [[ "$DEVICE" == "chrome" || "$DEVICE" == "web-server" ]]; then
       done
     fi
 
-    (cd "$APP_DIR/e2e/playwright" && npm install && PAW_WEB_BASE_URL="$WEB_BASE_URL" npx playwright test)
+    (cd "$APP_DIR/e2e/playwright" && npm ci && PAW_WEB_BASE_URL="$WEB_BASE_URL" npx playwright test)
     local code=$?
 
     if [[ -n "$server_pid" ]]; then
@@ -62,8 +65,8 @@ if [[ "$DEVICE" == "chrome" || "$DEVICE" == "web-server" ]]; then
     run_playwright_with_server
     exit $?
   fi
-  flutter drive -d "$DEVICE" --driver "$DRIVER_TARGET" --target "$TEST_TARGET"
+  "$FLUTTER_BIN" drive -d "$DEVICE" --driver "$DRIVER_TARGET" --target "$TEST_TARGET"
 else
   echo "[e2e] running native/desktop integration via flutter test integration_test"
-  flutter test "$TEST_TARGET" -d "$DEVICE"
+  "$FLUTTER_BIN" test "$TEST_TARGET" -d "$DEVICE"
 fi

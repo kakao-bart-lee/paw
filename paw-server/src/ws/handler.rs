@@ -1,5 +1,5 @@
-use crate::auth::AppState;
 use crate::auth::jwt;
+use crate::auth::AppState;
 use crate::ws::connection::handle_socket;
 use axum::extract::{Query, State, WebSocketUpgrade};
 use axum::http::StatusCode;

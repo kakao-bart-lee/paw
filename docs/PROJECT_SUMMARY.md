@@ -31,20 +31,26 @@
 - **인증**: OTP + Ed25519 device keys (Signal 모델)
 - **암호화**: openmls (MIT), X25519-dalek, AES-GCM
 
-### 클라이언트 (paw-client)
+### 클라이언트 전환 상태
+- `paw-core`: 공유 Rust 런타임 (crypto, db/search, auth, http, ws/sync, core runtime slice)
+- `paw-android`: Kotlin + Compose shell scaffold
+- `paw-ios`: SwiftUI/Xcode shell scaffold
+- `paw-client`: Flutter Web/Desktop 경로 유지 + Web/Desktop verification gate 정리 진행
+
+### Flutter 클라이언트 (paw-client)
 - **언어**: Dart 3.11.1
 - **프레임워크**: Flutter 3.41.4 stable
 - **상태관리**: Riverpod
 - **라우팅**: go_router
 - **로컬 DB**: Drift (SQLite) + FTS5 전문검색
-- **암호화**: flutter_rust_bridge v2 (paw-ffi 바인딩)
+- **암호화**: pure Dart crypto bridge + secure storage
 - **보안 저장소**: flutter_secure_storage
+- **현 상태**: 모바일은 네이티브 우선, Flutter는 Web/Desktop 책임으로 축소 중
 
-### 암호화 크레이트 (paw-crypto, paw-ffi)
+### 암호화 크레이트 (paw-crypto)
 - openmls 0.7.4 (MLS 프로토콜)
 - x25519-dalek (ECDH 키 교환)
 - AES-GCM (대칭 암호화)
-- flutter_rust_bridge 2.9.0 (Dart ↔ Rust FFI)
 
 ### Agent SDK
 - **Python**: `paw-agent-sdk` — PawAgent 클래스, 스트리밍 지원
@@ -143,9 +149,9 @@
 |------|------|
 | `e180425c` | T24: prekey bundle 관리 |
 | `5cc46521` | T23a: paw-crypto mls.rs 수정 |
-| `120b11d2` | T23b: paw-ffi 크레이트 (X25519+AES-GCM, 3개 테스트) |
+| `120b11d2` | T23b: paw-ffi 크레이트 (이후 제거됨) |
 | `86637275` | T25: Agent 게이트웨이 스캐폴드 (NATS, agent WS, docker-compose, 28개 테스트) |
-| `1819045c` | T23c: flutter_rust_bridge v2 Dart 바인딩 + CI 업데이트 |
+| `1819045c` | T23c: flutter_rust_bridge v2 Dart 바인딩 + CI 업데이트 (이후 제거됨) |
 | `223017df` | T27: E2EE UI (e2ee_banner, agent_consent_banner, key_verification_screen) |
 | `7acdaffe` | T29: Agent 인증 API |
 | `00ee8dfb` | fix: sqflite_sqlcipher ^3.4.0 |
@@ -205,7 +211,6 @@
 │
 ├── paw-proto/src/lib.rs                # 모든 WS 프로토콜 타입
 ├── paw-crypto/src/{lib.rs,mls.rs}      # MLS 암호화
-├── paw-ffi/src/api.rs                  # Dart FFI API (createAccount, encrypt, decrypt)
 │
 ├── paw-server/
 │   ├── src/
@@ -363,7 +368,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| paw-ffi frb_expand 경고 | `flutter_rust_bridge = "=2.9.0"` 생성 경고 3개 — 에러 아님 |
+| paw-ffi frb_expand 경고 | 과거 생성 경고 기록 (현재는 제거됨) |
 | Flutter deprecated API | `withOpacity` → `withValues()`, `surfaceVariant` → `surfaceContainerHighest` (기존 파일) |
 | Drift .g.dart 스텁 | `flutter pub run build_runner build` 실행 전까지 스텁 상태 |
 | TypeScript 툴링 | `tsc`, `typescript-language-server` 미설치 — `npm run build`로 검증 |

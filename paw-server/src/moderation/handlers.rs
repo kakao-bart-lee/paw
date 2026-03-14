@@ -1,12 +1,12 @@
-use crate::auth::{AppState, middleware::UserId};
+use crate::auth::{middleware::UserId, AppState};
 use crate::moderation::{models::*, service};
 use axum::{
-    Json,
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub async fn create_report(

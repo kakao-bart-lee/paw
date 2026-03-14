@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../profile/widgets/avatar_widget.dart';
 import '../providers/chat_provider.dart';
+import '../../../core/theme/app_theme.dart';
 
 class GroupInfoScreen extends ConsumerStatefulWidget {
   final String conversationId;
 
-  const GroupInfoScreen({
-    super.key,
-    required this.conversationId,
-  });
+  const GroupInfoScreen({super.key, required this.conversationId});
 
   @override
   ConsumerState<GroupInfoScreen> createState() => _GroupInfoScreenState();
@@ -18,30 +16,15 @@ class GroupInfoScreen extends ConsumerStatefulWidget {
 class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
   // Mock members for Phase 2
   final List<Map<String, dynamic>> _mockMembers = [
-    {
-      'id': 'user_1',
-      'name': '나 (방장)',
-      'role': 'owner',
-      'avatarUrl': null,
-    },
-    {
-      'id': 'user_2',
-      'name': '김철수',
-      'role': 'member',
-      'avatarUrl': null,
-    },
-    {
-      'id': 'user_3',
-      'name': '이영희',
-      'role': 'member',
-      'avatarUrl': null,
-    },
+    {'id': 'user_1', 'name': '나 (방장)', 'role': 'owner', 'avatarUrl': null},
+    {'id': 'user_2', 'name': '김철수', 'role': 'member', 'avatarUrl': null},
+    {'id': 'user_3', 'name': '이영희', 'role': 'member', 'avatarUrl': null},
   ];
 
   void _showStubSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -74,22 +57,25 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
           const SizedBox(height: 16),
           Text(
             conversation.name,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           // Member count chip
           Chip(
             label: Text('멤버 ${_mockMembers.length}명 / 100명'),
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            backgroundColor: AppTheme.surface3,
           ),
           const SizedBox(height: 24),
           const Divider(height: 1),
-          
+
           // Action Buttons
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -103,10 +89,20 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _showStubSnackBar('그룹 나가기 기능은 준비 중입니다.'),
-                    icon: const Icon(Icons.exit_to_app, color: Colors.red),
-                    label: const Text('그룹 나가기', style: TextStyle(color: Colors.red)),
+                    icon: Icon(
+                      Icons.exit_to_app,
+                      color: AppTheme.danger.withValues(alpha: 0.88),
+                    ),
+                    label: Text(
+                      '그룹 나가기',
+                      style: TextStyle(
+                        color: AppTheme.danger.withValues(alpha: 0.88),
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
+                      side: BorderSide(
+                        color: AppTheme.danger.withValues(alpha: 0.4),
+                      ),
                     ),
                   ),
                 ),
@@ -114,7 +110,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             ),
           ),
           const Divider(height: 1),
-          
+
           // Member List
           Expanded(
             child: ListView.builder(
@@ -122,7 +118,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
               itemBuilder: (context, index) {
                 final member = _mockMembers[index];
                 final isOwner = member['role'] == 'owner';
-                
+
                 return ListTile(
                   leading: AvatarWidget(
                     displayName: member['name'] as String,
@@ -137,14 +133,16 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(12),
+                            color: AppTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusLg,
+                            ),
                           ),
-                          child: Text(
+                          child: const Text(
                             '방장',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              color: AppTheme.accent,
                             ),
                           ),
                         )

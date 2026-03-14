@@ -42,4 +42,15 @@ void main() {
     final MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.themeMode, ThemeMode.dark);
   });
+
+  testWidgets('shows unsupported fallback when Flutter client is disabled', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: PawApp(flutterClientEnabled: false)),
+    );
+
+    expect(find.text('모바일 앱은 네이티브로 이전되었습니다'), findsOneWidget);
+    expect(find.textContaining('Web/Desktop 전용'), findsOneWidget);
+  });
 }

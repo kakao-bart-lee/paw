@@ -53,7 +53,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
 
   void _verifyOtp(String code) async {
     await ref.read(authNotifierProvider.notifier).verifyOtp(code);
-    
+
     if (mounted) {
       final state = ref.read(authNotifierProvider);
       if (state.step == AuthStep.deviceName) {
@@ -81,16 +81,13 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              Text(
-                '인증번호 입력',
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
+              Text('인증번호 입력', style: Theme.of(context).textTheme.headlineLarge),
               const SizedBox(height: 8),
               Text(
                 '${authState.phone}로 전송된 6자리 코드를 입력하세요',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 32),
               OtpInputField(
@@ -110,8 +107,8 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                 Text(
                   authState.error!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ],
               const SizedBox(height: 32),
@@ -123,10 +120,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                         ? '00:${_secondsRemaining.toString().padLeft(2, '0')}'
                         : '인증번호가 만료되었습니다',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: _secondsRemaining > 0
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.error,
-                        ),
+                      color: _secondsRemaining > 0
+                          ? Theme.of(context).colorScheme.secondary
+                          : Theme.of(context).colorScheme.error,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   TextButton(
@@ -143,18 +140,13 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                   onPressed: _otpCode.length == 6 && !authState.isLoading
                       ? () => _verifyOtp(_otpCode)
                       : null,
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                   child: authState.isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Text(

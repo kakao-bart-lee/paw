@@ -1,6 +1,6 @@
 # Paw Messenger 한국어 안내서
 
-Paw는 사람과 AI 에이전트가 같은 메신저 환경에서 대화할 수 있도록 설계된 AI-네이티브 메시징 플랫폼입니다. 이 저장소는 Rust 서버, Flutter 클라이언트, 공용 프로토콜, 암호화 크레이트, 에이전트 SDK, OpenClaw 어댑터를 함께 관리하는 모노레포입니다.
+Paw는 사람과 AI 에이전트가 같은 메신저 환경에서 대화할 수 있도록 설계된 AI-네이티브 메시징 플랫폼입니다. 현재 저장소는 **Flutter 단일 클라이언트에서 모바일 네이티브 + Flutter Web/Desktop 분리 구조로 전환 중**이며, Rust 서버, 공용 프로토콜, 암호화 크레이트, 에이전트 SDK, OpenClaw 어댑터를 함께 관리하는 모노레포입니다.
 
 기존 [README.md](/Users/joy/workspace/paw/README.md)는 짧은 소개에 가깝고, 이 문서는 실제로 저장소를 열었을 때 필요한 구조 이해, 실행 순서, 서브프로젝트 역할, 참고 문서 위치를 더 자세히 정리한 안내서입니다.
 
@@ -25,7 +25,6 @@ flowchart LR
     Adapter["OpenClaw Adapter\nTypeScript"] --> SDK
     Server --> DB["PostgreSQL"]
     Server --> S3["MinIO / S3"]
-    Client --> FFI["paw-ffi / paw-crypto"]
     Server --> Proto["paw-proto"]
     SDK --> Proto
 ```
@@ -34,12 +33,14 @@ flowchart LR
 
 | 경로 | 역할 |
 |---|---|
-| `Cargo.toml` | Rust 워크스페이스 루트. `paw-server`, `paw-proto`, `paw-crypto`, `paw-ffi`를 묶습니다. |
+| `Cargo.toml` | Rust 워크스페이스 루트. 현재 `paw-core`, `paw-server`, `paw-proto`, `paw-crypto`를 묶습니다. |
+| `paw-core/` | 모바일 네이티브 공용 Rust 런타임입니다. crypto, db/search, auth, http, ws/sync, core runtime slice가 이곳으로 이동 중입니다. |
 | `paw-server/` | REST API, 인증, 메시지, 채널, 미디어, 마켓플레이스, 백업, 관리자 기능을 담당하는 서버입니다. |
 | `paw-proto/` | WebSocket 및 에이전트 스트리밍에 쓰이는 공용 메시지 타입입니다. |
 | `paw-crypto/` | E2EE 실험 및 암호 관련 Rust 코드입니다. 현재 `mls` 모듈을 노출합니다. |
-| `paw-ffi/` | Flutter에서 Rust 암호 기능을 호출하기 위한 FFI 계층입니다. |
-| `paw-client/` | Flutter 앱입니다. Riverpod, go_router, Drift, flutter_rust_bridge를 사용합니다. |
+| `paw-client/` | 현재는 Flutter Web/Desktop 경로를 유지하며, Web/Desktop 회귀 검증 게이트를 관리하는 클라이언트입니다. |
+| `paw-android/` | Kotlin + Compose 네이티브 Android shell scaffold 입니다. |
+| `paw-ios/` | SwiftUI 네이티브 iOS shell scaffold 입니다. |
 | `agents/paw-agent-sdk/` | Python 에이전트 SDK입니다. |
 | `adapters/paw-sdk-ts/` | TypeScript 에이전트 SDK 패키지(`@paw/sdk`)입니다. |
 | `adapters/openclaw-adapter/` | OpenClaw 연동용 TypeScript 어댑터입니다. |
@@ -61,11 +62,10 @@ flowchart LR
 
 ### 클라이언트
 
-- Flutter 3 계열
+- Flutter 3.41 계열
 - Riverpod
 - go_router
 - Drift + SQLCipher
-- flutter_rust_bridge
 - flutter_secure_storage
 
 ### SDK / 어댑터
@@ -109,13 +109,11 @@ flowchart LR
 초기화 순서:
 
 1. Flutter 바인딩 초기화
-2. Rust 초기화 (`initRust()`)
-웹에서는 no-op, 네이티브에서만 FRB 초기화
-3. 서비스 로케이터 설정
-4. 데스크톱 환경이면 시스템 트레이/단축키 등록
-5. `ProviderScope`로 앱 시작
+2. 서비스 로케이터 설정
+3. 데스크톱 환경이면 시스템 트레이/단축키 등록
+4. `ProviderScope`로 앱 시작
 
-이 구조를 보면 Paw 클라이언트는 단순한 채팅 UI가 아니라 Rust 기반 기능과 데스크톱 기능까지 고려된 앱으로 설계돼 있습니다.
+현재 Flutter 클라이언트는 Web/Desktop 전용 경로로 정리되어 있으며, 모바일은 Android/iOS 네이티브 앱이 담당합니다.
 
 ### 공용 프로토콜
 
@@ -203,6 +201,17 @@ make server
 make dev
 ```
 
+웹 디바이스(`chrome`, `edge`, `web-server`)로 실행할 때는 개발용 Flutter 앱이 기본적으로 `http://127.0.0.1:4100`에 바인딩됩니다.
+
+로컬 수동 로그인 테스트 편의를 위해 `.env`에서 `# PAW_FIXED_OTP=137900` 주석을 해제해 사용할 수 있습니다. 이 값은 개발 전용이며 운영 환경에서는 사용하면 안 됩니다.
+
+### 현재 전환 상태 요약
+
+- `paw-core`: 공용 Rust 런타임 slice 구현 완료
+- `paw-android`: auth/bootstrap/chat shell + Android 자동화 추가
+- `paw-ios`: auth/bootstrap/chat shell + XCUITest 추가
+- `paw-client`: Web/Desktop 책임으로 축소 진행
+
 ### 5.5 데이터베이스 마이그레이션
 
 [Makefile](/Users/joy/workspace/paw/Makefile) 에 정의된 명령:
@@ -247,12 +256,12 @@ flutter pub get
 flutter run
 ```
 
-클라이언트는 Flutter만으로 끝나지 않고 `flutter_rust_bridge`와 Rust FFI를 사용하므로, 플랫폼별 개발 환경 구성이 필요할 수 있습니다.
+클라이언트는 현재 Web/Desktop 중심 Flutter 경로와 네이티브 모바일 경로로 분리돼 있으므로, 플랫폼별 개발 환경 구성이 필요할 수 있습니다.
 
 ### 5.7 웹 실행 시 주의사항
 
 - 웹에서는 Rust FFI를 직접 로드하지 않도록 분리되어 있습니다.
-- 따라서 `paw_ffi.js` 관련 MIME/type 에러는 정상 구성에서는 발생하지 않아야 합니다.
+- Flutter Web/Desktop 경로에서 Rust FFI는 제거되었으므로, `paw_ffi.js` 관련 MIME/type 에러는 정상 경로에 포함되지 않아야 합니다.
 - 웹 세션 정책: 자동 세션 복원을 스킵하고, 사용자가 로그인 플로우를 명시적으로 완료해야 합니다.
 - 네이티브 세션 정책: 저장 토큰 복원 후 `getMe` 검증에 실패하면 토큰을 즉시 폐기하고 로그인 화면으로 전환합니다.
 - 보호 라우트(`/chat`, `/profile/me` 등)는 비인증 상태에서 접근 시 `/login`으로 강제 리다이렉트됩니다.
@@ -335,10 +344,10 @@ make e2e-real
 - DI: `get_it`
 - 로컬 저장소: `drift`, `sqflite_sqlcipher`
 - 네트워크: `http`, `web_socket_channel`
-- 암호화: `cryptography`, `flutter_rust_bridge`
+- 암호화: `cryptography`
 - 보안 저장소: `flutter_secure_storage`
 
-현재 읽은 엔트리 기준으로 앱은 테마, 라우터, 데스크톱 기능, Rust 초기화가 이미 중심축에 있습니다. 즉, 단순 스캐폴드가 아니라 플랫폼 기능과 암호계층을 함께 붙이는 방향으로 진화한 구조입니다.
+현재 읽은 엔트리 기준으로 앱은 테마, 라우터, 데스크톱 기능, Web/Desktop 런타임 경계가 이미 중심축에 있습니다.
 
 ### 6.3 `paw-proto`
 
@@ -352,11 +361,9 @@ make e2e-real
 
 프로토콜 상세는 [docs/protocol-v1.md](/Users/joy/workspace/paw/docs/protocol-v1.md) 를 같이 보는 것이 좋습니다.
 
-### 6.4 `paw-crypto` / `paw-ffi`
+### 6.4 `paw-crypto`
 
-`paw-crypto`는 암호 로직의 Rust 측 구현 포인트이고, `paw-ffi`는 이를 Flutter에서 활용하기 위한 다리 역할을 합니다.
-
-`paw-ffi`는 현재 다음 API를 재노출합니다.
+`paw-crypto`는 암호 로직의 Rust 측 구현 포인트입니다.
 
 - `create_account`
 - `encrypt`
@@ -505,7 +512,6 @@ make migrate      # SQLx migration 실행
 - [paw-server/src/main.rs](/Users/joy/workspace/paw/paw-server/src/main.rs)
 - [paw-proto/src/lib.rs](/Users/joy/workspace/paw/paw-proto/src/lib.rs)
 - [paw-client/lib/main.dart](/Users/joy/workspace/paw/paw-client/lib/main.dart)
-- [paw-ffi/src/lib.rs](/Users/joy/workspace/paw/paw-ffi/src/lib.rs)
 - [docs/ARCHITECTURE.md](/Users/joy/workspace/paw/docs/ARCHITECTURE.md)
 - [docs/protocol-v1.md](/Users/joy/workspace/paw/docs/protocol-v1.md)
 - [docs/api/openapi.yaml](/Users/joy/workspace/paw/docs/api/openapi.yaml)
@@ -518,9 +524,8 @@ make migrate      # SQLx migration 실행
 
 대표 이슈와 조치:
 
-- `paw_ffi ... codegen version` 또는 `pkg/paw_ffi.js MIME`:
-웹에서 FRB를 직접 로드하는 경로가 섞였는지 확인합니다.
-현재 구조는 `rust_init_web.dart` / `api_bridge_web.dart`를 통해 웹 no-op로 처리합니다.
+- 브라우저 정적 자산에서 옛 `paw_ffi` 산출물이 보인다면, 캐시된 배포 산출물이나 잘못된 정적 파일 경로를 먼저 점검합니다.
+현재 구조는 `src/rust/api_bridge.dart`가 Web/Desktop용 순수 Dart 암호 브리지로 연결되며, 별도 Rust 초기화는 요구하지 않습니다.
 - `LocaleDataException`:
 `main.dart`에서 `initializeDateFormatting('ko_KR')` 호출 여부를 확인합니다.
 - `401 Unauthorized` (`/conversations`, `/users/me`):

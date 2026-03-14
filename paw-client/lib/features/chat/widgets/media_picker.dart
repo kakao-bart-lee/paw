@@ -31,25 +31,23 @@ class MediaPicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('카메라'),
-            trailing: Text(
-              '준비 중',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-            onTap: null, // Disabled for Phase 2
-          ),
-          ListTile(
-            leading: const Icon(Icons.image),
-            title: const Text('갤러리'),
+            leading: const Icon(Icons.image_outlined),
+            title: const Text('이미지 파일'),
+            subtitle: const Text('Web/Desktop에서 이미지를 업로드합니다'),
             onTap: () => _showStubMessage(context),
           ),
           ListTile(
             leading: const Icon(Icons.attach_file),
-            title: const Text('파일'),
+            title: const Text('파일 업로드'),
+            subtitle: const Text('문서 또는 일반 파일을 선택합니다'),
             onTap: () => _showStubMessage(context),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              '카메라/갤러리 기반 모바일 첨부 흐름은 네이티브 앱으로 이전됩니다.',
+              style: theme.textTheme.bodySmall,
+            ),
           ),
         ],
       ),

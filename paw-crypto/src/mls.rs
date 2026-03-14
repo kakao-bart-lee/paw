@@ -60,8 +60,8 @@ mod tests {
         let provider = OpenMlsRustCrypto::default();
 
         let alice_credential = create_credential(b"alice");
-        let alice_signer = SignatureKeyPair::new(CIPHERSUITE.signature_algorithm())
-            .expect("alice signer");
+        let alice_signer =
+            SignatureKeyPair::new(CIPHERSUITE.signature_algorithm()).expect("alice signer");
         alice_signer
             .store(provider.storage())
             .expect("store alice signer");
@@ -80,8 +80,8 @@ mod tests {
         .expect("create group");
 
         let bob_credential = create_credential(b"bob");
-        let bob_signer = SignatureKeyPair::new(CIPHERSUITE.signature_algorithm())
-            .expect("bob signer");
+        let bob_signer =
+            SignatureKeyPair::new(CIPHERSUITE.signature_algorithm()).expect("bob signer");
         bob_signer
             .store(provider.storage())
             .expect("store bob signer");

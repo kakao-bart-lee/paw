@@ -28,10 +28,7 @@ pub async fn register_push_token(
     Ok(())
 }
 
-pub async fn unregister_push_token(
-    pool: &DbPool,
-    device_id: Uuid,
-) -> anyhow::Result<bool> {
+pub async fn unregister_push_token(pool: &DbPool, device_id: Uuid) -> anyhow::Result<bool> {
     let rows = sqlx::query("DELETE FROM push_tokens WHERE device_id = $1")
         .bind(device_id)
         .execute(pool.as_ref())
@@ -82,15 +79,14 @@ pub async fn unmute_conversation(
     user_id: Uuid,
     conversation_id: Uuid,
 ) -> anyhow::Result<bool> {
-    let rows = sqlx::query(
-        "DELETE FROM conversation_mutes WHERE user_id = $1 AND conversation_id = $2",
-    )
-    .bind(user_id)
-    .bind(conversation_id)
-    .execute(pool.as_ref())
-    .await
-    .context("unmute conversation")?
-    .rows_affected();
+    let rows =
+        sqlx::query("DELETE FROM conversation_mutes WHERE user_id = $1 AND conversation_id = $2")
+            .bind(user_id)
+            .bind(conversation_id)
+            .execute(pool.as_ref())
+            .await
+            .context("unmute conversation")?
+            .rows_affected();
 
     Ok(rows > 0)
 }

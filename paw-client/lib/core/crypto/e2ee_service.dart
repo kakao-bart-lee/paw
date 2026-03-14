@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import '../../src/rust/api_bridge.dart' as rust_api;
 
-/// Local representation of E2EE account keys returned from paw-ffi.
+/// Local representation of E2EE account keys returned from the client crypto bridge.
 /// signedPrekey = X25519 public key (share with server)
 /// signedPrekeySecret = X25519 private key (keep local, never upload)
 class AccountKeys {
@@ -24,9 +24,9 @@ class E2eeService {
 
   bool get isE2eeAvailable => _isE2eeAvailable;
 
-  AccountKeys? createAccount() {
+  Future<AccountKeys?> createAccount() async {
     try {
-      final keys = rust_api.createAccount();
+      final keys = await rust_api.createAccount();
       _isE2eeAvailable = true;
       return AccountKeys(
         identityKey: keys.identityKey,
@@ -40,12 +40,12 @@ class E2eeService {
     }
   }
 
-  Uint8List? encryptForRecipient({
+  Future<Uint8List?> encryptForRecipient({
     required Uint8List recipientPubKey,
     required Uint8List plaintext,
-  }) {
+  }) async {
     try {
-      final ciphertext = rust_api.encrypt(
+      final ciphertext = await rust_api.encrypt(
         theirSignedPrekey: recipientPubKey,
         plaintext: plaintext,
       );
@@ -57,12 +57,12 @@ class E2eeService {
     }
   }
 
-  Uint8List? decryptFromSender({
+  Future<Uint8List?> decryptFromSender({
     required Uint8List myPrivKey,
     required Uint8List ciphertext,
-  }) {
+  }) async {
     try {
-      final plaintext = rust_api.decrypt(
+      final plaintext = await rust_api.decrypt(
         mySignedPrekeySecret: myPrivKey,
         ciphertext: ciphertext,
       );

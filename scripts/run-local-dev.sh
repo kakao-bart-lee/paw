@@ -30,8 +30,10 @@ source .env
 set +a
 source ./scripts/local-env.sh
 normalize_legacy_local_env
+FLUTTER_BIN="$(resolve_flutter_bin)"
 
 PAW_API_BASE_URL="${SERVER_URL:-http://127.0.0.1:38173}"
+PAW_WEB_DEV_PORT="${PAW_WEB_DEV_PORT:-4100}"
 
 if curl -sf "$PAW_API_BASE_URL/health" >/dev/null 2>&1; then
   echo "[local-dev] existing server detected at $PAW_API_BASE_URL"
@@ -62,4 +64,13 @@ fi
 echo "[local-dev] server ready at $PAW_API_BASE_URL"
 echo "[local-dev] launching Flutter client on device: $CLIENT_DEVICE"
 cd paw-client
-flutter run -d "$CLIENT_DEVICE" --dart-define=SERVER_URL="$PAW_API_BASE_URL"
+if [[ "$CLIENT_DEVICE" == "chrome" || "$CLIENT_DEVICE" == "web-server" || "$CLIENT_DEVICE" == "edge" ]]; then
+  echo "[local-dev] web client will be served on http://127.0.0.1:$PAW_WEB_DEV_PORT"
+  "$FLUTTER_BIN" run \
+    -d "$CLIENT_DEVICE" \
+    --web-hostname 127.0.0.1 \
+    --web-port "$PAW_WEB_DEV_PORT" \
+    --dart-define=SERVER_URL="$PAW_API_BASE_URL"
+else
+  "$FLUTTER_BIN" run -d "$CLIENT_DEVICE" --dart-define=SERVER_URL="$PAW_API_BASE_URL"
+fi

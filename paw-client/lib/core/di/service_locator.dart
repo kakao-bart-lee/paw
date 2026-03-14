@@ -9,6 +9,7 @@ import '../db/daos/messages_dao.dart';
 import '../http/api_client.dart';
 import '../search/search_service.dart';
 import '../sync/sync_service.dart';
+import '../theme/theme_mode_controller.dart';
 import '../ws/reconnection_manager.dart';
 import '../ws/ws_service.dart';
 
@@ -23,6 +24,12 @@ Future<void> setupServiceLocator() async {
 
   if (!getIt.isRegistered<SessionEvents>()) {
     getIt.registerSingleton<SessionEvents>(SessionEvents());
+  }
+
+  if (!getIt.isRegistered<ThemeModeController>()) {
+    final controller = ThemeModeController();
+    await controller.load();
+    getIt.registerSingleton<ThemeModeController>(controller);
   }
 
   if (!getIt.isRegistered<ApiClient>()) {

@@ -44,7 +44,7 @@ class MessengerAvatar extends StatelessWidget {
                 ),
                 border: Border.all(
                   color: isAgent
-                      ? AppTheme.primary.withValues(alpha: 0.28)
+                      ? AppTheme.accent.withValues(alpha: 0.28)
                       : AppTheme.outline,
                 ),
               ),
@@ -75,8 +75,8 @@ class MessengerAvatar extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(999),
+                  color: AppTheme.accent,
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: AppTheme.background, width: 1.5),
                 ),
                 child: Text(
@@ -143,7 +143,7 @@ class _AvatarFallback extends StatelessWidget {
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          color: isAgent ? AppTheme.primary : AppTheme.strongText,
+          color: isAgent ? AppTheme.accent : AppTheme.strongText,
           letterSpacing: -0.4,
         ),
       ),

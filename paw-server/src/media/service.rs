@@ -301,8 +301,7 @@ fn read_storage_alias(name: &str) -> Result<String, std::env::VarError> {
 }
 
 fn read_credential(primary: &str, fallback: &str) -> Option<String> {
-    match std::env::var(primary).or_else(|_| std::env::var(fallback)) {
-        Ok(value) => Some(value),
-        Err(_) => None,
-    }
+    std::env::var(primary)
+        .or_else(|_| std::env::var(fallback))
+        .ok()
 }

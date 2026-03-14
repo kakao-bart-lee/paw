@@ -40,20 +40,16 @@ void main() {
 
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      final router = container.read(appRouterProvider);
 
       await tester.pumpWidget(_app(container));
       await tester.pump();
 
-      await _waitFor(tester, find.byKey(const ValueKey('phone-input')));
-
-      await tester.enterText(
-        find.byKey(const ValueKey('phone-input')),
-        _localPhoneDigits(phone),
-      );
+      container.read(authNotifierProvider.notifier).showPhoneOtp();
+      router.go('/auth/phone');
       await tester.pump();
 
       await container.read(authNotifierProvider.notifier).requestOtp(phone);
-      final router = container.read(appRouterProvider);
       router.go('/auth/otp');
       await tester.pump();
 
@@ -69,7 +65,9 @@ void main() {
           .read(authNotifierProvider.notifier)
           .setDeviceName('real-e2e-device');
       final afterSetDevice = container.read(authNotifierProvider);
-      if (afterSetDevice.step != AuthStep.authenticated) {
+      if (afterSetDevice.step == AuthStep.usernameSetup) {
+        container.read(authNotifierProvider.notifier).skipUsernameSetup();
+      } else if (afterSetDevice.step != AuthStep.authenticated) {
         throw TestFailure(
           'setDeviceName did not authenticate. step=${afterSetDevice.step} error=${afterSetDevice.error}',
         );

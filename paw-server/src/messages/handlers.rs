@@ -1,21 +1,22 @@
-use crate::auth::{AppState, middleware::UserId};
+use crate::auth::{middleware::UserId, AppState};
 use crate::messages::{
     models::{
-        AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse, UpdateGroupNameRequest,
+        AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse,
+        UpdateGroupNameRequest,
     },
     service::{self, GroupManagementError, Membership},
 };
 use crate::moderation;
 use crate::push;
 use axum::{
-    Json,
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -74,8 +75,12 @@ pub async fn send_message(
     Json(payload): Json<SendMessageRequest>,
 ) -> Response {
     if payload.content.trim().is_empty() {
-        return error(StatusCode::BAD_REQUEST, "invalid_content", "Message content is required")
-            .into_response();
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_content",
+            "Message content is required",
+        )
+        .into_response();
     }
 
     let format = payload.format.to_ascii_lowercase();
@@ -102,7 +107,9 @@ pub async fn send_message(
         .into_response();
     }
 
-    match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key).await {
+    match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key)
+        .await
+    {
         Ok(Some(existing)) => return Json(existing).into_response(),
         Ok(None) => {}
         Err(err) => {
@@ -160,8 +167,13 @@ pub async fn send_message(
         }
         Err(err) => {
             tracing::warn!(%err, conversation_id = %conv_id, sender_id = %user_id, "message insert failed, checking idempotency replay");
-            match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key)
-                .await
+            match service::get_idempotent_message(
+                &state.db,
+                conv_id,
+                user_id,
+                payload.idempotency_key,
+            )
+            .await
             {
                 Ok(Some(existing)) => Json(existing).into_response(),
                 _ => error(
@@ -175,7 +187,10 @@ pub async fn send_message(
     }
 }
 
-async fn notify_agents_of_message(state: AppState, message: MessageReceivedMsg) -> anyhow::Result<()> {
+async fn notify_agents_of_message(
+    state: AppState,
+    message: MessageReceivedMsg,
+) -> anyhow::Result<()> {
     let Some(nats) = state.nats.clone() else {
         return Ok(());
     };
@@ -225,9 +240,12 @@ async fn notify_agents_of_message(state: AppState, message: MessageReceivedMsg) 
     Ok(())
 }
 
-fn message_received_from_row(row: &sqlx::postgres::PgRow) -> Result<MessageReceivedMsg, sqlx::Error> {
+fn message_received_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<MessageReceivedMsg, sqlx::Error> {
     let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
-    let blocks_raw: Option<serde_json::Value> = row.try_get::<Option<serde_json::Value>, _>("blocks")?;
+    let blocks_raw: Option<serde_json::Value> =
+        row.try_get::<Option<serde_json::Value>, _>("blocks")?;
     let blocks = match blocks_raw {
         Some(serde_json::Value::Array(values)) => values,
         _ => Vec::new(),
@@ -320,20 +338,21 @@ pub async fn create_conversation(
         .into_response();
     }
 
-    let created = match service::create_conversation(&state.db, user_id, payload.member_ids, payload.name)
-        .await
-    {
-        Ok(conversation) => conversation,
-        Err(err) => {
-            tracing::error!(%err, user_id = %user_id, "failed to create conversation");
-            return error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "conversation_create_failed",
-                "Could not create conversation",
-            )
-            .into_response();
-        }
-    };
+    let created =
+        match service::create_conversation(&state.db, user_id, payload.member_ids, payload.name)
+            .await
+        {
+            Ok(conversation) => conversation,
+            Err(err) => {
+                tracing::error!(%err, user_id = %user_id, "failed to create conversation");
+                return error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "conversation_create_failed",
+                    "Could not create conversation",
+                )
+                .into_response();
+            }
+        };
 
     let response = CreateConversationResponse {
         id: created.id,
@@ -422,9 +441,11 @@ fn group_management_error_to_response(err: GroupManagementError) -> (StatusCode,
             "conversation_not_found",
             "Conversation not found",
         ),
-        GroupManagementError::NotAuthorized => {
-            error(StatusCode::FORBIDDEN, "forbidden", "Not authorized for this action")
-        }
+        GroupManagementError::NotAuthorized => error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            "Not authorized for this action",
+        ),
         GroupManagementError::TooManyMembers => error(
             StatusCode::CONFLICT,
             "too_many_members",
@@ -435,16 +456,20 @@ fn group_management_error_to_response(err: GroupManagementError) -> (StatusCode,
             "already_member",
             "User is already a member of this conversation",
         ),
-        GroupManagementError::MemberNotFound => {
-            error(StatusCode::NOT_FOUND, "member_not_found", "Conversation member not found")
-        }
+        GroupManagementError::MemberNotFound => error(
+            StatusCode::NOT_FOUND,
+            "member_not_found",
+            "Conversation member not found",
+        ),
         GroupManagementError::CannotRemoveLastOwner => error(
             StatusCode::FORBIDDEN,
             "cannot_remove_last_owner",
             "Cannot remove the last owner from conversation",
         ),
-        GroupManagementError::InvalidGroupName => {
-            error(StatusCode::BAD_REQUEST, "invalid_group_name", "Group name is required")
-        }
+        GroupManagementError::InvalidGroupName => error(
+            StatusCode::BAD_REQUEST,
+            "invalid_group_name",
+            "Group name is required",
+        ),
     }
 }

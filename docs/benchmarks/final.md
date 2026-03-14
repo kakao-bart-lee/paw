@@ -25,7 +25,7 @@
 | Transport | HTTP REST + WebSocket Protocol v1 |
 | Load tool | k6 v0.50+ (Grafana) |
 | Auth | OTP → Ed25519 device key → JWT HS256 |
-| E2EE | X25519 ECDH key agreement + AES-256-GCM (`paw-ffi`) |
+| E2EE | X25519 ECDH key agreement + AES-256-GCM (client-side crypto bridge) |
 | Runner | Docker Compose local (single node) |
 
 ### k6 Load Test Setup
@@ -106,7 +106,7 @@ k6 run \
 
 ## E2EE Overhead Analysis
 
-Paw uses the Signal-inspired double-ratchet approach with X25519 ECDH key agreement and AES-256-GCM symmetric encryption, implemented in the `paw-ffi` crate.
+Paw uses the Signal-inspired double-ratchet approach with X25519 ECDH key agreement and AES-256-GCM symmetric encryption. The current Web/Desktop path uses a pure Dart crypto bridge, while native mobile paths are converging on `paw-core`.
 
 ### Per-Message Cryptographic Cost
 

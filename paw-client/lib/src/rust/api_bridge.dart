@@ -1,19 +1,18 @@
 import 'dart:typed_data';
 
-import 'api_bridge_native.dart'
-    if (dart.library.html) 'api_bridge_web.dart' as impl;
+import 'api_bridge_pure_dart.dart' as impl;
 
 typedef AccountKeys = impl.AccountKeys;
 
-AccountKeys createAccount() => impl.createAccount();
+Future<AccountKeys> createAccount() => impl.createAccount();
 
-Uint8List encrypt({
+Future<Uint8List> encrypt({
   required List<int> theirSignedPrekey,
   required List<int> plaintext,
 }) =>
     impl.encrypt(theirSignedPrekey: theirSignedPrekey, plaintext: plaintext);
 
-Uint8List decrypt({
+Future<Uint8List> decrypt({
   required List<int> mySignedPrekeySecret,
   required List<int> ciphertext,
 }) =>

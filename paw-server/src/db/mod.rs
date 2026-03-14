@@ -10,8 +10,8 @@ pub mod schema;
 
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Shared database connection pool
 pub type DbPool = Arc<PgPool>;

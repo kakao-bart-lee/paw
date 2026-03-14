@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 enum ReadReceiptStatus { sent, delivered, read }
 
 class ReadReceiptIndicator extends StatelessWidget {
   final ReadReceiptStatus status;
 
-  const ReadReceiptIndicator({
-    super.key,
-    required this.status,
-  });
+  const ReadReceiptIndicator({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +24,6 @@ class ReadReceiptIndicator extends StatelessWidget {
     );
   }
 
-  Color get _color => status == ReadReceiptStatus.read
-      ? const Color(0xFF6C63FF)
-      : Colors.grey;
+  Color get _color =>
+      status == ReadReceiptStatus.read ? AppTheme.accent : AppTheme.mutedText;
 }

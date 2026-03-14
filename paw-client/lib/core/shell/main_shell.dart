@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 
+const double kWideShellBreakpoint = 960;
+
 class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
@@ -10,20 +12,20 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final isDesktop = MediaQuery.sizeOf(context).width >= 960;
-    final showMobileNav = !isDesktop && !_isDetailRoute(location);
+    final isWideLayout = MediaQuery.sizeOf(context).width >= kWideShellBreakpoint;
+    final showCompactNav = !isWideLayout && !_isDetailRoute(location);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Row(
         children: [
-          if (isDesktop)
+          if (isWideLayout)
             _DesktopSidebar(selectedIndex: _selectedIndex(location)),
           Expanded(child: child),
         ],
       ),
-      bottomNavigationBar: showMobileNav
-          ? _MobileNav(
+      bottomNavigationBar: showCompactNav
+          ? _CompactNav(
               selectedIndex: _selectedIndex(location),
               onSelect: (index) => _onDestinationSelected(context, index),
             )
@@ -57,8 +59,8 @@ class MainShell extends StatelessWidget {
   }
 }
 
-class _MobileNav extends StatelessWidget {
-  const _MobileNav({required this.selectedIndex, required this.onSelect});
+class _CompactNav extends StatelessWidget {
+  const _CompactNav({required this.selectedIndex, required this.onSelect});
 
   final int selectedIndex;
   final ValueChanged<int> onSelect;
@@ -72,7 +74,7 @@ class _MobileNav extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: AppTheme.surface2,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppTheme.outline),
           boxShadow: [
             BoxShadow(
@@ -125,7 +127,7 @@ class _DesktopSidebar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface2,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppTheme.outline),
       ),
       child: Column(
@@ -134,21 +136,21 @@ class _DesktopSidebar extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(8),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [AppTheme.primarySoft, AppTheme.surface4],
               ),
               border: Border.all(
-                color: AppTheme.primary.withValues(alpha: 0.28),
+                color: AppTheme.accent.withValues(alpha: 0.28),
               ),
             ),
             child: const Center(
               child: Text(
                 'Pw',
                 style: TextStyle(
-                  color: AppTheme.primary,
+                  color: AppTheme.accent,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
@@ -179,14 +181,14 @@ class _DesktopSidebar extends StatelessWidget {
           ),
           const Spacer(),
           InkWell(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(8),
             onTap: () => context.go('/profile/me'),
             child: Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
                 color: AppTheme.surface4,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: const Center(
@@ -229,27 +231,27 @@ class _NavItem extends StatelessWidget {
         button: true,
         selected: selected,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(8),
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               color: selected ? AppTheme.primarySoft : Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   selected ? selectedIcon : icon,
-                  color: selected ? AppTheme.primary : AppTheme.mutedText,
+                  color: selected ? AppTheme.accent : AppTheme.mutedText,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected ? AppTheme.primary : AppTheme.mutedText,
+                    color: selected ? AppTheme.accent : AppTheme.mutedText,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -282,7 +284,7 @@ class _SidebarItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
@@ -290,19 +292,19 @@ class _SidebarItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: selected ? AppTheme.primarySoft : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             children: [
               Icon(
                 selected ? selectedIcon : icon,
-                color: selected ? AppTheme.primary : AppTheme.mutedText,
+                color: selected ? AppTheme.accent : AppTheme.mutedText,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: selected ? AppTheme.primary : AppTheme.mutedText,
+                  color: selected ? AppTheme.accent : AppTheme.mutedText,
                   fontWeight: FontWeight.w700,
                 ),
               ),

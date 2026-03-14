@@ -1,0 +1,57 @@
+name: server
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "paw-server/**"
+      - "paw-proto/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+  pull_request:
+    branches: [main]
+    paths:
+      - "paw-server/**"
+      - "paw-proto/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: paw
+          POSTGRES_PASSWORD: paw_dev_password
+          POSTGRES_DB: paw_dev
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy -p paw-server -p paw-proto --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test -p paw-server -p paw-proto --no-fail-fast
+        env:
+          DATABASE_URL: postgresql://paw:paw_dev_password@localhost:5432/paw_dev

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 class TypingIndicator extends StatefulWidget {
   final String userName;
 
-  const TypingIndicator({
-    super.key,
-    required this.userName,
-  });
+  const TypingIndicator({super.key, required this.userName});
 
   @override
   State<TypingIndicator> createState() => _TypingIndicatorState();
@@ -34,14 +33,17 @@ class _TypingIndicatorState extends State<TypingIndicator>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.surface3,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.outline.withValues(alpha: 0.8)),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '${widget.userName}이 입력 중',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('${widget.userName}이 입력 중', style: theme.textTheme.bodySmall),
           const SizedBox(width: 2),
           AnimatedBuilder(
             animation: _controller,
@@ -59,6 +61,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
                       child: Text(
                         '.',
                         style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.accent,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

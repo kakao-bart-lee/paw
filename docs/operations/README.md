@@ -16,7 +16,7 @@
 
 ## E2E 검증 실행
 
-클라이언트 핵심 플로우 검증은 아래 2단계로 운영합니다.
+현재 클라이언트 검증 명령은 Flutter 기준 경로와 Web 경로가 함께 존재합니다. 모바일 네이티브 앱이 아직 도입되지 않았으므로, 아래 명령의 현재 의미를 고정해 둡니다.
 
 1. Flutter 공식 Integration Test
 ```bash
@@ -35,7 +35,16 @@ make e2e-playwright
 make e2e-real
 ```
 
-`e2e-real`은 서버를 테스트 모드(OTP debug code 노출)로 올린 뒤 macOS `integration_test`를 실행합니다.
+`make e2e-real`은 **현재는 `make e2e-real-flutter`의 별칭(alias)** 이며, 서버를 테스트 모드(OTP debug code 노출)로 올린 뒤 macOS Flutter `integration_test`를 실행합니다.
+
+4. 실서버 Web full-loop E2E
+```bash
+make e2e-real-web
+```
+
+`e2e-real-web`은 서버와 Flutter web-server를 함께 기동한 뒤 Playwright real full-loop를 실행합니다.
+
+> 현재 상태: Android/iOS 네이티브 검증 명령은 이미 도입되어 있으며, 별도로 `docs/native-mobile-automation-plan.md`에서 platform-native automation 구조를 관리합니다.
 
 ## 클라이언트 정책 스냅샷
 
@@ -61,6 +70,10 @@ make migrate
 # 3. 개발 서버 실행
 make dev
 ```
+
+웹 디바이스로 `make dev` / `./scripts/run-local-dev.sh`를 실행할 경우 개발용 Flutter 앱은 기본적으로 `http://127.0.0.1:4100`을 사용합니다.
+
+개발 중 수동 인증을 빠르게 확인하려면 `.env`에서 `# PAW_FIXED_OTP=137900` 주석을 해제할 수 있습니다. 이 값은 서버 내부에서 OTP를 고정할 뿐이며, 응답 본문 노출은 `PAW_EXPOSE_OTP_FOR_E2E=true`일 때만 허용해야 합니다. 운영 환경에서는 절대 활성화하지 마세요.
 
 ## 사전 요구 사항 (Prerequisites)
 

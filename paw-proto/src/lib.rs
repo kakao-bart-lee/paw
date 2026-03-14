@@ -1,17 +1,19 @@
 //! Paw WebSocket Protocol Types v1
-//! 
+//!
 //! All messages MUST include the `v` field (currently `1`).
 //! This enables future protocol evolution without breaking clients.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 pub const PROTOCOL_VERSION: u8 = 1;
 
 /// All WebSocket frames implement this trait
 pub trait PawMessage {
-    fn version(&self) -> u8 { PROTOCOL_VERSION }
+    fn version(&self) -> u8 {
+        PROTOCOL_VERSION
+    }
     fn message_type(&self) -> &str;
 }
 
@@ -226,7 +228,10 @@ mod tests {
 
     #[test]
     fn test_connect_msg_has_version() {
-        let msg = ConnectMsg { v: 1, token: "test".into() };
+        let msg = ConnectMsg {
+            v: 1,
+            token: "test".into(),
+        };
         let json = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["v"], 1, "All messages must include v field");
     }

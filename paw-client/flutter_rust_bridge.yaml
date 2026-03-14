@@ -1,4 +1,0 @@
-rust_input: crate::api
-rust_root: ../paw-ffi
-dart_output: lib/src/rust
-rust_output: /Users/joy/workspace/paw/paw-ffi/src/frb_generated.rs

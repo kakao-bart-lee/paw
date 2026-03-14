@@ -1,17 +1,17 @@
 use axum::{
-    Json,
     body::Body,
     extract::State,
-    http::{Request, StatusCode, header},
+    http::{header, Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
+    Json,
 };
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::observability::RequestId;
 
-use super::{AppState, jwt};
+use super::{jwt, AppState};
 
 #[derive(Clone, Copy, Debug)]
 pub struct UserId(pub Uuid);

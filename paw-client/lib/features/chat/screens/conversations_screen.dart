@@ -44,6 +44,16 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
         final filteredConversations = _applyFilter(conversations);
 
         if (isWide) {
+          _selectedConversationId ??= filteredConversations.isNotEmpty
+              ? filteredConversations.first.id
+              : null;
+          if (filteredConversations.every(
+            (conversation) => conversation.id != _selectedConversationId,
+          )) {
+            _selectedConversationId = filteredConversations.isNotEmpty
+                ? filteredConversations.first.id
+                : null;
+          }
           return _buildDesktopLayout(
             context,
             filteredConversations,
@@ -113,6 +123,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
         children: [
           _ConversationHeader(
             filter: _filter,
+            conversationCount: conversations.length,
             onFilterChanged: (filter) => setState(() => _filter = filter),
             onSearchTap: () => context.push('/search'),
           ),
@@ -128,7 +139,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/create-group'),
-        backgroundColor: AppTheme.primary,
+        backgroundColor: AppTheme.accent,
         foregroundColor: AppTheme.background,
         icon: const Icon(Icons.add_rounded),
         label: const Text('새 대화'),
@@ -154,7 +165,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
               width: 360,
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Column(
@@ -196,6 +207,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                   ),
                   _ConversationHeader(
                     filter: _filter,
+                    conversationCount: conversations.length,
                     onFilterChanged: (filter) =>
                         setState(() => _filter = filter),
                     onSearchTap: () => context.push('/search'),
@@ -218,7 +230,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: AppTheme.surface1,
-                  borderRadius: BorderRadius.circular(32),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTheme.outline),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -260,7 +272,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                 height: 72,
                 decoration: BoxDecoration(
                   color: AppTheme.surface3,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTheme.outline),
                 ),
                 child: const Icon(Icons.chat_bubble_outline_rounded, size: 30),
@@ -283,7 +295,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.only(bottom: desktop ? 12 : 96),
+      padding: EdgeInsets.only(bottom: desktop ? 12 : 96, top: 2),
       itemCount: conversations.length,
       itemBuilder: (context, index) {
         final conversation = conversations[index];
@@ -308,12 +320,14 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
 class _ConversationHeader extends StatelessWidget {
   const _ConversationHeader({
     required this.filter,
+    required this.conversationCount,
     required this.onFilterChanged,
     required this.onSearchTap,
     this.compact = false,
   });
 
   final _ConversationFilter filter;
+  final int conversationCount;
   final ValueChanged<_ConversationFilter> onFilterChanged;
   final VoidCallback onSearchTap;
   final bool compact;
@@ -321,33 +335,38 @@ class _ConversationHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        compact ? 16 : 16,
-        compact ? 8 : 4,
-        compact ? 16 : 16,
-        12,
-      ),
+      padding: EdgeInsets.fromLTRB(16, compact ? 8 : 4, 16, 12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(8),
             onTap: onSearchTap,
             child: Ink(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
               decoration: BoxDecoration(
-                color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(22),
+                color: AppTheme.surface3,
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.search_rounded, color: AppTheme.mutedText),
                   const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '메시지 검색',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.mutedText,
+                      ),
+                    ),
+                  ),
                   Text(
-                    '메시지 검색',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.mutedText),
+                    '$conversationCount개',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -404,23 +423,23 @@ class _FilterChipButton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: selected ? AppTheme.primarySoft : AppTheme.surface3,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected
-                  ? AppTheme.primary.withValues(alpha: 0.28)
+                  ? AppTheme.accent.withValues(alpha: 0.28)
                   : AppTheme.outline,
             ),
           ),
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? AppTheme.primary : AppTheme.mutedText,
+              color: selected ? AppTheme.accent : AppTheme.mutedText,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -448,13 +467,13 @@ class _EmptyDesktopPanel extends StatelessWidget {
               height: 84,
               decoration: BoxDecoration(
                 color: AppTheme.surface2,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppTheme.outline),
               ),
               child: const Icon(
                 Icons.forum_rounded,
                 size: 34,
-                color: AppTheme.primary,
+                color: AppTheme.accent,
               ),
             ),
             const SizedBox(height: 20),

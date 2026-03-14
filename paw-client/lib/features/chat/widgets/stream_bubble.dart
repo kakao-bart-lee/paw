@@ -49,15 +49,15 @@ class _StreamBubbleState extends State<StreamBubble>
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           const Padding(
-            padding: EdgeInsets.only(right: 10, bottom: 22),
+            padding: EdgeInsets.only(right: 8, bottom: 18),
             child: MessengerAvatar(
               name: 'AI',
-              size: 32,
+              size: 30,
               isAgent: true,
               showPresence: false,
             ),
@@ -69,10 +69,10 @@ class _StreamBubbleState extends State<StreamBubble>
               decoration: BoxDecoration(
                 color: AppTheme.agentBubbleDark,
                 borderRadius: BorderRadius.circular(
-                  24,
-                ).copyWith(bottomLeft: const Radius.circular(8)),
+                  8,
+                ).copyWith(bottomLeft: const Radius.circular(3)),
                 border: Border.all(
-                  color: AppTheme.primary.withValues(alpha: 0.14),
+                  color: AppTheme.accent.withValues(alpha: 0.18),
                 ),
               ),
               child: Column(
@@ -84,13 +84,13 @@ class _StreamBubbleState extends State<StreamBubble>
                       Icon(
                         Icons.auto_awesome_rounded,
                         size: 13,
-                        color: AppTheme.primary.withValues(alpha: 0.9),
+                        color: AppTheme.accent.withValues(alpha: 0.95),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'AI 응답',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.primary,
+                          color: AppTheme.accent,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -129,7 +129,7 @@ class _StreamBubbleState extends State<StreamBubble>
                                 ),
                                 codeblockDecoration: BoxDecoration(
                                   color: AppTheme.surface4,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
                             ),
@@ -140,7 +140,7 @@ class _StreamBubbleState extends State<StreamBubble>
                               child: const Text(
                                 '▋',
                                 style: TextStyle(
-                                  color: AppTheme.primary,
+                                  color: AppTheme.accent,
                                   fontSize: 16,
                                 ),
                               ),

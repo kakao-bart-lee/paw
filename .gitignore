@@ -1,6 +1,10 @@
 # Rust build artifacts
 /target/
 **/*.rs.bk
+paw-core/generated/
+paw-ios/PawCore/Artifacts/
+paw-android/app/src/main/jniLibs/*
+!paw-android/app/src/main/jniLibs/.gitkeep
 
 # Flutter / Dart build artifacts
 paw-client/build/

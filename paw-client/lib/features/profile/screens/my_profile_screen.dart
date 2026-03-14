@@ -81,7 +81,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: AppTheme.surface2,
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                   border: Border.all(color: AppTheme.outline),
                 ),
                 child: Column(
@@ -139,7 +139,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
               Container(
                 decoration: const BoxDecoration(
                   color: AppTheme.surface2,
-                  borderRadius: BorderRadius.all(Radius.circular(24)),
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(AppTheme.radiusXl),
+                  ),
                   border: Border.fromBorderSide(
                     BorderSide(color: AppTheme.outline),
                   ),
@@ -169,7 +171,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.danger,
-                  side: const BorderSide(color: Color(0x55FF7A7A)),
+                  side: BorderSide(
+                    color: AppTheme.danger.withValues(alpha: 0.4),
+                  ),
                 ),
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('로그아웃'),
@@ -211,9 +215,9 @@ class _ProfileInfoRow extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               color: AppTheme.surface4,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
-            child: Icon(icon, color: AppTheme.primary),
+            child: Icon(icon, color: AppTheme.accent),
           ),
           const SizedBox(width: 12),
           Expanded(

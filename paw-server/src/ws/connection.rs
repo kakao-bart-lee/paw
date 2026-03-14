@@ -1,12 +1,12 @@
 use crate::auth::AppState;
 use crate::messages::service::{self, Membership};
 use crate::ws::hub::WsSender;
-use axum::extract::ws::{CloseFrame, Message, WebSocket, close_code};
+use axum::extract::ws::{close_code, CloseFrame, Message, WebSocket};
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{
     ClientMessage, DeviceSyncResponse, HelloErrorMsg, HelloOkMsg, MessageFormat,
-    MessageReceivedMsg, PROTOCOL_VERSION, ServerMessage,
+    MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION,
 };
 use sqlx::Row;
 use std::time::{Duration, Instant};
@@ -34,7 +34,10 @@ pub async fn handle_socket(socket: WebSocket, user_id: Uuid, device_id: Uuid, st
     );
 
     let (outbound_tx, mut outbound_rx) = mpsc::unbounded_channel::<Message>();
-    state.hub.register(connection.user_id, outbound_tx.clone()).await;
+    state
+        .hub
+        .register(connection.user_id, outbound_tx.clone())
+        .await;
 
     if let Ok(frame) = serde_json::to_string(&ServerMessage::HelloOk(HelloOkMsg {
         v: PROTOCOL_VERSION,
@@ -189,7 +192,8 @@ async fn handle_client_message(
                 }
             }
 
-            let messages = fetch_messages_after_seq(state, sync.conversation_id, sync.last_seq).await?;
+            let messages =
+                fetch_messages_after_seq(state, sync.conversation_id, sync.last_seq).await?;
             for message in messages {
                 let payload = serde_json::to_string(&ServerMessage::MessageReceived(message))?;
                 if outbound_tx.send(Message::Text(payload.into())).is_err() {
@@ -202,7 +206,9 @@ async fn handle_client_message(
 
             let mut messages = Vec::new();
             for conversation in request.conversations {
-                match service::check_member(&state.db, conversation.conversation_id, user_id).await? {
+                match service::check_member(&state.db, conversation.conversation_id, user_id)
+                    .await?
+                {
                     Membership::Member => {
                         let mut missing = fetch_messages_after_seq(
                             state,
@@ -224,12 +230,11 @@ async fn handle_client_message(
 
             messages.sort_by_key(|message| (message.conversation_id, message.seq));
 
-            let payload = serde_json::to_string(&ServerMessage::DeviceSyncResponse(
-                DeviceSyncResponse {
+            let payload =
+                serde_json::to_string(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
                     v: PROTOCOL_VERSION,
                     messages,
-                },
-            ))?;
+                }))?;
             let _ = outbound_tx.send(Message::Text(payload.into()));
         }
     }
@@ -266,7 +271,8 @@ async fn fetch_messages_after_seq(
             _ => MessageFormat::Markdown,
         };
 
-        let blocks: Option<serde_json::Value> = row.try_get::<Option<serde_json::Value>, _>("blocks")?;
+        let blocks: Option<serde_json::Value> =
+            row.try_get::<Option<serde_json::Value>, _>("blocks")?;
         let blocks = match blocks {
             Some(serde_json::Value::Array(values)) => values,
             _ => Vec::new(),
@@ -296,12 +302,15 @@ fn require_v(v: u8) -> anyhow::Result<()> {
     }
 }
 
-async fn conversation_members(state: &AppState, conversation_id: Uuid) -> anyhow::Result<Vec<Uuid>> {
+async fn conversation_members(
+    state: &AppState,
+    conversation_id: Uuid,
+) -> anyhow::Result<Vec<Uuid>> {
     let rows: Vec<sqlx::postgres::PgRow> =
         sqlx::query("SELECT user_id FROM conversation_members WHERE conversation_id = $1")
-        .bind(conversation_id)
-        .fetch_all(state.db.as_ref())
-        .await?;
+            .bind(conversation_id)
+            .fetch_all(state.db.as_ref())
+            .await?;
 
     let mut users = Vec::with_capacity(rows.len());
     for row in rows {
@@ -311,7 +320,11 @@ async fn conversation_members(state: &AppState, conversation_id: Uuid) -> anyhow
     Ok(users)
 }
 
-async fn send_protocol_error(outbound_tx: &WsSender, code: &str, message: String) -> anyhow::Result<()> {
+async fn send_protocol_error(
+    outbound_tx: &WsSender,
+    code: &str,
+    message: String,
+) -> anyhow::Result<()> {
     let payload = serde_json::to_string(&ServerMessage::HelloError(HelloErrorMsg {
         v: PROTOCOL_VERSION,
         code: code.to_owned(),

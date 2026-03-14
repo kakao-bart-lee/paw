@@ -1,12 +1,18 @@
-use crate::auth::{AppState, middleware::{DeviceId, UserId}};
-use crate::keys::{models::UploadKeysRequest, service::{self, KeysError}};
+use crate::auth::{
+    middleware::{DeviceId, UserId},
+    AppState,
+};
+use crate::keys::{
+    models::UploadKeysRequest,
+    service::{self, KeysError},
+};
 use axum::{
-    Json,
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 pub async fn upload_keys_handler(
@@ -47,10 +53,12 @@ pub async fn get_key_bundle_handler(
 ) -> Response {
     match service::get_key_bundle(&state.db, target_user_id).await {
         Ok(bundle) => Json(bundle).into_response(),
-        Err(KeysError::BundleNotFound) => {
-            error(StatusCode::NOT_FOUND, "bundle_not_found", "Prekey bundle not found")
-                .into_response()
-        }
+        Err(KeysError::BundleNotFound) => error(
+            StatusCode::NOT_FOUND,
+            "bundle_not_found",
+            "Prekey bundle not found",
+        )
+        .into_response(),
         Err(KeysError::InvalidBase64) => error(
             StatusCode::BAD_REQUEST,
             "invalid_base64",
