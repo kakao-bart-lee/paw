@@ -319,7 +319,7 @@ class _MemberRow extends StatelessWidget {
         children: [
           AvatarWidget(
             displayName: member.name,
-            imageUrl: member.avatarUrl,
+            imageUrl: null,
             size: 40,
           ),
           const SizedBox(width: 12),
@@ -352,11 +352,9 @@ class _GroupMember {
     required this.id,
     required this.name,
     required this.role,
-    this.avatarUrl,
   });
 
   final String id;
   final String name;
   final String role;
-  final String? avatarUrl;
 }

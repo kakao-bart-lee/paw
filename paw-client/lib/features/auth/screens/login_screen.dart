@@ -45,7 +45,7 @@ class LoginScreen extends ConsumerWidget {
                                 color: AppTheme.accent.withValues(alpha: 0.28),
                               ),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.north_east_rounded,
                               size: 16,
                               color: AppTheme.accent,
