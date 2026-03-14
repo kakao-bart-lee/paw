@@ -1046,7 +1046,11 @@ fn test_replenish_threshold() {
     }
 
     for count in 0..5u32 {
-        assert!(should_replenish(count), "should replenish at count {}", count);
+        assert!(
+            should_replenish(count),
+            "should replenish at count {}",
+            count
+        );
     }
     assert!(!should_replenish(5), "should NOT replenish at count 5");
 }
