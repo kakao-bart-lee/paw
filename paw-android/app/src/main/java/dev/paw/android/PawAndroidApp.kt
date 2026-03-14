@@ -540,7 +540,6 @@ private fun AuthSectionIntro(
     description: String,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Auth flow", style = MaterialTheme.typography.labelSmall, color = PawPrimary)
         Text(title, style = MaterialTheme.typography.titleLarge, color = PawStrongText)
         Text(description, style = MaterialTheme.typography.bodyMedium, color = PawMutedText)
     }
