@@ -5,26 +5,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 
 private val PawDarkColors = darkColorScheme(
-    primary = PawAccent,
-    onPrimary = PawBackground,
+    primary = PawPrimary,
+    onPrimary = PawPrimaryForeground,
     secondary = PawAccent,
-    onSecondary = PawBackground,
+    onSecondary = PawPrimaryForeground,
     background = PawBackground,
+    onBackground = PawStrongText,
     surface = PawSurface1,
     surfaceVariant = PawSurface3,
     onSurface = PawStrongText,
     onSurfaceVariant = PawMutedText,
     outline = PawOutline,
+    error = PawDestructive,
+    onError = PawStrongText,
 )
 
 private val PawShapes = Shapes(
-    extraSmall = RoundedCornerShape(6),
-    small = RoundedCornerShape(8),
-    medium = RoundedCornerShape(10),
-    large = RoundedCornerShape(12),
-    extraLarge = RoundedCornerShape(12),
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
 @Composable

@@ -220,7 +220,7 @@ class BootstrapViewModel(application: Application) : AndroidViewModel(applicatio
             state = if (connected) ConnectionStateView.CONNECTED else ConnectionStateView.DISCONNECTED,
             attempts = 0u,
             pendingReconnectDelayMs = null,
-            pendingReconnectUri = if (connected) dev.paw.android.runtime.PawAndroidConfig.apiBaseUrl else null,
+            pendingReconnectEndpoint = if (connected) dev.paw.android.runtime.PawAndroidConfig.apiBaseUrl else null,
         ),
     )
 }

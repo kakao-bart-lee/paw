@@ -34,7 +34,7 @@ class ChatShellModelsTest {
                     state = ConnectionStateView.CONNECTED,
                     attempts = 0u,
                     pendingReconnectDelayMs = null,
-                    pendingReconnectUri = null,
+                    pendingReconnectEndpoint = null,
                 ),
                 cursors = emptyList(),
                 activeStreams = emptyList(),

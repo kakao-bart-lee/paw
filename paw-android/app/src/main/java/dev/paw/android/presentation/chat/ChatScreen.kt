@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -28,13 +27,9 @@ import dev.paw.android.domain.model.ChatMessage
 import dev.paw.android.presentation.bootstrap.BootstrapUiState
 import dev.paw.android.presentation.bootstrap.BootstrapViewModel
 import dev.paw.android.presentation.components.AuthField
-import dev.paw.android.presentation.components.EditorialNote
-import dev.paw.android.presentation.components.EditorialPanel
 import dev.paw.android.presentation.components.EmptyStatePanel
-import dev.paw.android.presentation.components.MetadataLine
 import dev.paw.android.presentation.components.MoodCard
 import dev.paw.android.presentation.components.PawPrimaryButton
-import dev.paw.android.presentation.components.ShellStatChip
 import dev.paw.android.presentation.theme.PawAccent
 import dev.paw.android.presentation.theme.PawAgentBubble
 import dev.paw.android.presentation.theme.PawMutedText
@@ -55,22 +50,10 @@ fun ChatShellCard(
     val chatVm = viewModel.chatViewModel
     MoodCard(
         title = "Conversations",
-        subtitle = "authenticated shell backed by /conversations + /messages",
+        subtitle = "",
         background = PawSurface1,
     ) {
         val selectedConversation = uiState.chat.conversations.firstOrNull { it.id == uiState.chat.selectedConversationId }
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            ShellStatChip("threads", uiState.chat.conversations.size.toString())
-            ShellStatChip("selected", selectedConversation?.name ?: "none")
-            ShellStatChip("messages", uiState.chat.messages.size.toString())
-            if ((selectedConversation?.unreadCount ?: 0) > 0) {
-                ShellStatChip("unread", selectedConversation?.unreadCount.toString())
-            }
-        }
 
         val listContent: @Composable () -> Unit = {
             if (uiState.chat.conversationsLoading) {
@@ -93,7 +76,6 @@ fun ChatShellCard(
                 )
             } else {
                 Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EditorialNote("최근 대화를 선택하면 오른쪽에서 메시지 흐름과 작성창이 이어집니다.")
                     uiState.chat.conversations.forEach { conversation ->
                         ConversationRow(
                             name = conversation.name,
@@ -108,10 +90,6 @@ fun ChatShellCard(
         }
 
         val detailContent: @Composable () -> Unit = {
-            selectedConversation?.let {
-                MetadataLine("active thread", it.name)
-            }
-
             when {
                 uiState.chat.selectedConversationId == null && uiState.chat.conversations.isNotEmpty() -> {
                     EmptyStatePanel(
@@ -155,7 +133,11 @@ fun ChatShellCard(
                             }
                         }
                         if (uiState.chat.sendingMessage) {
-                            EditorialNote("메시지를 전송하고 있습니다.")
+                            Text(
+                                "메시지를 전송하고 있습니다.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = PawMutedText,
+                            )
                         }
                         ComposerPanel(uiState, viewModel)
                     }
@@ -165,37 +147,18 @@ fun ChatShellCard(
 
         if (wideLayout) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                EditorialPanel(
-                    title = "Thread list",
-                    subtitle = "recent rooms and unread counts",
-                    modifier = Modifier.weight(0.95f),
-                    content = listContent,
-                )
-                EditorialPanel(
-                    title = "Chat shell",
-                    subtitle = "message history and composer",
-                    modifier = Modifier.weight(1.05f),
-                    content = detailContent,
-                )
+                Column(modifier = Modifier.weight(0.95f)) {
+                    listContent()
+                }
+                Column(modifier = Modifier.weight(1.05f)) {
+                    detailContent()
+                }
             }
         } else {
-            EditorialPanel(
-                title = "Thread list",
-                subtitle = "recent rooms and unread counts",
-                content = listContent,
-            )
-            EditorialPanel(
-                title = "Chat shell",
-                subtitle = "message history and composer",
-                modifier = Modifier.padding(top = 12.dp),
-                content = detailContent,
-            )
+            listContent()
+            detailContent()
         }
 
-        val cursorSummary = uiState.preview.runtime.cursors
-            .joinToString { "${it.conversationId.take(8)}:${it.lastSeq}" }
-            .ifBlank { "-" }
-        MetadataLine("runtime cursors", cursorSummary)
     }
 }
 
@@ -270,7 +233,7 @@ private fun ChatBubble(message: ChatMessage) {
     }
     MoodCard(
         title = if (message.isMe) "You" else if (message.isAgent) "Agent" else message.senderId.take(8),
-        subtitle = "seq ${message.seq}",
+        subtitle = "",
         background = background,
     ) {
         Text(message.content, color = PawStrongText)

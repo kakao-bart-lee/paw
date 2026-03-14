@@ -14,6 +14,11 @@ enum PawAccessibility {
     static let conversationsEmpty = "paw.conversations.empty"
     static let chatEmpty = "paw.chat.empty"
     static let profileSummary = "paw.profile.summary"
+    static let mainShell = "paw.main.shell"
+    static let chatListTitle = "paw.chat.list.title"
+    static let mainTabChat = "paw.main.tab.chat"
+    static let mainTabAgent = "paw.main.tab.agent"
+    static let mainTabSettings = "paw.main.tab.settings"
     static let settingsSummary = "paw.settings.summary"
     static func authButton(_ step: PawAuthStep) -> String {
         "paw.auth.button.\(step.rawValue)"

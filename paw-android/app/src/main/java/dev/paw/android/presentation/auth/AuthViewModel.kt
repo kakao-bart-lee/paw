@@ -215,6 +215,52 @@ class AuthViewModel(
         callback.onRequestChatLoad()
     }
 
+    /**
+     * Dev-only: bypass all auth steps with demo tokens and go straight to AUTHENTICATED.
+     * Only available in debug builds.
+     */
+    fun devQuickLogin() {
+        if (!dev.paw.android.BuildConfig.DEBUG) return
+        scope.launch(Dispatchers.IO) {
+            val demoTokens = StoredTokens(
+                accessToken = "dev-access-token",
+                refreshToken = "dev-refresh-token",
+            )
+            authRepository.writeTokens(demoTokens)
+            authRepository.setAccessToken(demoTokens.accessToken)
+            _authUiState.value = _authUiState.value.copy(
+                usernameInput = "dev",
+                discoverableByPhone = false,
+                stagedSessionToken = null,
+            )
+            callback.onPreviewUpdated { preview ->
+                PawCoreBridge.preview(
+                    auth = currentAuth().copy(
+                        step = AuthStepView.AUTHENTICATED,
+                        phone = "+82 10-0000-0000",
+                        deviceName = "Dev Emulator",
+                        username = "dev",
+                        discoverableByPhone = false,
+                        hasSessionToken = false,
+                        hasAccessToken = true,
+                        hasRefreshToken = true,
+                        isLoading = false,
+                        error = null,
+                    ),
+                    runtime = preview.runtime,
+                    storage = authRepository.storageCapabilities(),
+                    push = preview.push,
+                    activeLifecycleHints = preview.activeLifecycleHints,
+                    backgroundLifecycleHints = preview.backgroundLifecycleHints,
+                    lastLifecycleState = preview.lastLifecycleState,
+                    bootstrapMessage = "Dev quick login — skipped auth flow.",
+                    deviceKeyMaterial = authRepository.loadDeviceKey(),
+                )
+            }
+            callback.onRequestChatLoad()
+        }
+    }
+
     fun logout() {
         scope.launch(Dispatchers.IO) {
             val accessToken = if (currentAuth().hasAccessToken) authRepository.readTokens()?.accessToken else null
@@ -231,7 +277,7 @@ class AuthViewModel(
                             state = ConnectionStateView.DISCONNECTED,
                             attempts = 0u,
                             pendingReconnectDelayMs = null,
-                            pendingReconnectUri = null,
+                            pendingReconnectEndpoint = null,
                         ),
                     ),
                     storage = authRepository.storageCapabilities(),

@@ -29,8 +29,6 @@ class PawBootstrapInstrumentationTest {
     @Test
     fun phoneChip_returnsToPhoneInputAfterReset() {
         composeTestRule.onNodeWithTag(PawTestTags.AUTH_CONTINUE_PHONE).performClick()
-        composeTestRule.onNodeWithTag(PawTestTags.AUTH_CHIP_RESET).performClick()
-        composeTestRule.onNodeWithTag(PawTestTags.AUTH_CHIP_PHONE).performClick()
 
         composeTestRule.onNodeWithTag(PawTestTags.AUTH_PHONE_INPUT).assertIsDisplayed()
         composeTestRule.onNodeWithTag(PawTestTags.AUTH_STEP_VALUE).assertIsDisplayed()

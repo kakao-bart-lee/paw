@@ -1,10 +1,8 @@
 package dev.paw.android.presentation.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,9 +32,7 @@ import dev.paw.android.presentation.theme.PawMutedText
 import dev.paw.android.presentation.theme.PawOutline
 import dev.paw.android.presentation.theme.PawPrimary
 import dev.paw.android.presentation.theme.PawStrongText
-import dev.paw.android.presentation.theme.PawSurface2
 import dev.paw.android.presentation.theme.PawSurface3
-import dev.paw.android.presentation.theme.PawSurface4
 
 @Composable
 fun MoodCard(
@@ -64,60 +60,6 @@ fun MoodCard(
                     content()
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun EditorialPanel(
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(1.dp, PawOutline, RoundedCornerShape(8.dp)),
-        shape = RoundedCornerShape(8.dp),
-        color = PawSurface2,
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = PawStrongText)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = PawMutedText)
-            Column(modifier = Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                content()
-            }
-        }
-    }
-}
-
-@Composable
-fun EditorialNote(text: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .size(6.dp)
-                .background(PawAccent, RoundedCornerShape(50)),
-        )
-        Text(text, style = MaterialTheme.typography.bodySmall, color = PawMutedText)
-    }
-}
-
-@Composable
-fun ShellStatChip(label: String, value: String) {
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = PawSurface3,
-        border = BorderStroke(1.dp, PawOutline),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = PawPrimary)
-            Text(value, style = MaterialTheme.typography.bodySmall, color = PawStrongText)
         }
     }
 }
@@ -207,7 +149,7 @@ fun PawPrimaryButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = PawAccent,
             contentColor = PawBackground,
-            disabledContainerColor = PawSurface4,
+            disabledContainerColor = PawSurface3,
             disabledContentColor = PawMutedText,
         ),
     ) {

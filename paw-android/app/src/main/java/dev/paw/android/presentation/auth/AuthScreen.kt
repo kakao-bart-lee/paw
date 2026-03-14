@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -22,15 +18,11 @@ import dev.paw.android.PawTestTags
 import dev.paw.android.presentation.bootstrap.BootstrapUiState
 import dev.paw.android.presentation.bootstrap.BootstrapViewModel
 import dev.paw.android.presentation.components.AuthField
-import dev.paw.android.presentation.components.EditorialPanel
-import dev.paw.android.presentation.components.MetadataLine
+import dev.paw.android.BuildConfig
 import dev.paw.android.presentation.components.PawPrimaryButton
 import dev.paw.android.presentation.components.PawSecondaryButton
 import dev.paw.android.presentation.theme.PawMutedText
-import dev.paw.android.presentation.theme.PawOutline
 import dev.paw.android.presentation.theme.PawStrongText
-import dev.paw.android.presentation.theme.PawSurface3
-import dev.paw.android.runtime.PawAndroidConfig
 import uniffi.paw_core.AuthStepView
 
 @Composable
@@ -50,6 +42,16 @@ fun AuthStepPanel(uiState: BootstrapUiState, viewModel: BootstrapViewModel) {
                     .testTag(PawTestTags.AUTH_CONTINUE_PHONE),
             ) {
                 Text("전화번호로 계속")
+            }
+            if (BuildConfig.DEBUG) {
+                PawSecondaryButton(
+                    onClick = authVm::devQuickLogin,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                ) {
+                    Text("Dev: 빠른 로그인")
+                }
             }
         }
         AuthStepView.PHONE_INPUT -> {
@@ -77,27 +79,8 @@ fun AuthStepPanel(uiState: BootstrapUiState, viewModel: BootstrapViewModel) {
         AuthStepView.OTP_VERIFY -> {
             AuthSectionIntro(
                 title = "인증번호 입력",
-                description = "개발 서버에서는 고정 OTP 137900을 사용할 수 있습니다.",
+                description = "전송된 인증번호를 입력해 주세요.",
             )
-            EditorialPanel(
-                title = "Developer shortcut",
-                subtitle = "fixed OTP for local bootstrap only",
-                modifier = Modifier.padding(top = 12.dp),
-            ) {
-                AssistChip(
-                    onClick = authVm::useDebugOtp,
-                    label = { Text("개발용 OTP ${PawAndroidConfig.debugFixedOtp}") },
-                    shape = RoundedCornerShape(6.dp),
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = PawSurface3,
-                        labelColor = PawStrongText,
-                    ),
-                    border = AssistChipDefaults.assistChipBorder(
-                        enabled = true,
-                        borderColor = PawOutline,
-                    ),
-                )
-            }
             AuthField(
                 label = "OTP 코드",
                 value = uiState.otpInput,
@@ -123,14 +106,6 @@ fun AuthStepPanel(uiState: BootstrapUiState, viewModel: BootstrapViewModel) {
                 title = "디바이스 등록",
                 description = "이 기기 이름으로 세션을 등록하고 다음 단계로 진행합니다.",
             )
-            EditorialPanel(
-                title = "Session restore",
-                subtitle = "기기 키와 이름을 함께 저장해 다음 실행에서 바로 복구합니다.",
-                modifier = Modifier.padding(top = 12.dp),
-            ) {
-                MetadataLine("device keys", if (uiState.preview.deviceKeyReady) "ready" else "missing")
-                MetadataLine("staged phone", uiState.preview.auth.phone.ifBlank { "(pending)" })
-            }
             AuthField("디바이스 이름", uiState.deviceNameInput, authVm::onDeviceNameChanged, testTag = PawTestTags.AUTH_DEVICE_NAME_INPUT)
             PawPrimaryButton(
                 onClick = authVm::registerDevice,
@@ -148,15 +123,12 @@ fun AuthStepPanel(uiState: BootstrapUiState, viewModel: BootstrapViewModel) {
                 description = "username을 설정하면 검색/프로필 링크에 사용됩니다. 지금은 건너뛰고 나중에 설정할 수도 있습니다.",
             )
             AuthField("username", uiState.usernameInput, authVm::onUsernameChanged, testTag = PawTestTags.AUTH_USERNAME_INPUT)
-            EditorialPanel(
-                title = "Search visibility",
-                subtitle = "전화번호 기반 검색 허용 여부를 여기서 정합니다.",
+            Row(
                 modifier = Modifier.padding(top = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("전화번호 검색 허용", color = PawMutedText)
-                    Switch(checked = uiState.discoverableByPhone, onCheckedChange = authVm::onDiscoverableChanged)
-                }
+                Text("전화번호 검색 허용", color = PawMutedText)
+                Switch(checked = uiState.discoverableByPhone, onCheckedChange = authVm::onDiscoverableChanged)
             }
             FlowRow(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PawPrimaryButton(onClick = authVm::completeUsernameSetup, modifier = Modifier.testTag(PawTestTags.AUTH_COMPLETE_USERNAME)) {
@@ -172,8 +144,6 @@ fun AuthStepPanel(uiState: BootstrapUiState, viewModel: BootstrapViewModel) {
                 title = "로그인 완료",
                 description = "이제 대화 목록과 채팅 런타임을 사용할 수 있습니다.",
             )
-            MetadataLine("username", uiState.preview.auth.username.ifBlank { "(unset)" })
-            MetadataLine("device", uiState.preview.auth.deviceName.ifBlank { uiState.deviceNameInput })
         }
     }
 }
@@ -194,17 +164,6 @@ fun AuthProgressSummary(step: AuthStepView) {
         modifier = Modifier.testTag(PawTestTags.AUTH_STEP_VALUE),
         style = MaterialTheme.typography.titleMedium,
         color = PawStrongText,
-    )
-}
-
-@Composable
-fun AuthStepChip(label: String, testTag: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        modifier = Modifier.testTag(testTag),
-        label = { Text(label) },
-        shape = RoundedCornerShape(6.dp),
     )
 }
 
