@@ -1,12 +1,20 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    auth::{AuthState, AuthStep},
+    auth::{AuthState, AuthStep, SessionEvent, SessionExpiryReason},
     core::{CoreRuntime, RuntimeBootstrapReport, RuntimeEffect, RuntimeInitStep},
     db::MessageRecord,
     sync::{FinalizedStreamMessage, StreamingSession, SyncRequest, ToolCallRecord},
     ws::{WsConnectionState, WsService},
 };
+
+fn saturating_u32(value: usize) -> u32 {
+    u32::try_from(value).unwrap_or(u32::MAX)
+}
+
+fn saturating_u64(value: u128) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum AuthStepView {
@@ -38,6 +46,7 @@ pub enum ConnectionStateView {
     Connecting,
     Connected,
     Retrying,
+    Exhausted,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -45,13 +54,37 @@ pub struct ConnectionSnapshot {
     pub state: ConnectionStateView,
     pub attempts: u32,
     pub pending_reconnect_delay_ms: Option<u64>,
-    pub pending_reconnect_uri: Option<String>,
+    pub pending_reconnect_endpoint: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ReconnectScheduledView {
+    pub delay_ms: u64,
+    pub endpoint: String,
+    pub attempt: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ReconnectAttemptStartedView {
+    pub endpoint: String,
+    pub attempt: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ActiveStreamsClearedView {
+    pub count: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ConversationCursorView {
     pub conversation_id: String,
     pub last_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct RecoveryCursorView {
+    pub conversation_id: String,
+    pub request_from_seq: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -112,12 +145,52 @@ pub struct AckRequestView {
     pub last_seq: i64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DuplicateMessageView {
+    pub conversation_id: String,
+    pub received_seq: i64,
+    pub last_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct GapDetectedView {
+    pub conversation_id: String,
+    pub expected_seq: i64,
+    pub received_seq: i64,
+    pub request_from_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DeviceSyncAppliedView {
+    pub conversation_id: String,
+    pub applied_count: u32,
+    pub highest_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DeviceSyncBatchProcessedView {
+    pub message_count: u32,
+    pub conversation_count: u32,
+    pub conversation_ids: Vec<String>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
 pub enum RuntimeInitStepView {
     DatabaseOpened,
     TokensRestored,
+    BootstrapSkippedNoStoredTokens,
     SessionValidated,
     WsConnected,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+pub enum SessionExpiryReasonView {
+    Unauthorized,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct SessionEventView {
+    pub reason: SessionExpiryReasonView,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -125,13 +198,14 @@ pub struct RuntimeBootstrapReportView {
     pub steps: Vec<RuntimeInitStepView>,
     pub has_tokens: bool,
     pub has_profile: bool,
-    pub connected_uri: Option<String>,
+    pub connected_endpoint: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct RuntimeSnapshot {
     pub connection: ConnectionSnapshot,
     pub cursors: Vec<ConversationCursorView>,
+    pub pending_recoveries: Vec<RecoveryCursorView>,
     pub active_streams: Vec<StreamingSessionView>,
 }
 
@@ -141,11 +215,49 @@ pub enum CoreEvent {
     AuthStateChanged(AuthStateView),
     BootstrapProgress(RuntimeBootstrapReportView),
     ConnectionStateChanged(ConnectionSnapshot),
+    ReconnectScheduled(ReconnectScheduledView),
+    ReconnectAttemptStarted(ReconnectAttemptStartedView),
+    ActiveStreamsCleared(ActiveStreamsClearedView),
+    SessionInvalidated(SessionEventView),
     SyncRequested(SyncRequestView),
     AckRequested(AckRequestView),
+    DuplicateMessage(DuplicateMessageView),
+    GapDetected(GapDetectedView),
+    DeviceSyncApplied(DeviceSyncAppliedView),
+    DeviceSyncBatchProcessed(DeviceSyncBatchProcessedView),
     MessagePersisted(MessageRecordView),
     StreamUpdated(StreamingSessionView),
     StreamFinalized(FinalizedStreamMessageView),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+pub enum CoreEventDomain {
+    Lifecycle,
+    Connection,
+    Sync,
+    Streaming,
+}
+
+impl CoreEvent {
+    pub fn domain(&self) -> CoreEventDomain {
+        match self {
+            Self::AuthStateChanged(_)
+            | Self::BootstrapProgress(_)
+            | Self::ActiveStreamsCleared(_)
+            | Self::SessionInvalidated(_) => CoreEventDomain::Lifecycle,
+            Self::ConnectionStateChanged(_)
+            | Self::ReconnectScheduled(_)
+            | Self::ReconnectAttemptStarted(_) => CoreEventDomain::Connection,
+            Self::SyncRequested(_)
+            | Self::AckRequested(_)
+            | Self::DuplicateMessage(_)
+            | Self::GapDetected(_)
+            | Self::DeviceSyncApplied(_)
+            | Self::DeviceSyncBatchProcessed(_)
+            | Self::MessagePersisted(_) => CoreEventDomain::Sync,
+            Self::StreamUpdated(_) | Self::StreamFinalized(_) => CoreEventDomain::Streaming,
+        }
+    }
 }
 
 impl From<&AuthStep> for AuthStepView {
@@ -185,6 +297,7 @@ impl From<WsConnectionState> for ConnectionStateView {
             WsConnectionState::Connecting => Self::Connecting,
             WsConnectionState::Connected => Self::Connected,
             WsConnectionState::Retrying => Self::Retrying,
+            WsConnectionState::Exhausted => Self::Exhausted,
         }
     }
 }
@@ -194,9 +307,9 @@ impl From<&WsService> for ConnectionSnapshot {
         let pending = value.pending_reconnect();
         Self {
             state: value.connection_state().into(),
-            attempts: value.attempts() as u32,
-            pending_reconnect_delay_ms: pending.map(|plan| plan.delay.as_millis() as u64),
-            pending_reconnect_uri: pending.map(|plan| plan.uri.to_string()),
+            attempts: saturating_u32(value.attempts()),
+            pending_reconnect_delay_ms: pending.map(|plan| saturating_u64(plan.delay.as_millis())),
+            pending_reconnect_endpoint: pending.map(|plan| crate::ws::public_endpoint_label(&plan.uri)),
         }
     }
 }
@@ -206,6 +319,15 @@ impl From<&crate::sync::ConversationSyncCursor> for ConversationCursorView {
         Self {
             conversation_id: value.conversation_id.to_string(),
             last_seq: value.last_seq,
+        }
+    }
+}
+
+impl From<&crate::sync::ConversationSyncCursor> for RecoveryCursorView {
+    fn from(value: &crate::sync::ConversationSyncCursor) -> Self {
+        Self {
+            conversation_id: value.conversation_id.to_string(),
+            request_from_seq: value.last_seq,
         }
     }
 }
@@ -277,11 +399,82 @@ impl From<&SyncRequest> for SyncRequestView {
     }
 }
 
+impl From<&RuntimeEffect> for DuplicateMessageView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::DuplicateMessage {
+                conversation_id,
+                received_seq,
+                last_seq,
+            } => Self {
+                conversation_id: conversation_id.to_string(),
+                received_seq: *received_seq,
+                last_seq: *last_seq,
+            },
+            other => unreachable!("invariant: matched DuplicateMessage effect before conversion, got {other:?}"),
+        }
+    }
+}
+
+impl From<&RuntimeEffect> for GapDetectedView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::GapDetected {
+                conversation_id,
+                expected_seq,
+                received_seq,
+                request_from_seq,
+            } => Self {
+                conversation_id: conversation_id.to_string(),
+                expected_seq: *expected_seq,
+                received_seq: *received_seq,
+                request_from_seq: *request_from_seq,
+            },
+            other => unreachable!("invariant: matched GapDetected effect before conversion, got {other:?}"),
+        }
+    }
+}
+
+impl From<&RuntimeEffect> for DeviceSyncAppliedView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::DeviceSyncApplied {
+                conversation_id,
+                applied_count,
+                highest_seq,
+            } => Self {
+                conversation_id: conversation_id.to_string(),
+                applied_count: *applied_count,
+                highest_seq: *highest_seq,
+            },
+            other => unreachable!("invariant: matched DeviceSyncApplied effect before conversion, got {other:?}"),
+        }
+    }
+}
+
+impl From<&RuntimeEffect> for DeviceSyncBatchProcessedView {
+    fn from(value: &RuntimeEffect) -> Self {
+        match value {
+            RuntimeEffect::DeviceSyncBatchProcessed {
+                message_count,
+                conversation_count,
+                conversation_ids,
+            } => Self {
+                message_count: *message_count,
+                conversation_count: *conversation_count,
+                conversation_ids: conversation_ids.iter().map(ToString::to_string).collect(),
+            },
+            other => unreachable!("invariant: matched DeviceSyncBatchProcessed effect before conversion, got {other:?}"),
+        }
+    }
+}
+
 impl From<&RuntimeInitStep> for RuntimeInitStepView {
     fn from(value: &RuntimeInitStep) -> Self {
         match value {
             RuntimeInitStep::DatabaseOpened => Self::DatabaseOpened,
             RuntimeInitStep::TokensRestored => Self::TokensRestored,
+            RuntimeInitStep::BootstrapSkippedNoStoredTokens => Self::BootstrapSkippedNoStoredTokens,
             RuntimeInitStep::SessionValidated => Self::SessionValidated,
             RuntimeInitStep::WsConnected => Self::WsConnected,
         }
@@ -294,7 +487,23 @@ impl From<&RuntimeBootstrapReport> for RuntimeBootstrapReportView {
             steps: value.steps.iter().map(Into::into).collect(),
             has_tokens: value.tokens.is_some(),
             has_profile: value.profile.is_some(),
-            connected_uri: value.connected_uri.as_ref().map(ToString::to_string),
+            connected_endpoint: value.connected_endpoint.clone(),
+        }
+    }
+}
+
+impl From<&SessionExpiryReason> for SessionExpiryReasonView {
+    fn from(value: &SessionExpiryReason) -> Self {
+        match value {
+            SessionExpiryReason::Unauthorized => Self::Unauthorized,
+        }
+    }
+}
+
+impl From<&SessionEvent> for SessionEventView {
+    fn from(value: &SessionEvent) -> Self {
+        Self {
+            reason: (&value.reason).into(),
         }
     }
 }
@@ -302,6 +511,29 @@ impl From<&RuntimeBootstrapReport> for RuntimeBootstrapReportView {
 impl From<&RuntimeEffect> for CoreEvent {
     fn from(value: &RuntimeEffect) -> Self {
         match value {
+            RuntimeEffect::BootstrapProgress(report) => Self::BootstrapProgress(report.into()),
+            RuntimeEffect::ConnectionStateChanged(snapshot) => {
+                Self::ConnectionStateChanged(snapshot.clone())
+            }
+            RuntimeEffect::ReconnectScheduled {
+                delay_ms,
+                endpoint,
+                attempt,
+            } => Self::ReconnectScheduled(ReconnectScheduledView {
+                delay_ms: *delay_ms,
+                endpoint: endpoint.clone(),
+                attempt: *attempt,
+            }),
+            RuntimeEffect::ReconnectAttemptStarted { endpoint, attempt } => {
+                Self::ReconnectAttemptStarted(ReconnectAttemptStartedView {
+                    endpoint: endpoint.clone(),
+                    attempt: *attempt,
+                })
+            }
+            RuntimeEffect::ActiveStreamsCleared { count } => {
+                Self::ActiveStreamsCleared(ActiveStreamsClearedView { count: *count })
+            }
+            RuntimeEffect::SessionInvalidated(event) => Self::SessionInvalidated(event.into()),
             RuntimeEffect::SyncRequested(request) => Self::SyncRequested(request.into()),
             RuntimeEffect::AckRequested {
                 conversation_id,
@@ -310,6 +542,12 @@ impl From<&RuntimeEffect> for CoreEvent {
                 conversation_id: conversation_id.to_string(),
                 last_seq: *last_seq,
             }),
+            RuntimeEffect::DuplicateMessage { .. } => Self::DuplicateMessage(value.into()),
+            RuntimeEffect::GapDetected { .. } => Self::GapDetected(value.into()),
+            RuntimeEffect::DeviceSyncApplied { .. } => Self::DeviceSyncApplied(value.into()),
+            RuntimeEffect::DeviceSyncBatchProcessed { .. } => {
+                Self::DeviceSyncBatchProcessed(value.into())
+            }
             RuntimeEffect::MessagePersisted(record) => Self::MessagePersisted(record.into()),
             RuntimeEffect::StreamUpdated(stream) => Self::StreamUpdated(stream.into()),
             RuntimeEffect::StreamFinalized(message) => Self::StreamFinalized(message.into()),
@@ -364,15 +602,112 @@ mod tests {
 
     #[test]
     fn runtime_effects_convert_to_serializable_core_events() {
-        let effect = RuntimeEffect::AckRequested {
+        let effect = RuntimeEffect::DuplicateMessage {
             conversation_id: Uuid::nil(),
+            received_seq: 7,
             last_seq: 9,
         };
 
         let event = CoreEvent::from(&effect);
         let json = serde_json::to_string(&event).unwrap();
-        assert!(json.contains("\"AckRequested\""));
+        assert!(json.contains("\"DuplicateMessage\""));
+        assert!(json.contains("\"received_seq\":7"));
         assert!(json.contains("\"last_seq\":9"));
+    }
+
+    #[test]
+    fn session_invalidated_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::SessionInvalidated(SessionEvent {
+            reason: SessionExpiryReason::Unauthorized,
+        });
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"SessionInvalidated\""));
+        assert!(json.contains("\"Unauthorized\""));
+    }
+
+    #[test]
+    fn active_streams_cleared_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::ActiveStreamsCleared { count: 2 };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"ActiveStreamsCleared\""));
+        assert!(json.contains("\"count\":2"));
+    }
+
+    #[test]
+    fn reconnect_scheduled_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::ReconnectScheduled {
+            delay_ms: 1_000,
+            endpoint: "wss://paw.example/ws".into(),
+            attempt: 2,
+        };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"ReconnectScheduled\""));
+        assert!(json.contains("\"delay_ms\":1000"));
+        assert!(json.contains("\"attempt\":2"));
+    }
+
+    #[test]
+    fn reconnect_attempt_started_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::ReconnectAttemptStarted {
+            endpoint: "wss://paw.example/ws".into(),
+            attempt: 3,
+        };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"ReconnectAttemptStarted\""));
+        assert!(json.contains("\"attempt\":3"));
+    }
+
+    #[test]
+    fn device_sync_batch_processed_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::DeviceSyncBatchProcessed {
+            message_count: 3,
+            conversation_count: 1,
+            conversation_ids: vec![uuid::Uuid::nil()],
+        };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"DeviceSyncBatchProcessed\""));
+        assert!(json.contains("\"message_count\":3"));
+        assert!(json.contains("\"conversation_count\":1"));
+        assert!(json.contains("\"conversation_ids\""));
+    }
+
+    #[test]
+    fn core_event_domain_groups_exported_events_by_semantics() {
+        assert_eq!(
+            CoreEvent::ReconnectScheduled(ReconnectScheduledView {
+                delay_ms: 1_000,
+                endpoint: "wss://paw.example/ws".into(),
+                attempt: 1,
+            })
+            .domain(),
+            CoreEventDomain::Connection
+        );
+        assert_eq!(
+            CoreEvent::DeviceSyncBatchProcessed(DeviceSyncBatchProcessedView {
+                message_count: 0,
+                conversation_count: 0,
+                conversation_ids: vec![],
+            })
+            .domain(),
+            CoreEventDomain::Sync
+        );
+        assert_eq!(
+            CoreEvent::SessionInvalidated(SessionEventView {
+                reason: SessionExpiryReasonView::Unauthorized,
+            })
+            .domain(),
+            CoreEventDomain::Lifecycle
+        );
     }
 
     #[test]
@@ -411,6 +746,10 @@ mod tests {
         assert_eq!(snapshot.state, ConnectionStateView::Retrying);
         assert_eq!(snapshot.attempts, 1);
         assert_eq!(snapshot.pending_reconnect_delay_ms, Some(1_000));
+        assert_eq!(
+            snapshot.pending_reconnect_endpoint.as_deref(),
+            Some("wss://example.com/ws")
+        );
     }
 
     #[test]

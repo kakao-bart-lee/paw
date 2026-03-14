@@ -18,15 +18,19 @@ pub use auth::{
     VerifyOtpResponse,
 };
 pub use core::{
-    CoreRuntime, CoreRuntimeError, RuntimeBootstrapReport, RuntimeEffect, RuntimeInitStep,
+    CoreRuntime, CoreRuntimeError, RuntimeBootstrapReport, RuntimeEffect, RuntimeEffectDomain,
+    RuntimeInitStep,
 };
 pub use crypto::{create_account, decrypt, encrypt, AccountKeys};
 pub use db::{AppDatabase, ConversationRecord, DbError, DbResult, MessageRecord};
 pub use events::{
-    AckRequestView, AuthStateView, AuthStepView, ConnectionSnapshot, ConnectionStateView,
-    ConversationCursorView, CoreEvent, FinalizedStreamMessageView, MessageRecordView,
-    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, StreamingSessionView,
-    SyncRequestView, ToolCallView,
+    AckRequestView, ActiveStreamsClearedView, AuthStateView, AuthStepView, ConnectionSnapshot,
+    ConnectionStateView, ConversationCursorView, CoreEvent, CoreEventDomain,
+    DeviceSyncAppliedView, DeviceSyncBatchProcessedView, DuplicateMessageView,
+    FinalizedStreamMessageView, GapDetectedView, MessageRecordView,
+    ReconnectAttemptStartedView, ReconnectScheduledView, RecoveryCursorView,
+    RuntimeBootstrapReportView, RuntimeInitStepView, RuntimeSnapshot, SessionEventView,
+    SessionExpiryReasonView, StreamingSessionView, SyncRequestView, ToolCallView,
 };
 pub use http::{
     AddMemberResponse, ApiClient, ApiError, ApiErrorKind, ApiResult, AuthTokens,
@@ -68,9 +72,10 @@ pub fn empty_runtime_snapshot() -> RuntimeSnapshot {
             state: ConnectionStateView::Disconnected,
             attempts: 0,
             pending_reconnect_delay_ms: None,
-            pending_reconnect_uri: None,
+            pending_reconnect_endpoint: None,
         },
         cursors: Vec::new(),
+        pending_recoveries: Vec::new(),
         active_streams: Vec::new(),
     }
 }
