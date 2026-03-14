@@ -60,6 +60,9 @@ impl RuntimeBootstrapReport {
 pub enum RuntimeEffect {
     BootstrapProgress(RuntimeBootstrapReport),
     ConnectionStateChanged(ConnectionSnapshot),
+    ActiveStreamsCleared {
+        count: u32,
+    },
     SessionInvalidated(SessionEvent),
     SyncRequested(SyncRequest),
     AckRequested {
@@ -195,11 +198,20 @@ impl CoreRuntime {
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
         token_store.clear().await;
         self.ws_service.disconnect().await?;
+        let cleared_streams = self.streaming.clear();
 
-        Ok(vec![
-            RuntimeEffect::SessionInvalidated(event),
-            RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(&self.ws_service)),
-        ])
+        let mut effects = Vec::with_capacity(3);
+        if cleared_streams > 0 {
+            effects.push(RuntimeEffect::ActiveStreamsCleared {
+                count: cleared_streams as u32,
+            });
+        }
+        effects.push(RuntimeEffect::SessionInvalidated(event));
+        effects.push(RuntimeEffect::ConnectionStateChanged(ConnectionSnapshot::from(
+            &self.ws_service,
+        )));
+
+        Ok(effects)
     }
 
     pub async fn reconnect_with_stored_token(
@@ -950,5 +962,43 @@ mod tests {
             runtime.ws_service().connection_state(),
             WsConnectionState::Disconnected
         );
+    }
+
+    #[tokio::test]
+    async fn session_invalidation_discards_active_streams_before_notifying_ui() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let (mut runtime, _transport, _calls) = runtime_with_db(db);
+        let token_store = InMemoryTokenStore::new();
+        let conversation_id = Uuid::new_v4();
+        let agent_id = Uuid::new_v4();
+        let stream_id = Uuid::new_v4();
+
+        runtime
+            .handle_server_message(&ServerMessage::StreamStart(paw_proto::StreamStartMsg {
+                v: paw_proto::PROTOCOL_VERSION,
+                conversation_id,
+                agent_id,
+                stream_id,
+            }))
+            .await
+            .unwrap();
+
+        assert_eq!(runtime.snapshot().active_streams.len(), 1);
+
+        let effects = runtime
+            .handle_session_event(
+                &token_store,
+                SessionEvent {
+                    reason: crate::auth::SessionExpiryReason::Unauthorized,
+                },
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            effects.first(),
+            Some(&RuntimeEffect::ActiveStreamsCleared { count: 1 })
+        );
+        assert!(runtime.snapshot().active_streams.is_empty());
     }
 }

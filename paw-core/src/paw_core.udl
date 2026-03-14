@@ -9,6 +9,7 @@ typedef enum AuthStepView;
 typedef record AuthStateView;
 typedef enum ConnectionStateView;
 typedef record ConnectionSnapshot;
+typedef record ActiveStreamsClearedView;
 typedef record ConversationCursorView;
 typedef record ToolCallView;
 typedef record StreamingSessionView;

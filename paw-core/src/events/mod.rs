@@ -50,6 +50,11 @@ pub struct ConnectionSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ActiveStreamsClearedView {
+    pub count: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ConversationCursorView {
     pub conversation_id: String,
     pub last_seq: i64,
@@ -175,6 +180,7 @@ pub enum CoreEvent {
     AuthStateChanged(AuthStateView),
     BootstrapProgress(RuntimeBootstrapReportView),
     ConnectionStateChanged(ConnectionSnapshot),
+    ActiveStreamsCleared(ActiveStreamsClearedView),
     SessionInvalidated(SessionEventView),
     SyncRequested(SyncRequestView),
     AckRequested(AckRequestView),
@@ -415,6 +421,9 @@ impl From<&RuntimeEffect> for CoreEvent {
             RuntimeEffect::ConnectionStateChanged(snapshot) => {
                 Self::ConnectionStateChanged(snapshot.clone())
             }
+            RuntimeEffect::ActiveStreamsCleared { count } => {
+                Self::ActiveStreamsCleared(ActiveStreamsClearedView { count: *count })
+            }
             RuntimeEffect::SessionInvalidated(event) => Self::SessionInvalidated(event.into()),
             RuntimeEffect::SyncRequested(request) => Self::SyncRequested(request.into()),
             RuntimeEffect::AckRequested {
@@ -504,6 +513,16 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"SessionInvalidated\""));
         assert!(json.contains("\"Unauthorized\""));
+    }
+
+    #[test]
+    fn active_streams_cleared_effects_convert_to_serializable_core_events() {
+        let effect = RuntimeEffect::ActiveStreamsCleared { count: 2 };
+
+        let event = CoreEvent::from(&effect);
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("\"ActiveStreamsCleared\""));
+        assert!(json.contains("\"count\":2"));
     }
 
     #[test]
