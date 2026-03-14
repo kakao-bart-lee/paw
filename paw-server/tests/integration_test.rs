@@ -158,6 +158,7 @@ fn protocol_message_send_includes_v_field() {
     let frame = paw_proto::MessageSendMsg {
         v: paw_proto::PROTOCOL_VERSION,
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         content: "hello".into(),
         format: paw_proto::MessageFormat::Markdown,
         blocks: vec![],
@@ -172,6 +173,7 @@ fn protocol_client_message_tagged_serialization() {
     let msg = paw_proto::ClientMessage::MessageSend(paw_proto::MessageSendMsg {
         v: 1,
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         content: "test".into(),
         format: paw_proto::MessageFormat::Plain,
         blocks: vec![],
@@ -190,6 +192,7 @@ fn protocol_server_hello_ok_roundtrip() {
         v: 1,
         user_id,
         server_time: now,
+        capabilities: None,
     });
     let json = serde_json::to_string(&msg).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
@@ -205,6 +208,7 @@ fn protocol_message_received_all_fields() {
         v: 1,
         id: Uuid::new_v4(),
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         sender_id: Uuid::new_v4(),
         content: "Hello!".into(),
         format: paw_proto::MessageFormat::Markdown,
@@ -228,6 +232,7 @@ fn protocol_sync_frame_roundtrip() {
     let msg = paw_proto::ClientMessage::Sync(paw_proto::SyncMsg {
         v: 1,
         conversation_id: conv_id,
+        thread_id: None,
         last_seq: 99,
     });
     let json = serde_json::to_string(&msg).unwrap();
@@ -247,6 +252,7 @@ fn protocol_typing_omits_user_id_when_none() {
     let msg = paw_proto::TypingMsg {
         v: 1,
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         user_id: None,
     };
     let json = serde_json::to_string(&msg).unwrap();
@@ -262,6 +268,7 @@ fn protocol_typing_includes_user_id_when_present() {
     let msg = paw_proto::TypingMsg {
         v: 1,
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         user_id: Some(uid),
     };
     let json = serde_json::to_value(&msg).unwrap();
@@ -274,6 +281,7 @@ fn protocol_message_ack_roundtrip() {
     let msg = paw_proto::ClientMessage::MessageAck(paw_proto::MessageAckMsg {
         v: 1,
         conversation_id: conv_id,
+        thread_id: None,
         last_seq: 7,
     });
     let serialized = serde_json::to_string(&msg).unwrap();
@@ -736,6 +744,7 @@ fn idempotency_key_preserved_through_serialization() {
     let msg = paw_proto::MessageSendMsg {
         v: 1,
         conversation_id: conv_id,
+        thread_id: None,
         content: "test".into(),
         format: paw_proto::MessageFormat::Plain,
         blocks: vec![],
@@ -757,6 +766,7 @@ fn different_idempotency_keys_produce_different_messages() {
     let msg_a = paw_proto::MessageSendMsg {
         v: 1,
         conversation_id: conv_id,
+        thread_id: None,
         content: "same content".into(),
         format: paw_proto::MessageFormat::Plain,
         blocks: vec![],
@@ -766,6 +776,7 @@ fn different_idempotency_keys_produce_different_messages() {
     let msg_b = paw_proto::MessageSendMsg {
         v: 1,
         conversation_id: conv_id,
+        thread_id: None,
         content: "same content".into(),
         format: paw_proto::MessageFormat::Plain,
         blocks: vec![],
@@ -819,6 +830,7 @@ fn gap_fill_messages_must_be_monotonically_increasing() {
             v: 1,
             id: Uuid::new_v4(),
             conversation_id: conv_id,
+            thread_id: None,
             sender_id,
             content: format!("msg {seq}"),
             format: paw_proto::MessageFormat::Markdown,
@@ -893,6 +905,7 @@ fn test_inbound_context_serialization() {
         v: 1,
         id: Uuid::new_v4(),
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         sender_id: Uuid::new_v4(),
         content: "hello".into(),
         format: paw_proto::MessageFormat::Markdown,
@@ -940,6 +953,7 @@ fn test_agent_stream_msg_roundtrip() {
         paw_proto::AgentStreamMsg::StreamStart(paw_proto::StreamStartMsg {
             v: 1,
             conversation_id,
+            thread_id: None,
             agent_id,
             stream_id,
         }),
@@ -1139,6 +1153,7 @@ fn agent_stream_msg_all_variants_have_version() {
         AgentStreamMsg::StreamStart(StreamStartMsg {
             v: 1,
             conversation_id,
+            thread_id: None,
             agent_id,
             stream_id,
         }),
@@ -1178,6 +1193,7 @@ fn stream_start_msg_has_conversation_id() {
     let msg = paw_proto::StreamStartMsg {
         v: 1,
         conversation_id: Uuid::new_v4(),
+        thread_id: None,
         agent_id: Uuid::new_v4(),
         stream_id: Uuid::new_v4(),
     };

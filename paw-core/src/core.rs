@@ -726,6 +726,7 @@ mod tests {
                 v: PROTOCOL_VERSION,
                 user_id: Uuid::new_v4(),
                 server_time: Utc::now(),
+                capabilities: None,
             }))
             .await
             .unwrap();
@@ -770,6 +771,7 @@ mod tests {
             v: PROTOCOL_VERSION,
             id: Uuid::new_v4(),
             conversation_id,
+            thread_id: None,
             sender_id: Uuid::new_v4(),
             content: "stale".into(),
             format: MessageFormat::Markdown,
@@ -864,6 +866,7 @@ mod tests {
             v: PROTOCOL_VERSION,
             id: Uuid::new_v4(),
             conversation_id,
+            thread_id: None,
             sender_id: Uuid::new_v4(),
             content: content.into(),
             format: MessageFormat::Markdown,
@@ -878,6 +881,7 @@ mod tests {
                 conversations: vec![ConvSyncState {
                     conversation_id,
                     last_seq: 0,
+                    threads: vec![],
                 }],
                 messages: vec![message(1, "one"), message(3, "three"), message(2, "two")],
             }))
@@ -931,6 +935,7 @@ mod tests {
                 conversations: vec![ConvSyncState {
                     conversation_id,
                     last_seq: 4,
+                    threads: vec![],
                 }],
                 messages: vec![],
             }))
@@ -969,6 +974,7 @@ mod tests {
             .handle_server_message(&ServerMessage::StreamStart(StreamStartMsg {
                 v: PROTOCOL_VERSION,
                 conversation_id,
+                thread_id: None,
                 agent_id,
                 stream_id,
             }))
@@ -1145,6 +1151,7 @@ mod tests {
             .handle_server_message(&ServerMessage::StreamStart(paw_proto::StreamStartMsg {
                 v: paw_proto::PROTOCOL_VERSION,
                 conversation_id,
+                thread_id: None,
                 agent_id,
                 stream_id,
             }))

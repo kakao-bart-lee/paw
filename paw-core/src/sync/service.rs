@@ -126,6 +126,7 @@ mod tests {
             v: 1,
             id: Uuid::new_v4(),
             conversation_id: Uuid::parse_str(&conversation_id).unwrap(),
+            thread_id: None,
             sender_id: Uuid::new_v4(),
             content: "hello".into(),
             format: MessageFormat::Markdown,

@@ -49,6 +49,7 @@ impl SyncEngine {
         ClientMessage::Sync(SyncMsg {
             v: PROTOCOL_VERSION,
             conversation_id,
+            thread_id: None,
             last_seq: self.last_seq(conversation_id),
         })
     }
@@ -139,6 +140,7 @@ mod tests {
             v: PROTOCOL_VERSION,
             id: Uuid::new_v4(),
             conversation_id,
+            thread_id: None,
             sender_id: Uuid::new_v4(),
             content: format!("msg-{seq}"),
             format: MessageFormat::Markdown,

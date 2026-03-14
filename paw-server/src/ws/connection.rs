@@ -6,8 +6,8 @@ use axum::extract::ws::{close_code, CloseFrame, Message, WebSocket};
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{
-    ClientMessage, DeviceSyncResponse, HelloErrorMsg, HelloOkMsg, MessageFormat,
-    MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION,
+    ClientMessage, DeviceSyncResponse, ErrorMsg, HelloOkMsg, MessageFormat, MessageReceivedMsg,
+    ServerMessage, PROTOCOL_VERSION,
 };
 use sqlx::Row;
 use std::time::{Duration, Instant};
@@ -52,6 +52,8 @@ pub async fn handle_socket(
         v: PROTOCOL_VERSION,
         user_id: connection.user_id,
         server_time: Utc::now(),
+        // Threads stay disabled until server-side routing/broadcast support is implemented.
+        capabilities: None,
     })) {
         let _ = outbound_tx.send(Message::Text(frame.into()));
     }
@@ -98,6 +100,7 @@ pub async fn handle_socket(
                                         let _ = send_protocol_error(
                                             &outbound_tx,
                                             "unsupported_protocol_version",
+                                            "frame",
                                             &locale,
                                             Some(&err.to_string()),
                                             "Unsupported protocol version",
@@ -109,6 +112,7 @@ pub async fn handle_socket(
                                 let _ = send_protocol_error(
                                     &outbound_tx,
                                     "invalid_frame",
+                                    "frame",
                                     &locale,
                                     Some(&format!("invalid json frame: {err}")),
                                     "Invalid websocket frame",
@@ -127,6 +131,7 @@ pub async fn handle_socket(
                         let _ = send_protocol_error(
                             &outbound_tx,
                             "invalid_frame",
+                            "frame",
                             &locale,
                             Some("binary frames are not supported"),
                             "Invalid websocket frame",
@@ -208,6 +213,7 @@ async fn handle_client_message(
                     let _ = send_protocol_error(
                         outbound_tx,
                         "forbidden",
+                        "sync",
                         locale,
                         None,
                         "User is not a member of this conversation",
@@ -219,6 +225,7 @@ async fn handle_client_message(
                     let _ = send_protocol_error(
                         outbound_tx,
                         "not_found",
+                        "sync",
                         locale,
                         None,
                         "Conversation not found",
@@ -277,6 +284,54 @@ async fn handle_client_message(
                 }))?;
             let _ = outbound_tx.send(Message::Text(payload.into()));
         }
+        ClientMessage::ThreadCreate(thread_create) => {
+            require_v(thread_create.v)?;
+            let _ = send_protocol_error(
+                outbound_tx,
+                "invalid_frame",
+                "thread_create",
+                locale,
+                Some("thread_create is not implemented on this server yet"),
+                "Thread operations are not available yet",
+            )
+            .await;
+        }
+        ClientMessage::ThreadBindAgent(thread_bind_agent) => {
+            require_v(thread_bind_agent.v)?;
+            let _ = send_protocol_error(
+                outbound_tx,
+                "invalid_frame",
+                "thread_bind_agent",
+                locale,
+                Some("thread_bind_agent is not implemented on this server yet"),
+                "Thread operations are not available yet",
+            )
+            .await;
+        }
+        ClientMessage::ThreadUnbindAgent(thread_unbind_agent) => {
+            require_v(thread_unbind_agent.v)?;
+            let _ = send_protocol_error(
+                outbound_tx,
+                "invalid_frame",
+                "thread_unbind_agent",
+                locale,
+                Some("thread_unbind_agent is not implemented on this server yet"),
+                "Thread operations are not available yet",
+            )
+            .await;
+        }
+        ClientMessage::ThreadDelete(thread_delete) => {
+            require_v(thread_delete.v)?;
+            let _ = send_protocol_error(
+                outbound_tx,
+                "invalid_frame",
+                "thread_delete",
+                locale,
+                Some("thread_delete is not implemented on this server yet"),
+                "Thread operations are not available yet",
+            )
+            .await;
+        }
     }
 
     Ok(())
@@ -322,6 +377,7 @@ async fn fetch_messages_after_seq(
             v: PROTOCOL_VERSION,
             id: row.try_get("id")?,
             conversation_id: row.try_get("conversation_id")?,
+            thread_id: None,
             sender_id: row.try_get("sender_id")?,
             content: row.try_get("content")?,
             format,
@@ -363,15 +419,18 @@ async fn conversation_members(
 async fn send_protocol_error(
     outbound_tx: &WsSender,
     code: &str,
+    ref_type: &str,
     locale: &str,
     details: Option<&str>,
     fallback: &str,
 ) -> anyhow::Result<()> {
-    let payload = serde_json::to_string(&ServerMessage::HelloError(HelloErrorMsg {
+    let payload = serde_json::to_string(&ServerMessage::Error(ErrorMsg {
         v: PROTOCOL_VERSION,
         code: code.to_owned(),
-        message: localized_message(code, locale, fallback).to_string(),
-        details: details.map(ToOwned::to_owned),
+        ref_type: ref_type.to_owned(),
+        message: details
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| localized_message(code, locale, fallback).to_string()),
     }))?;
     let _ = outbound_tx.send(Message::Text(payload.into()));
     Ok(())

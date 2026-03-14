@@ -164,6 +164,7 @@ mod tests {
         state.handle_stream_start(&StreamStartMsg {
             v: PROTOCOL_VERSION,
             conversation_id,
+            thread_id: None,
             agent_id,
             stream_id,
         });
@@ -223,6 +224,7 @@ mod tests {
             state.handle_stream_start(&StreamStartMsg {
                 v: PROTOCOL_VERSION,
                 conversation_id,
+                thread_id: None,
                 agent_id,
                 stream_id,
             });
