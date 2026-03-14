@@ -64,7 +64,11 @@ pub async fn request_otp(
         return error_json("otp_store_failed", "Failed to create OTP");
     }
 
-    tracing::info!(phone = %payload.phone, "Generated OTP");
+    tracing::info!(
+        phone = %payload.phone,
+        fixed = otp::fixed_otp().is_some(),
+        "Generated OTP"
+    );
 
     let expose_otp = std::env::var("PAW_EXPOSE_OTP_FOR_E2E")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
@@ -73,6 +77,9 @@ pub async fn request_otp(
     if expose_otp {
         tracing::warn!("PAW_EXPOSE_OTP_FOR_E2E is enabled; do not use in production");
         Json(json!({ "ok": true, "debug_code": code }))
+    } else if otp::fixed_otp().is_some() {
+        tracing::warn!("PAW_FIXED_OTP is enabled; do not use in production");
+        Json(json!({ "ok": true, "fixed_code": code }))
     } else {
         Json(json!({ "ok": true }))
     }

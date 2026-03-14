@@ -19,15 +19,14 @@ import '../../features/profile/screens/user_profile_screen.dart';
 import '../shell/main_shell.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-
   bool isPublicPath(String path) {
     return path == '/login' || path.startsWith('/auth/');
   }
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/chat',
     redirect: (context, state) {
+      final authState = ref.read(authNotifierProvider);
       final path = state.uri.path;
       final isAuthenticated = authState.step == AuthStep.authenticated;
       final needsUsernameSetup = authState.step == AuthStep.usernameSetup;
@@ -127,4 +126,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.listen<AuthState>(authNotifierProvider, (_, __) {
+    router.refresh();
+  });
+  ref.onDispose(router.dispose);
+
+  return router;
 });

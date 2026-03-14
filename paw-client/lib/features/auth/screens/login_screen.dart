@@ -54,9 +54,6 @@ class LoginScreen extends ConsumerWidget {
                     onPressed: authState.isLoading
                         ? null
                         : () {
-                            ref
-                                .read(authNotifierProvider.notifier)
-                                .showPhoneOtp();
                             context.go('/auth/phone');
                           },
                     icon: const Icon(Icons.sms_outlined),

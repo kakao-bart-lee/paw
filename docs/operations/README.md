@@ -71,6 +71,10 @@ make migrate
 make dev
 ```
 
+웹 디바이스로 `make dev` / `./scripts/run-local-dev.sh`를 실행할 경우 개발용 Flutter 앱은 기본적으로 `http://127.0.0.1:4100`을 사용합니다.
+
+개발 중 수동 인증을 빠르게 확인하려면 `.env`에 `PAW_FIXED_OTP=137900`를 둘 수 있습니다. 서버는 이 값을 감지하면 고정 OTP를 저장하고, 응답 본문에도 `fixed_code`를 포함합니다. 운영 환경에서는 절대 활성화하지 마세요.
+
 ## 사전 요구 사항 (Prerequisites)
 
 운영 및 관리를 위해 다음 도구들이 설치되어 있어야 합니다:

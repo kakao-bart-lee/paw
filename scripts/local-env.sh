@@ -8,6 +8,11 @@ normalize_legacy_local_env() {
     changed=1
   fi
 
+  if [[ "${PAW_WEB_DEV_PORT:-}" == "3000" ]]; then
+    export PAW_WEB_DEV_PORT=4100
+    changed=1
+  fi
+
   if [[ "${DATABASE_URL:-}" == "postgresql://paw:paw_dev_password@localhost:5432/paw_dev" ]]; then
     export DATABASE_URL="postgresql://paw:paw_dev_password@localhost:35432/paw_dev"
     changed=1

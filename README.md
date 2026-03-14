@@ -52,7 +52,9 @@ Paw is an AI-native messenger monorepo that is currently migrating from a single
 
 1. Run `./scripts/run-local-dev.sh` from the repo root.
 2. Optionally pass a Flutter device, for example `./scripts/run-local-dev.sh macos`.
-3. Stop everything with `./scripts/stop-local-dev.sh`.
+3. When using a web device (`chrome`, `edge`, `web-server`), the dev app binds to `http://127.0.0.1:4100` by default.
+4. For local-only manual auth testing, set `PAW_FIXED_OTP=137900` in `.env`.
+5. Stop everything with `./scripts/stop-local-dev.sh`.
 
 ### Client
 
