@@ -9,6 +9,7 @@ use super::models::{
     MarketplaceAgentDetail, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
     RotateAgentKeyResponse,
 };
+use super::permissions::DEFAULT_INVITE_PERMISSIONS;
 
 pub fn generate_agent_token() -> String {
     format!("paw_agent_{}", Uuid::new_v4())
@@ -135,6 +136,8 @@ pub async fn invite_agent_to_conversation(
     agent_id: Uuid,
     invited_by: Uuid,
 ) -> anyhow::Result<bool> {
+    let mut tx = pool.begin().await?;
+
     let outcome = sqlx::query_scalar::<_, i32>(
         "WITH inserted AS (\
             INSERT INTO conversation_agents (conversation_id, agent_id, invited_by)\
@@ -153,12 +156,31 @@ pub async fn invite_agent_to_conversation(
     .bind(conversation_id)
     .bind(agent_id)
     .bind(invited_by)
-    .fetch_one(pool.as_ref())
+    .fetch_one(&mut *tx)
     .await?;
 
     match outcome {
-        1 => Ok(true),
-        0 => Ok(false),
+        1 => {
+            for permission in DEFAULT_INVITE_PERMISSIONS {
+                sqlx::query(
+                    "INSERT INTO agent_permissions (id, agent_id, conversation_id, permission, granted_by)
+                     VALUES (gen_random_uuid(), $1, $2, $3, $4)
+                     ON CONFLICT (agent_id, conversation_id, permission) DO NOTHING",
+                )
+                .bind(agent_id)
+                .bind(conversation_id)
+                .bind(permission.as_str())
+                .bind(invited_by)
+                .execute(&mut *tx)
+                .await?;
+            }
+            tx.commit().await?;
+            Ok(true)
+        }
+        0 => {
+            tx.commit().await?;
+            Ok(false)
+        }
         _ => Err(anyhow!("agent_not_found_or_revoked")),
     }
 }

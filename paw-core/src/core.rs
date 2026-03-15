@@ -997,6 +997,7 @@ mod tests {
             seq: 2,
             created_at: Utc::now(),
             blocks: vec![],
+            attachments: vec![],
         };
         let gap = MessageReceivedMsg {
             seq: 4,
@@ -1099,6 +1100,7 @@ mod tests {
             seq: 1,
             created_at: Utc::now(),
             blocks: vec![],
+            attachments: vec![],
         };
         let gap = MessageReceivedMsg {
             seq: 3,
@@ -1168,6 +1170,7 @@ mod tests {
             seq,
             created_at: Utc::now(),
             blocks: vec![],
+            attachments: vec![],
         };
 
         let effects = runtime

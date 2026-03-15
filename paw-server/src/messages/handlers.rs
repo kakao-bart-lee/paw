@@ -1,4 +1,5 @@
 use crate::auth::{middleware::UserId, AppState};
+use crate::agents::permissions::{check_agent_permission, AgentPermission};
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
@@ -161,6 +162,7 @@ pub async fn send_message(
                 seq: created.seq,
                 created_at: created.created_at,
                 blocks: Vec::new(),
+                attachments: Vec::new(),
             };
 
             tokio::spawn(async move {
@@ -239,15 +241,40 @@ async fn notify_agents_of_message(
     recent_messages.reverse();
 
     let conversation_id = message.conversation_id;
-    let inbound = InboundContext {
-        v: PROTOCOL_VERSION,
-        message,
-        conversation_id,
-        recent_messages,
-    };
-    let payload = serde_json::to_vec(&inbound)?;
 
     for agent_id in agent_ids {
+        let can_read = check_agent_permission(
+            &state.db,
+            conversation_id,
+            agent_id,
+            AgentPermission::ReadMessages,
+        )
+        .await?;
+
+        if !can_read {
+            continue;
+        }
+
+        let can_access_history = check_agent_permission(
+            &state.db,
+            conversation_id,
+            agent_id,
+            AgentPermission::AccessHistory,
+        )
+        .await?;
+
+        let inbound = InboundContext {
+            v: PROTOCOL_VERSION,
+            message: message.clone(),
+            conversation_id,
+            recent_messages: if can_access_history {
+                recent_messages.clone()
+            } else {
+                Vec::new()
+            },
+        };
+        let payload = serde_json::to_vec(&inbound)?;
+
         let subject = format!("agent.inbound.{agent_id}");
         match nats.publish(subject, payload.clone().into()).await {
             Ok(()) => crate::metrics::record_agent_gateway_call(true),
@@ -283,6 +310,7 @@ fn message_received_from_row(
         seq: row.try_get("seq")?,
         created_at: row.try_get("created_at")?,
         blocks,
+        attachments: Vec::new(),
     })
 }
 
