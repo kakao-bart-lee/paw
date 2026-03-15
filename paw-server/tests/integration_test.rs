@@ -199,6 +199,26 @@ fn protocol_client_message_tagged_serialization() {
 }
 
 #[test]
+fn protocol_send_thread_message_tagged_serialization() {
+    let conversation_id = Uuid::new_v4();
+    let thread_id = Uuid::new_v4();
+    let msg = paw_proto::ClientMessage::SendThreadMessage(paw_proto::ThreadMessageSendMsg {
+        v: 1,
+        conversation_id,
+        thread_id,
+        content: "thread reply".into(),
+        format: paw_proto::MessageFormat::Markdown,
+        blocks: vec![],
+        idempotency_key: Uuid::new_v4(),
+    });
+    let json = serde_json::to_value(&msg).unwrap();
+
+    assert_eq!(json["type"], "send_thread_message");
+    assert_eq!(json["conversation_id"], conversation_id.to_string());
+    assert_eq!(json["thread_id"], thread_id.to_string());
+}
+
+#[test]
 fn protocol_server_hello_ok_roundtrip() {
     let user_id = Uuid::new_v4();
     let now = Utc::now();
@@ -239,6 +259,32 @@ fn protocol_message_received_all_fields() {
     assert_eq!(json["format"], "markdown");
     assert!(json["id"].is_string());
     assert!(json["created_at"].is_string());
+}
+
+#[test]
+fn protocol_thread_message_received_all_fields() {
+    let thread_id = Uuid::new_v4();
+    let msg = paw_proto::ThreadMessageReceivedMsg {
+        v: 1,
+        id: Uuid::new_v4(),
+        conversation_id: Uuid::new_v4(),
+        thread_id,
+        sender_id: Uuid::new_v4(),
+        content: "Thread hello!".into(),
+        format: paw_proto::MessageFormat::Plain,
+        seq: 5,
+        conversation_seq: 21,
+        created_at: Utc::now(),
+        blocks: vec![],
+        attachments: vec![],
+    };
+    let json = serde_json::to_value(&msg).unwrap();
+
+    assert_eq!(json["v"], 1);
+    assert_eq!(json["thread_id"], thread_id.to_string());
+    assert_eq!(json["seq"], 5);
+    assert_eq!(json["conversation_seq"], 21);
+    assert_eq!(json["content"], "Thread hello!");
 }
 
 #[test]
@@ -328,6 +374,22 @@ fn protocol_typing_includes_user_id_when_present() {
     };
     let json = serde_json::to_value(&msg).unwrap();
     assert_eq!(json["user_id"], uid.to_string());
+}
+
+#[test]
+fn protocol_thread_typing_includes_thread_scope() {
+    let thread_id = Uuid::new_v4();
+    let user_id = Uuid::new_v4();
+    let msg = paw_proto::ThreadTypingMsg {
+        v: 1,
+        conversation_id: Uuid::new_v4(),
+        thread_id,
+        user_id: Some(user_id),
+    };
+    let json = serde_json::to_value(&msg).unwrap();
+
+    assert_eq!(json["thread_id"], thread_id.to_string());
+    assert_eq!(json["user_id"], user_id.to_string());
 }
 
 #[test]
