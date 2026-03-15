@@ -90,6 +90,26 @@ components:
         agent_id: { type: string, format: uuid }
         bound_at: { type: string, format: date-time }
 
+    AgentPermission:
+      type: string
+      enum: [read_messages, send_messages, manage_thread, access_history, use_tools]
+
+    AgentPermissionsResponse:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          items: { $ref: '#/components/schemas/AgentPermission' }
+
+    AgentPermissionsUpdateRequest:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          items: { $ref: '#/components/schemas/AgentPermission' }
+
     ErrorResponse:
       type: object
       required: [code, message]
@@ -402,6 +422,49 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200': { description: Agent removed }
+
+  /conversations/{id}/agents/{agent_id}/permissions:
+    get:
+      summary: List permissions granted to an invited agent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: agent_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Agent permissions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentPermissionsResponse' }
+    put:
+      summary: Replace permissions granted to an invited agent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: agent_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentPermissionsUpdateRequest' }
+      responses:
+        '200':
+          description: Updated agent permissions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentPermissionsResponse' }
 
   /conversations/{conv_id}/messages:
     get:

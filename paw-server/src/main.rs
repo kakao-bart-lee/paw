@@ -84,20 +84,23 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let prometheus_handle = metrics::init_metrics();
+    let rate_limiter = rate_limit::limiter_from_env();
+    let agent_limiter = rate_limit::agent_limiter_from_env();
 
     let state = AppState {
         db: db.clone(),
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        agent_limiter: agent_limiter.clone(),
         media_service,
         nats: nats_client,
     };
 
     tokio::spawn(ws::pg_listener::start_pg_listener(db.clone(), hub));
 
-    let rate_limiter = rate_limit::limiter_from_env();
     rate_limit::spawn_cleanup_task(rate_limiter.clone());
+    rate_limit::spawn_cleanup_task(agent_limiter);
 
     let media_upload = Router::new()
         .route("/media/upload", post(media::handlers::upload))
@@ -141,12 +144,24 @@ async fn main() -> anyhow::Result<()> {
             delete(agents::handlers::remove_agent_handler),
         )
         .route(
+            "/conversations/{id}/agents/{agent_id}/permissions",
+            get(agents::handlers::list_agent_permissions_handler),
+        )
+        .route(
+            "/conversations/{id}/agents/{agent_id}/permissions",
+            put(agents::handlers::update_agent_permissions_handler),
+        )
+        .route(
             "/conversations/{conv_id}/messages",
             post(messages::handlers::send_message),
         )
         .route(
             "/conversations/{conv_id}/messages",
             get(messages::handlers::get_messages),
+        )
+        .route(
+            "/conversations/{target_conv_id}/messages/forward",
+            post(messages::handlers::forward_message),
         )
         .route(
             "/conversations/{conv_id}/messages/{message_id}",
@@ -211,6 +226,10 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/api/v1/agents/{agent_id}/revoke",
             post(agents::handlers::revoke_agent_handler),
+        )
+        .route(
+            "/api/v1/agents/{agent_id}/rotate-key",
+            post(agents::handlers::rotate_agent_key_handler),
         )
         .route(
             "/api/v1/agents/{agent_id}/publish",

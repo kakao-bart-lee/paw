@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
+use super::permissions::AgentPermission;
+
 #[derive(Debug, Deserialize)]
 pub struct RegisterAgentRequest {
     pub name: String,
@@ -32,6 +34,13 @@ pub struct RevokeAgentResponse {
     pub revoked: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct RotateAgentKeyResponse {
+    pub agent_id: Uuid,
+    pub rotated: bool,
+    pub api_key: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InviteAgentRequest {
     pub agent_id: Uuid,
@@ -40,6 +49,16 @@ pub struct InviteAgentRequest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InviteAgentResponse {
     pub invited: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AgentPermissionsUpdateRequest {
+    pub permissions: Vec<AgentPermission>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AgentPermissionsResponse {
+    pub permissions: Vec<AgentPermission>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -245,6 +264,38 @@ mod tests {
         let json2 = serde_json::to_string(&uninstall).unwrap();
         let parsed2: serde_json::Value = serde_json::from_str(&json2).unwrap();
         assert_eq!(parsed2["uninstalled"], true);
+
+        let rotated = RotateAgentKeyResponse {
+            agent_id: Uuid::nil(),
+            rotated: true,
+            api_key: "paw_agent_test_key".to_string(),
+        };
+        let json3 = serde_json::to_string(&rotated).unwrap();
+        let parsed3: serde_json::Value = serde_json::from_str(&json3).unwrap();
+        assert_eq!(parsed3["rotated"], true);
+        assert_eq!(parsed3["api_key"], "paw_agent_test_key");
+    }
+
+    #[test]
+    fn agent_permissions_request_response_roundtrip() {
+        let req = AgentPermissionsUpdateRequest {
+            permissions: vec![AgentPermission::ReadMessages, AgentPermission::UseTools],
+        };
+        let req_json = serde_json::to_value(&req).unwrap();
+        assert_eq!(req_json["permissions"][0], "read_messages");
+        assert_eq!(req_json["permissions"][1], "use_tools");
+
+        let parsed_req: AgentPermissionsUpdateRequest = serde_json::from_value(req_json).unwrap();
+        assert_eq!(parsed_req.permissions, req.permissions);
+
+        let res = AgentPermissionsResponse {
+            permissions: vec![AgentPermission::SendMessages],
+        };
+        let res_json = serde_json::to_value(&res).unwrap();
+        assert_eq!(res_json["permissions"][0], "send_messages");
+
+        let parsed_res: AgentPermissionsResponse = serde_json::from_value(res_json).unwrap();
+        assert_eq!(parsed_res.permissions, res.permissions);
     }
 
     #[test]

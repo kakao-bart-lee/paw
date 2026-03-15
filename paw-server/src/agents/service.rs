@@ -7,7 +7,9 @@ use uuid::Uuid;
 use super::models::{
     is_valid_agent_token_format, AgentManifest, AgentProfile, InstalledAgent, MarketplaceAgent,
     MarketplaceAgentDetail, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
+    RotateAgentKeyResponse,
 };
+use super::permissions::AgentPermission;
 
 pub fn generate_agent_token() -> String {
     format!("paw_agent_{}", Uuid::new_v4())
@@ -19,13 +21,18 @@ pub fn hash_token(raw_token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
+fn generate_agent_token_pair() -> (String, String) {
+    let raw_token = generate_agent_token();
+    let token_hash = hash_token(&raw_token);
+    (raw_token, token_hash)
+}
+
 pub async fn register_agent(
     db: &PgPool,
     owner_user_id: Uuid,
     req: RegisterAgentRequest,
 ) -> Result<RegisterAgentResponse, sqlx::Error> {
-    let raw_token = generate_agent_token();
-    let token_hash = hash_token(&raw_token);
+    let (raw_token, token_hash) = generate_agent_token_pair();
 
     let row = sqlx::query_as::<_, (Uuid,)>(
         "INSERT INTO agent_tokens (name, description, avatar_url, token_hash, owner_user_id) \
@@ -80,6 +87,31 @@ pub async fn revoke_agent_token(
     }))
 }
 
+pub async fn rotate_agent_token(
+    db: &PgPool,
+    agent_id: Uuid,
+    owner_user_id: Uuid,
+) -> Result<Option<RotateAgentKeyResponse>, sqlx::Error> {
+    let (raw_token, token_hash) = generate_agent_token_pair();
+
+    let result = sqlx::query_as::<_, (Uuid,)>(
+        "UPDATE agent_tokens SET token_hash = $1, last_used_at = NULL \
+         WHERE id = $2 AND owner_user_id = $3 AND revoked_at IS NULL \
+         RETURNING id",
+    )
+    .bind(&token_hash)
+    .bind(agent_id)
+    .bind(owner_user_id)
+    .fetch_optional(db)
+    .await?;
+
+    Ok(result.map(|row| RotateAgentKeyResponse {
+        agent_id: row.0,
+        rotated: true,
+        api_key: raw_token,
+    }))
+}
+
 pub async fn verify_agent_token(db: &PgPool, raw_token: &str) -> Result<Option<Uuid>, sqlx::Error> {
     if !is_valid_agent_token_format(raw_token) {
         return Ok(None);
@@ -104,32 +136,60 @@ pub async fn invite_agent_to_conversation(
     agent_id: Uuid,
     invited_by: Uuid,
 ) -> anyhow::Result<bool> {
-    let outcome = sqlx::query_scalar::<_, i32>(
-        "WITH inserted AS (\
-            INSERT INTO conversation_agents (conversation_id, agent_id, invited_by)\
-            SELECT $1, at.id, $3\
-            FROM agent_tokens at\
-            WHERE at.id = $2 AND at.revoked_at IS NULL\
-            ON CONFLICT (conversation_id, agent_id) DO NOTHING\
-            RETURNING 1\
-        )\
-        SELECT CASE\
-            WHEN EXISTS (SELECT 1 FROM inserted) THEN 1\
-            WHEN EXISTS (SELECT 1 FROM conversation_agents WHERE conversation_id = $1 AND agent_id = $2) THEN 0\
-            ELSE -1\
-        END",
+    let mut tx = pool.begin().await?;
+
+    let inserted = sqlx::query(
+        "INSERT INTO conversation_agents (conversation_id, agent_id, invited_by)\
+         SELECT $1, at.id, $3\
+         FROM agent_tokens at\
+         WHERE at.id = $2 AND at.revoked_at IS NULL\
+         ON CONFLICT (conversation_id, agent_id) DO NOTHING",
     )
     .bind(conversation_id)
     .bind(agent_id)
     .bind(invited_by)
-    .fetch_one(pool.as_ref())
-    .await?;
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
 
-    match outcome {
-        1 => Ok(true),
-        0 => Ok(false),
-        _ => Err(anyhow!("agent_not_found_or_revoked")),
+    if inserted == 0 {
+        let already_invited = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(\
+                SELECT 1 FROM conversation_agents\
+                WHERE conversation_id = $1 AND agent_id = $2\
+            )",
+        )
+        .bind(conversation_id)
+        .bind(agent_id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.rollback().await?;
+
+        if already_invited {
+            return Ok(false);
+        }
+
+        return Err(anyhow!("agent_not_found_or_revoked"));
     }
+
+    for permission in AgentPermission::default_on_invite() {
+        sqlx::query(
+            "INSERT INTO agent_permissions (agent_id, conversation_id, permission, granted_by)\
+             VALUES ($1, $2, $3, $4)\
+             ON CONFLICT (agent_id, conversation_id, permission) DO NOTHING",
+        )
+        .bind(agent_id)
+        .bind(conversation_id)
+        .bind(permission.as_str())
+        .bind(invited_by)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+
+    Ok(true)
 }
 
 pub async fn remove_agent_from_conversation(
@@ -160,6 +220,14 @@ pub async fn remove_agent_from_conversation(
             .execute(pool.as_ref())
             .await?
             .rows_affected();
+
+    if removed > 0 {
+        sqlx::query("DELETE FROM agent_permissions WHERE conversation_id = $1 AND agent_id = $2")
+            .bind(conversation_id)
+            .bind(agent_id)
+            .execute(pool.as_ref())
+            .await?;
+    }
 
     Ok(removed > 0)
 }
@@ -304,4 +372,25 @@ pub async fn publish_agent(
     .await?;
 
     Ok(result.rows_affected() > 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_token_pair_matches_hash() {
+        let (raw_token, token_hash) = generate_agent_token_pair();
+        assert!(is_valid_agent_token_format(&raw_token));
+        assert_eq!(token_hash, hash_token(&raw_token));
+    }
+
+    #[test]
+    fn generated_token_pair_is_unique_per_rotation() {
+        let (raw_a, hash_a) = generate_agent_token_pair();
+        let (raw_b, hash_b) = generate_agent_token_pair();
+
+        assert_ne!(raw_a, raw_b);
+        assert_ne!(hash_a, hash_b);
+    }
 }

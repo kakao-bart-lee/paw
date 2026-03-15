@@ -14,11 +14,12 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use super::models::{
-    AgentProfile, InstallAgentResponse, InstalledAgentsResponse, InviteAgentRequest,
-    InviteAgentResponse, MarketplaceSearchQuery, MarketplaceSearchResponse, PublishAgentRequest,
-    PublishAgentResponse, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
-    UninstallAgentResponse,
+    AgentPermissionsResponse, AgentPermissionsUpdateRequest, AgentProfile, InstallAgentResponse,
+    InstalledAgentsResponse, InviteAgentRequest, InviteAgentResponse, MarketplaceSearchQuery,
+    MarketplaceSearchResponse, PublishAgentRequest, PublishAgentResponse, RegisterAgentRequest,
+    RegisterAgentResponse, RevokeAgentResponse, RotateAgentKeyResponse, UninstallAgentResponse,
 };
+use super::permissions;
 use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
@@ -106,6 +107,35 @@ pub async fn revoke_agent_handler(
                 "internal_error",
                 &locale,
                 "Failed to revoke agent token",
+            )
+        })?;
+
+    match result {
+        Some(r) => Ok(Json(r)),
+        None => Err(error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found_or_not_owner",
+            &locale,
+            "Agent not found or you are not the owner",
+        )),
+    }
+}
+
+pub async fn rotate_agent_key_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(user_id): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<RotateAgentKeyResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let result = service::rotate_agent_token(&state.db, agent_id, user_id.0)
+        .await
+        .map_err(|e| {
+            tracing::error!("failed to rotate agent token: {e}");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "rotate_failed",
+                &locale,
+                "Failed to rotate agent key",
             )
         })?;
 
@@ -221,6 +251,176 @@ pub async fn remove_agent_handler(
             ))
         }
     }
+}
+
+pub async fn list_agent_permissions_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<AgentPermissionsResponse>, (StatusCode, Json<Value>)> {
+    match check_member(&state.db, conversation_id, user_id).await {
+        Ok(Membership::Member) => {}
+        Ok(Membership::NotMember) => {
+            return Err(error(
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                &locale,
+                "User is not a member of this conversation",
+            ));
+        }
+        Ok(Membership::ConversationNotFound) => {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "conversation_not_found",
+                &locale,
+                "Conversation not found",
+            ));
+        }
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed membership check");
+            return Err(error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "membership_check_failed",
+                &locale,
+                "Could not validate conversation membership",
+            ));
+        }
+    }
+
+    let exists = permissions::agent_in_conversation(&state.db, conversation_id, agent_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, "failed to check agent conversation membership");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to load agent permissions",
+            )
+        })?;
+
+    if !exists {
+        return Err(error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found",
+            &locale,
+            "Agent is not in this conversation",
+        ));
+    }
+
+    let permissions = permissions::list_permissions(&state.db, conversation_id, agent_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, "failed to list agent permissions");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to load agent permissions",
+            )
+        })?;
+
+    Ok(Json(AgentPermissionsResponse { permissions }))
+}
+
+pub async fn update_agent_permissions_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<AgentPermissionsUpdateRequest>,
+) -> Result<Json<AgentPermissionsResponse>, (StatusCode, Json<Value>)> {
+    match check_member(&state.db, conversation_id, user_id).await {
+        Ok(Membership::Member) => {}
+        Ok(Membership::NotMember) => {
+            return Err(error(
+                StatusCode::FORBIDDEN,
+                "forbidden",
+                &locale,
+                "User is not a member of this conversation",
+            ));
+        }
+        Ok(Membership::ConversationNotFound) => {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "conversation_not_found",
+                &locale,
+                "Conversation not found",
+            ));
+        }
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed membership check");
+            return Err(error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "membership_check_failed",
+                &locale,
+                "Could not validate conversation membership",
+            ));
+        }
+    }
+
+    let can_manage = permissions::can_manage_permissions(&state.db, conversation_id, user_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for managing agent permissions");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to update agent permissions",
+            )
+        })?;
+
+    if !can_manage {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            &locale,
+            "Only conversation owners or admins can manage agent permissions",
+        ));
+    }
+
+    let exists = permissions::agent_in_conversation(&state.db, conversation_id, agent_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, "failed to check agent conversation membership");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to update agent permissions",
+            )
+        })?;
+
+    if !exists {
+        return Err(error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found",
+            &locale,
+            "Agent is not in this conversation",
+        ));
+    }
+
+    let permissions = permissions::replace_permissions(
+        &state.db,
+        conversation_id,
+        agent_id,
+        user_id,
+        &payload.permissions,
+    )
+    .await
+    .map_err(|err| {
+        tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, user_id = %user_id, "failed to update agent permissions");
+        error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal_error",
+            &locale,
+            "Failed to update agent permissions",
+        )
+    })?;
+
+    Ok(Json(AgentPermissionsResponse { permissions }))
 }
 
 pub async fn marketplace_search_handler(
@@ -484,6 +684,7 @@ async fn handle_agent_socket(
     use axum::extract::ws::Message;
 
     let (mut ws_tx, mut ws_rx) = socket.split();
+    let (outbound_tx, mut outbound_rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
 
     let subject = format!("agent.inbound.{agent_id}");
     let mut nats_sub = match nats.subscribe(subject.clone()).await {
@@ -495,7 +696,7 @@ async fn handle_agent_socket(
                 &locale,
                 "Failed to subscribe agent session",
             );
-            let _ = ws_tx.send(Message::Text(err.to_string().into())).await;
+            let _ = outbound_tx.send(Message::Text(err.to_string().into()));
             return;
         }
     };
@@ -503,12 +704,19 @@ async fn handle_agent_socket(
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 
+    let writer = tokio::spawn(async move {
+        while let Some(msg) = outbound_rx.recv().await {
+            if ws_tx.send(msg).await.is_err() {
+                break;
+            }
+        }
+    });
+
     let nats_to_ws = async {
         while let Some(msg) = nats_sub.next().await {
             let payload = String::from_utf8_lossy(&msg.payload);
-            if ws_tx
+            if outbound_tx
                 .send(Message::Text(payload.into_owned().into()))
-                .await
                 .is_err()
             {
                 break;
@@ -518,35 +726,50 @@ async fn handle_agent_socket(
 
     let ws_to_server = async {
         let mut stream_states: HashMap<Uuid, StreamRelayState> = HashMap::new();
+        let rate_limit_key = format!("agent:{agent_id}");
 
         while let Some(Ok(msg)) = ws_rx.next().await {
             match msg {
-                Message::Text(text) => match serde_json::from_str::<AgentStreamMsg>(&text) {
-                    Ok(stream_msg) => {
-                        if let Err(e) = relay_agent_stream_message(
-                            &state,
-                            agent_id,
-                            &mut stream_states,
-                            stream_msg,
-                        )
-                        .await
-                        {
-                            tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
+                Message::Text(text) => {
+                    if text.len() > crate::ws::MAX_WS_MESSAGE_SIZE_BYTES {
+                        tracing::warn!(%agent_id, "agent websocket frame exceeds max size");
+                        break;
+                    }
+
+                    if !state.agent_limiter.check(&rate_limit_key).allowed {
+                        tracing::warn!(%agent_id, "agent rate limit exceeded");
+                        break;
+                    }
+
+                    match serde_json::from_str::<AgentStreamMsg>(&text) {
+                        Ok(stream_msg) => {
+                            if let Err(e) = relay_agent_stream_message(
+                                &state,
+                                agent_id,
+                                &mut stream_states,
+                                stream_msg,
+                            )
+                            .await
+                            {
+                                tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
+                            }
+                        }
+                        Err(_) => {
+                            match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
+                                Ok(agent_msg) => {
+                                    tracing::info!(
+                                        "agent {agent_id} response for conv {}: {} bytes",
+                                        agent_msg.conversation_id,
+                                        agent_msg.content.len()
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::warn!("invalid agent message from {agent_id}: {e}");
+                                }
+                            }
                         }
                     }
-                    Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
-                        Ok(agent_msg) => {
-                            tracing::info!(
-                                "agent {agent_id} response for conv {}: {} bytes",
-                                agent_msg.conversation_id,
-                                agent_msg.content.len()
-                            );
-                        }
-                        Err(e) => {
-                            tracing::warn!("invalid agent message from {agent_id}: {e}");
-                        }
-                    },
-                },
+                }
                 Message::Close(_) => break,
                 _ => {}
             }
@@ -557,6 +780,9 @@ async fn handle_agent_socket(
         _ = nats_to_ws => {}
         _ = ws_to_server => {}
     }
+
+    drop(outbound_tx);
+    let _ = writer.await;
 
     crate::metrics::ws_connection_closed();
     tracing::info!("agent {agent_id} disconnected");
@@ -573,6 +799,19 @@ async fn relay_agent_stream_message(
             require_v(msg.v)?;
             if msg.agent_id != agent_id {
                 anyhow::bail!("agent_id mismatch for stream {}", msg.stream_id);
+            }
+
+            let can_send = permissions::check_agent_permission(
+                &state.db,
+                agent_id,
+                msg.conversation_id,
+                permissions::AgentPermission::SendMessages,
+            )
+            .await?;
+
+            if !can_send {
+                tracing::warn!(agent_id = %agent_id, conversation_id = %msg.conversation_id, "agent lacks send_messages permission");
+                return Ok(());
             }
 
             if stream_states.len() >= MAX_CONCURRENT_STREAMS_PER_AGENT {
@@ -609,10 +848,12 @@ async fn relay_agent_stream_message(
             }
             relay_stream_frame(
                 state,
+                agent_id,
                 stream_states,
                 msg.stream_id,
                 ServerMessage::ContentDelta(msg),
                 false,
+                None,
             )
             .await?;
         }
@@ -620,10 +861,12 @@ async fn relay_agent_stream_message(
             require_v(msg.v)?;
             relay_stream_frame(
                 state,
+                agent_id,
                 stream_states,
                 msg.stream_id,
                 ServerMessage::ToolStart(msg),
                 false,
+                Some(permissions::AgentPermission::UseTools),
             )
             .await?;
         }
@@ -631,10 +874,12 @@ async fn relay_agent_stream_message(
             require_v(msg.v)?;
             relay_stream_frame(
                 state,
+                agent_id,
                 stream_states,
                 msg.stream_id,
                 ServerMessage::ToolEnd(msg),
                 false,
+                Some(permissions::AgentPermission::UseTools),
             )
             .await?;
         }
@@ -642,10 +887,12 @@ async fn relay_agent_stream_message(
             require_v(msg.v)?;
             relay_stream_frame(
                 state,
+                agent_id,
                 stream_states,
                 msg.stream_id,
                 ServerMessage::StreamEnd(msg),
                 true,
+                None,
             )
             .await?;
         }
@@ -679,10 +926,12 @@ fn agent_error_frame(code: &str, locale: &str, fallback: &str) -> Value {
 
 async fn relay_stream_frame(
     state: &AppState,
+    agent_id: Uuid,
     stream_states: &mut HashMap<Uuid, StreamRelayState>,
     stream_id: Uuid,
     frame: ServerMessage,
     finalize: bool,
+    required_permission: Option<permissions::AgentPermission>,
 ) -> anyhow::Result<()> {
     let payload = serde_json::to_string(&frame)?;
     let payload_len = payload.len();
@@ -711,6 +960,21 @@ async fn relay_stream_frame(
             .send_to_conversation(current.conversation_id, user_ids, &end_payload)
             .await;
         return Ok(());
+    }
+
+    if let Some(permission) = required_permission {
+        let allowed = permissions::check_agent_permission(
+            &state.db,
+            agent_id,
+            current.conversation_id,
+            permission,
+        )
+        .await?;
+
+        if !allowed {
+            tracing::warn!(agent_id = %agent_id, conversation_id = %current.conversation_id, permission = %permission.as_str(), "agent permission denied for stream frame");
+            return Ok(());
+        }
     }
 
     if let Some(entry) = stream_states.get_mut(&stream_id) {
