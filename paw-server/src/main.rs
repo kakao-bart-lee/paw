@@ -5,6 +5,7 @@ mod channels;
 mod db;
 mod i18n;
 mod keys;
+mod link_preview;
 mod media;
 mod messages;
 mod metrics;
@@ -69,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
+    let link_preview_service = Arc::new(link_preview::service::LinkPreviewService::new());
 
     let nats_url =
         std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:34223".to_string());
@@ -94,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
         hub: hub.clone(),
         agent_limiter: agent_limiter.clone(),
         media_service,
+        link_preview_service,
         nats: nats_client,
     };
 
@@ -155,6 +158,11 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/conversations/{conv_id}/messages/{message_id}",
             delete(messages::handlers::delete_message),
+        )
+        .route(
+            "/link-previews",
+            post(link_preview::handlers::request_link_previews)
+                .get(link_preview::handlers::get_link_preview),
         )
         .route(
             "/conversations/{id}/threads",

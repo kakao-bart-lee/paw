@@ -98,6 +98,36 @@ components:
         code: { type: string }
         message: { type: string }
 
+    LinkPreview:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        canonical_url: { type: string, format: uri, nullable: true }
+        title: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        image_url: { type: string, format: uri, nullable: true }
+        site_name: { type: string, nullable: true }
+        status: { type: string, enum: [pending, ready, failed] }
+        fetched_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    RequestLinkPreviews:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, description: "Raw message content to scan for URLs" }
+
+    RequestLinkPreviewsResponse:
+      type: object
+      properties:
+        requested_urls:
+          type: array
+          items: { type: string, format: uri }
+        previews:
+          type: array
+          items: { $ref: '#/components/schemas/LinkPreview' }
+
     Channel:
       type: object
       properties:
@@ -476,6 +506,41 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /link-previews:
+    get:
+      summary: Get link preview status for a URL
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        '200':
+          description: Link preview status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkPreview' }
+        '404':
+          description: Link preview not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    post:
+      summary: Request asynchronous link preview extraction
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestLinkPreviews' }
+      responses:
+        '202':
+          description: Link preview fetch started or reused from cache
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequestLinkPreviewsResponse' }
 
   /conversations/{conv_id}/threads:
     get:

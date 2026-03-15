@@ -33,6 +33,9 @@ sha2 = { workspace = true }
 hex = "0.4"
 metrics = "0.24"
 metrics-exporter-prometheus = { version = "0.18", default-features = false }
+reqwest = { version = "0.12", features = ["json"] }
+regex = "1"
+scraper = "0.23"
 
 [dev-dependencies]
 paw-proto = { path = "../paw-proto" }
