@@ -9,8 +9,8 @@ use axum::{
     Json,
 };
 use paw_proto::{
-    MessageFormat, MessageReceivedMsg, ServerMessage, ThreadAgentBoundMsg, ThreadAgentUnboundMsg,
-    ThreadCreatedMsg, ThreadDeletedMsg, PROTOCOL_VERSION,
+    ContextThreadCreatedMsg, MessageFormat, MessageReceivedMsg, ServerMessage, ThreadAgentBoundMsg,
+    ThreadAgentUnboundMsg, ThreadCreatedMsg, ThreadDeletedMsg, PROTOCOL_VERSION,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -337,6 +337,28 @@ pub async fn create_thread(
         created_at: created.created_at,
     });
     let _ = broadcast_to_conversation(&state, conversation_id, &event).await;
+
+    let context_engine = state.context_engine.clone();
+    let thread_id = created.id;
+    let root_message_id = created.root_message_id;
+    let title = created.title.clone();
+    let occurred_at = created.created_at;
+    tokio::spawn(async move {
+        if let Err(err) = context_engine
+            .on_thread_created(ContextThreadCreatedMsg {
+                v: PROTOCOL_VERSION,
+                conversation_id,
+                thread_id,
+                root_message_id,
+                title,
+                created_by: user_id,
+                occurred_at,
+            })
+            .await
+        {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "context hook failed");
+        }
+    });
 
     (StatusCode::CREATED, Json(created)).into_response()
 }
@@ -681,6 +703,28 @@ pub async fn send_thread_message(
         blocks: vec![],
     });
     let _ = broadcast_to_conversation(&state, conversation_id, &event).await;
+
+    let context_engine = state.context_engine.clone();
+    let context_message = crate::context_engine::message_created_event(MessageReceivedMsg {
+        v: PROTOCOL_VERSION,
+        id: response.id,
+        conversation_id,
+        thread_id: Some(thread_id),
+        sender_id: user_id,
+        content: response.content.clone(),
+        format: match response.format.as_str() {
+            "plain" => MessageFormat::Plain,
+            _ => MessageFormat::Markdown,
+        },
+        seq: response.seq,
+        created_at: response.created_at,
+        blocks: Vec::new(),
+    });
+    tokio::spawn(async move {
+        if let Err(err) = context_engine.on_message_created(context_message).await {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "context hook failed");
+        }
+    });
 
     (StatusCode::CREATED, Json(response)).into_response()
 }
