@@ -10,6 +10,29 @@ use uuid::Uuid;
 pub const MAX_GROUP_MEMBERS: usize = 100;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConversationRole {
+    Admin,
+    Member,
+}
+
+impl ConversationRole {
+    pub fn from_db(value: &str) -> Option<Self> {
+        match value {
+            "admin" => Some(Self::Admin),
+            "member" => Some(Self::Member),
+            _ => None,
+        }
+    }
+
+    pub const fn as_db(self) -> &'static str {
+        match self {
+            Self::Admin => "admin",
+            Self::Member => "member",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Membership {
     Member,
     NotMember,
@@ -19,12 +42,15 @@ pub enum Membership {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GroupManagementError {
     ConversationNotFound,
+    NotGroupConversation,
     NotAuthorized,
     TooManyMembers,
     AlreadyMember,
     MemberNotFound,
-    CannotRemoveLastOwner,
+    CannotRemoveLastAdmin,
+    CannotDemoteLastAdmin,
     InvalidGroupName,
+    InvalidRole,
 }
 
 pub async fn check_member(
@@ -203,7 +229,7 @@ pub async fn create_conversation(
         return Err(anyhow!("too_many_members"));
     }
 
-    insert_members(&mut tx, created.id, creator_id, &all_members).await?;
+    insert_members(&mut tx, created.id, creator_id, &all_members, conv_type).await?;
 
     tx.commit()
         .await
@@ -216,10 +242,11 @@ async fn insert_members(
     conversation_id: Uuid,
     creator_id: Uuid,
     members: &HashSet<Uuid>,
+    conversation_type: &str,
 ) -> anyhow::Result<()> {
     for member_id in members {
-        let role = if *member_id == creator_id {
-            "owner"
+        let role = if conversation_type == "group" && *member_id == creator_id {
+            ConversationRole::Admin.as_db()
         } else {
             "member"
         };
@@ -246,14 +273,7 @@ pub async fn add_member(
     requester_id: Uuid,
     new_user_id: Uuid,
 ) -> Result<bool, GroupManagementError> {
-    let requester_role = get_role(pool, conversation_id, requester_id)
-        .await
-        .map_err(|_| GroupManagementError::ConversationNotFound)?;
-
-    match requester_role.as_deref() {
-        Some("owner") | Some("admin") => {}
-        Some(_) | None => return Err(GroupManagementError::NotAuthorized),
-    }
+    require_group_admin(pool, conversation_id, requester_id).await?;
 
     let conv_row = sqlx::query_as::<_, (i32, i64)>(
         "SELECT c.max_members, COUNT(cm.user_id)::BIGINT
@@ -300,12 +320,10 @@ pub async fn remove_member(
     requester_id: Uuid,
     target_user_id: Uuid,
 ) -> Result<bool, GroupManagementError> {
-    let requester_role = get_role(pool, conversation_id, requester_id)
-        .await
-        .map_err(|_| GroupManagementError::ConversationNotFound)?;
-
-    if requester_id != target_user_id && requester_role.as_deref() != Some("owner") {
-        return Err(GroupManagementError::NotAuthorized);
+    if requester_id != target_user_id {
+        require_group_admin(pool, conversation_id, requester_id).await?;
+    } else {
+        ensure_group_conversation(pool, conversation_id).await?;
     }
 
     let target_role = get_role(pool, conversation_id, target_user_id)
@@ -316,19 +334,19 @@ pub async fn remove_member(
         return Err(GroupManagementError::MemberNotFound);
     };
 
-    if target_role == "owner" {
-        let owner_count = sqlx::query_scalar::<_, i64>(
+    if target_role == ConversationRole::Admin {
+        let admin_count = sqlx::query_scalar::<_, i64>(
             "SELECT COUNT(*)::BIGINT
              FROM conversation_members
-             WHERE conversation_id = $1 AND role = 'owner'",
+             WHERE conversation_id = $1 AND role = 'admin'",
         )
         .bind(conversation_id)
         .fetch_one(pool.as_ref())
         .await
         .map_err(|_| GroupManagementError::ConversationNotFound)?;
 
-        if owner_count <= 1 {
-            return Err(GroupManagementError::CannotRemoveLastOwner);
+        if admin_count <= 1 {
+            return Err(GroupManagementError::CannotRemoveLastAdmin);
         }
     }
 
@@ -356,14 +374,7 @@ pub async fn update_group_name(
     requester_id: Uuid,
     name: &str,
 ) -> Result<bool, GroupManagementError> {
-    let requester_role = get_role(pool, conversation_id, requester_id)
-        .await
-        .map_err(|_| GroupManagementError::ConversationNotFound)?;
-
-    match requester_role.as_deref() {
-        Some("owner") | Some("admin") => {}
-        Some(_) | None => return Err(GroupManagementError::NotAuthorized),
-    }
+    require_group_admin(pool, conversation_id, requester_id).await?;
 
     let normalized = name.trim();
     if normalized.is_empty() {
@@ -389,11 +400,70 @@ pub async fn update_group_name(
     Ok(true)
 }
 
+pub async fn update_member_role(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    requester_id: Uuid,
+    target_user_id: Uuid,
+    role: &str,
+) -> Result<bool, GroupManagementError> {
+    require_group_admin(pool, conversation_id, requester_id).await?;
+
+    let Some(target_role) = get_role(pool, conversation_id, target_user_id)
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?
+    else {
+        return Err(GroupManagementError::MemberNotFound);
+    };
+
+    let requested_role =
+        ConversationRole::from_db(role.trim()).ok_or(GroupManagementError::InvalidRole)?;
+
+    if target_role == requested_role {
+        return Ok(false);
+    }
+
+    if target_role == ConversationRole::Admin && requested_role == ConversationRole::Member {
+        let admin_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*)::BIGINT
+             FROM conversation_members
+             WHERE conversation_id = $1 AND role = 'admin'",
+        )
+        .bind(conversation_id)
+        .fetch_one(pool.as_ref())
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+        if admin_count <= 1 {
+            return Err(GroupManagementError::CannotDemoteLastAdmin);
+        }
+    }
+
+    let updated = sqlx::query(
+        "UPDATE conversation_members
+         SET role = $3
+         WHERE conversation_id = $1 AND user_id = $2",
+    )
+    .bind(conversation_id)
+    .bind(target_user_id)
+    .bind(requested_role.as_db())
+    .execute(pool.as_ref())
+    .await
+    .map_err(|_| GroupManagementError::ConversationNotFound)?
+    .rows_affected();
+
+    if updated == 0 {
+        return Err(GroupManagementError::MemberNotFound);
+    }
+
+    Ok(true)
+}
+
 async fn get_role(
     pool: &DbPool,
     conversation_id: Uuid,
     user_id: Uuid,
-) -> anyhow::Result<Option<String>> {
+) -> anyhow::Result<Option<ConversationRole>> {
     let conversation_exists =
         sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM conversations WHERE id = $1)")
             .bind(conversation_id)
@@ -405,14 +475,51 @@ async fn get_role(
         return Err(anyhow!("conversation_not_found"));
     }
 
-    sqlx::query_scalar::<_, String>(
+    let role = sqlx::query_scalar::<_, String>(
         "SELECT role FROM conversation_members WHERE conversation_id = $1 AND user_id = $2",
     )
     .bind(conversation_id)
     .bind(user_id)
     .fetch_optional(pool.as_ref())
     .await
-    .context("load member role")
+    .context("load member role")?;
+
+    Ok(role.and_then(|value| ConversationRole::from_db(&value)))
+}
+
+async fn ensure_group_conversation(
+    pool: &DbPool,
+    conversation_id: Uuid,
+) -> Result<(), GroupManagementError> {
+    let conversation_type = sqlx::query_scalar::<_, String>("SELECT type FROM conversations WHERE id = $1")
+        .bind(conversation_id)
+        .fetch_optional(pool.as_ref())
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    match conversation_type.as_deref() {
+        Some("group") => Ok(()),
+        Some(_) => Err(GroupManagementError::NotGroupConversation),
+        None => Err(GroupManagementError::ConversationNotFound),
+    }
+}
+
+async fn require_group_admin(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    requester_id: Uuid,
+) -> Result<(), GroupManagementError> {
+    ensure_group_conversation(pool, conversation_id).await?;
+
+    let role = get_role(pool, conversation_id, requester_id)
+        .await
+        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+
+    if role == Some(ConversationRole::Admin) {
+        Ok(())
+    } else {
+        Err(GroupManagementError::NotAuthorized)
+    }
 }
 
 pub async fn delete_message(
@@ -432,4 +539,16 @@ pub async fn delete_message(
     .rows_affected();
 
     Ok(deleted > 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConversationRole;
+
+    #[test]
+    fn role_parser_accepts_only_admin_and_member() {
+        assert_eq!(ConversationRole::from_db("admin"), Some(ConversationRole::Admin));
+        assert_eq!(ConversationRole::from_db("member"), Some(ConversationRole::Member));
+        assert_eq!(ConversationRole::from_db("owner"), None);
+    }
 }

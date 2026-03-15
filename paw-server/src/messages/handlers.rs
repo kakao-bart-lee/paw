@@ -3,7 +3,7 @@ use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
         AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse,
-        UpdateGroupNameRequest,
+        UpdateGroupNameRequest, UpdateMemberRoleRequest, UpdateMemberRoleResponse,
     },
     service::{self, GroupManagementError, Membership},
 };
@@ -552,6 +552,27 @@ pub async fn update_group_name_handler(
     }
 }
 
+pub async fn update_member_role_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<UpdateMemberRoleRequest>,
+) -> Response {
+    match service::update_member_role(
+        &state.db,
+        conversation_id,
+        user_id,
+        target_user_id,
+        &payload.role,
+    )
+    .await
+    {
+        Ok(updated) => Json(UpdateMemberRoleResponse { updated }).into_response(),
+        Err(err) => group_management_error_to_response(err, &locale).into_response(),
+    }
+}
+
 async fn ensure_membership(
     state: &AppState,
     conv_id: Uuid,
@@ -602,6 +623,12 @@ fn group_management_error_to_response(
             locale,
             "Conversation not found",
         ),
+        GroupManagementError::NotGroupConversation => error(
+            StatusCode::BAD_REQUEST,
+            "not_group_conversation",
+            locale,
+            "This action is only available for group conversations",
+        ),
         GroupManagementError::NotAuthorized => error(
             StatusCode::FORBIDDEN,
             "forbidden",
@@ -626,17 +653,29 @@ fn group_management_error_to_response(
             locale,
             "Conversation member not found",
         ),
-        GroupManagementError::CannotRemoveLastOwner => error(
+        GroupManagementError::CannotRemoveLastAdmin => error(
             StatusCode::FORBIDDEN,
-            "cannot_remove_last_owner",
+            "cannot_remove_last_admin",
             locale,
-            "Cannot remove the last owner from conversation",
+            "Cannot remove the last admin from conversation",
+        ),
+        GroupManagementError::CannotDemoteLastAdmin => error(
+            StatusCode::FORBIDDEN,
+            "cannot_demote_last_admin",
+            locale,
+            "Cannot demote the last admin in conversation",
         ),
         GroupManagementError::InvalidGroupName => error(
             StatusCode::BAD_REQUEST,
             "invalid_group_name",
             locale,
             "Group name is required",
+        ),
+        GroupManagementError::InvalidRole => error(
+            StatusCode::BAD_REQUEST,
+            "invalid_role",
+            locale,
+            "Conversation role is invalid",
         ),
     }
 }

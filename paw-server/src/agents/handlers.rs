@@ -156,6 +156,27 @@ pub async fn invite_agent_handler(
         }
     }
 
+    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for inviting agent");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to invite agent",
+            )
+        })?;
+
+    if !can_manage {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            &locale,
+            "Only conversation admins can invite agents",
+        ));
+    }
+
     match service::invite_agent_to_conversation(
         &state.db,
         conversation_id,
@@ -205,11 +226,11 @@ pub async fn remove_agent_handler(
             &locale,
             "Agent is not in this conversation",
         )),
-        Err(err) if err.to_string() == "not_owner" => Err(error(
+        Err(err) if err.to_string() == "not_admin" => Err(error(
             StatusCode::FORBIDDEN,
             "forbidden",
             &locale,
-            "Only conversation owners can remove agents",
+            "Only conversation admins can remove agents",
         )),
         Err(err) => {
             tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, user_id = %user_id, "failed to remove agent");
