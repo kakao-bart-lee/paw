@@ -484,6 +484,14 @@ async fn handle_agent_socket(
     use axum::extract::ws::Message;
 
     let (mut ws_tx, mut ws_rx) = socket.split();
+    let (outbound_tx, mut outbound_rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+    let writer = tokio::spawn(async move {
+        while let Some(msg) = outbound_rx.recv().await {
+            if ws_tx.send(msg).await.is_err() {
+                break;
+            }
+        }
+    });
 
     let subject = format!("agent.inbound.{agent_id}");
     let mut nats_sub = match nats.subscribe(subject.clone()).await {
@@ -495,20 +503,26 @@ async fn handle_agent_socket(
                 &locale,
                 "Failed to subscribe agent session",
             );
-            let _ = ws_tx.send(Message::Text(err.to_string().into())).await;
+            let _ = outbound_tx.send(Message::Text(err.to_string().into()));
+            drop(outbound_tx);
+            let _ = writer.await;
             return;
         }
     };
 
+    state
+        .hub
+        .register_agent(agent_id, outbound_tx.clone())
+        .await;
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 
+    let outbound_tx_nats = outbound_tx.clone();
     let nats_to_ws = async {
         while let Some(msg) = nats_sub.next().await {
             let payload = String::from_utf8_lossy(&msg.payload);
-            if ws_tx
+            if outbound_tx_nats
                 .send(Message::Text(payload.into_owned().into()))
-                .await
                 .is_err()
             {
                 break;
@@ -558,6 +572,9 @@ async fn handle_agent_socket(
         _ = ws_to_server => {}
     }
 
+    state.hub.unregister_agent(agent_id, &outbound_tx).await;
+    drop(outbound_tx);
+    let _ = writer.await;
     crate::metrics::ws_connection_closed();
     tracing::info!("agent {agent_id} disconnected");
 }

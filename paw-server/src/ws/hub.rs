@@ -9,12 +9,14 @@ pub type WsSender = mpsc::UnboundedSender<Message>;
 #[derive(Clone)]
 pub struct Hub {
     connections: Arc<RwLock<HashMap<Uuid, Vec<WsSender>>>>,
+    agent_connections: Arc<RwLock<HashMap<Uuid, Vec<WsSender>>>>,
 }
 
 impl Hub {
     pub fn new() -> Self {
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
+            agent_connections: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -39,6 +41,37 @@ impl Hub {
             senders.retain(|tx| tx.send(Message::Text(msg.to_owned().into())).is_ok());
             if senders.is_empty() {
                 guard.remove(&user_id);
+            }
+        }
+    }
+
+    pub async fn register_agent(&self, agent_id: Uuid, sender: WsSender) {
+        let mut guard = self.agent_connections.write().await;
+        guard.entry(agent_id).or_default().push(sender);
+    }
+
+    pub async fn unregister_agent(&self, agent_id: Uuid, sender: &WsSender) {
+        let mut guard = self.agent_connections.write().await;
+        if let Some(senders) = guard.get_mut(&agent_id) {
+            senders.retain(|tx| !tx.same_channel(sender));
+            if senders.is_empty() {
+                guard.remove(&agent_id);
+            }
+        }
+    }
+
+    pub async fn send_to_agent_nonblocking(&self, agent_id: Uuid, msg: &str) {
+        let mut guard = self.agent_connections.write().await;
+        if let Some(senders) = guard.get_mut(&agent_id) {
+            senders.retain(|tx| match tx.send(Message::Text(msg.to_owned().into())) {
+                Ok(_) => true,
+                Err(err) => {
+                    tracing::warn!(%agent_id, error = %err, "dropping websocket message for disconnected agent");
+                    false
+                }
+            });
+            if senders.is_empty() {
+                guard.remove(&agent_id);
             }
         }
     }

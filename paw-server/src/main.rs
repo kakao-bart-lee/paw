@@ -2,6 +2,7 @@ mod agents;
 mod auth;
 mod backup;
 mod channels;
+mod context_engine;
 mod db;
 mod i18n;
 mod keys;
@@ -84,12 +85,17 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let prometheus_handle = metrics::init_metrics();
+    let context_engine = Arc::new(context_engine::DefaultContextEngine::new(
+        db.clone(),
+        hub.clone(),
+    ));
 
     let state = AppState {
         db: db.clone(),
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        context_engine,
         media_service,
         nats: nats_client,
     };
