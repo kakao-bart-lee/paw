@@ -19,6 +19,10 @@ use super::models::{
     PublishAgentResponse, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
     RotateAgentKeyResponse, UninstallAgentResponse,
 };
+use super::permissions::{
+    check_agent_permission, list_agent_permissions, replace_agent_permissions, AgentPermission,
+    AgentPermissionsResponse, UpdateAgentPermissionsRequest,
+};
 use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
@@ -271,6 +275,121 @@ pub async fn remove_agent_handler(
                 "Failed to remove agent",
             ))
         }
+    }
+}
+
+pub async fn get_agent_permissions_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<AgentPermissionsResponse>, (StatusCode, Json<Value>)> {
+    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for reading permissions");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to read agent permissions",
+            )
+        })?;
+
+    if !can_manage {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            &locale,
+            "Only conversation admins can view agent permissions",
+        ));
+    }
+
+    let permissions = list_agent_permissions(&state.db, conversation_id, agent_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, "failed to fetch agent permissions");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to fetch agent permissions",
+            )
+        })?;
+
+    match permissions {
+        Some(permissions) => Ok(Json(AgentPermissionsResponse {
+            conversation_id,
+            agent_id,
+            permissions,
+        })),
+        None => Err(error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found",
+            &locale,
+            "Agent is not in this conversation",
+        )),
+    }
+}
+
+pub async fn put_agent_permissions_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<UpdateAgentPermissionsRequest>,
+) -> Result<Json<AgentPermissionsResponse>, (StatusCode, Json<Value>)> {
+    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for updating permissions");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to update agent permissions",
+            )
+        })?;
+
+    if !can_manage {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            &locale,
+            "Only conversation admins can update agent permissions",
+        ));
+    }
+
+    let permissions = replace_agent_permissions(
+        &state.db,
+        conversation_id,
+        agent_id,
+        user_id,
+        &payload.permissions,
+    )
+    .await
+    .map_err(|err| {
+        tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, "failed to update agent permissions");
+        error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal_error",
+            &locale,
+            "Failed to update agent permissions",
+        )
+    })?;
+
+    match permissions {
+        Some(permissions) => Ok(Json(AgentPermissionsResponse {
+            conversation_id,
+            agent_id,
+            permissions,
+        })),
+        None => Err(error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found",
+            &locale,
+            "Agent is not in this conversation",
+        )),
     }
 }
 
@@ -561,7 +680,21 @@ async fn handle_agent_socket(
         }
     };
 
-    state.hub.register(agent_id, outbound_tx.clone()).await;
+    if !state
+        .hub
+        .try_register_with_limit(agent_id, outbound_tx.clone(), MAX_CONCURRENT_STREAMS_PER_AGENT)
+        .await
+    {
+        let err = agent_error_frame(
+            "too_many_connections",
+            &locale,
+            "Too many concurrent agent websocket connections",
+        );
+        let _ = outbound_tx.send(Message::Text(err.to_string().into()));
+        drop(outbound_tx);
+        let _ = writer.await;
+        return;
+    }
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 
@@ -653,6 +786,31 @@ async fn relay_agent_stream_message(
                 anyhow::bail!("agent_id mismatch for stream {}", msg.stream_id);
             }
 
+            if !check_agent_permission(
+                &state.db,
+                msg.conversation_id,
+                agent_id,
+                AgentPermission::SendMessages,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, conversation_id = %msg.conversation_id, "agent missing send_messages permission");
+                return Ok(());
+            }
+
+            if msg.thread_id.is_some()
+                && !check_agent_permission(
+                    &state.db,
+                    msg.conversation_id,
+                    agent_id,
+                    AgentPermission::ManageThread,
+                )
+                .await?
+            {
+                tracing::warn!(%agent_id, conversation_id = %msg.conversation_id, "agent missing manage_thread permission");
+                return Ok(());
+            }
+
             if stream_states.len() >= MAX_CONCURRENT_STREAMS_PER_AGENT {
                 tracing::warn!("agent {agent_id} exceeded max concurrent streams");
                 return Ok(());
@@ -694,6 +852,32 @@ async fn relay_agent_stream_message(
             if msg.agent_id != agent_id {
                 anyhow::bail!("agent_id mismatch for typing_start in conversation {}", msg.conversation_id);
             }
+
+            if !check_agent_permission(
+                &state.db,
+                msg.conversation_id,
+                agent_id,
+                AgentPermission::SendMessages,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, conversation_id = %msg.conversation_id, "agent missing send_messages permission");
+                return Ok(());
+            }
+
+            if msg.thread_id.is_some()
+                && !check_agent_permission(
+                    &state.db,
+                    msg.conversation_id,
+                    agent_id,
+                    AgentPermission::ManageThread,
+                )
+                .await?
+            {
+                tracing::warn!(%agent_id, conversation_id = %msg.conversation_id, "agent missing manage_thread permission");
+                return Ok(());
+            }
+
             broadcast_agent_typing(
                 state,
                 msg.conversation_id,
@@ -708,6 +892,32 @@ async fn relay_agent_stream_message(
             if msg.agent_id != agent_id {
                 anyhow::bail!("agent_id mismatch for typing_end in conversation {}", msg.conversation_id);
             }
+
+            if !check_agent_permission(
+                &state.db,
+                msg.conversation_id,
+                agent_id,
+                AgentPermission::SendMessages,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, conversation_id = %msg.conversation_id, "agent missing send_messages permission");
+                return Ok(());
+            }
+
+            if msg.thread_id.is_some()
+                && !check_agent_permission(
+                    &state.db,
+                    msg.conversation_id,
+                    agent_id,
+                    AgentPermission::ManageThread,
+                )
+                .await?
+            {
+                tracing::warn!(%agent_id, conversation_id = %msg.conversation_id, "agent missing manage_thread permission");
+                return Ok(());
+            }
+
             broadcast_agent_typing(
                 state,
                 msg.conversation_id,
@@ -719,6 +929,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ContentDelta(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::SendMessages,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing send_messages permission for stream");
+                return Ok(());
+            }
             if msg.delta.len() > MAX_DELTA_SIZE {
                 tracing::warn!("content_delta from {agent_id} exceeds MAX_DELTA_SIZE, dropping");
                 return Ok(());
@@ -735,6 +957,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ToolCallStart(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::UseTools,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing use_tools permission for stream");
+                return Ok(());
+            }
             persist_tool_call_start(state, agent_id, &msg).await?;
             relay_stream_frame(
                 state,
@@ -748,6 +982,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ToolCallResult(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::UseTools,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing use_tools permission for stream");
+                return Ok(());
+            }
             persist_tool_call_result(state, &msg).await?;
             relay_stream_frame(
                 state,
@@ -761,6 +1007,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ToolCallEnd(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::UseTools,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing use_tools permission for stream");
+                return Ok(());
+            }
             persist_tool_call_end(state, &msg).await?;
             relay_stream_frame(
                 state,
@@ -774,6 +1032,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ToolStart(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::UseTools,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing use_tools permission for stream");
+                return Ok(());
+            }
             relay_stream_frame(
                 state,
                 stream_states,
@@ -786,6 +1056,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::ToolEnd(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::UseTools,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing use_tools permission for stream");
+                return Ok(());
+            }
             relay_stream_frame(
                 state,
                 stream_states,
@@ -798,6 +1080,18 @@ async fn relay_agent_stream_message(
         }
         AgentStreamMsg::StreamEnd(msg) => {
             require_v(msg.v)?;
+            if !stream_has_permission(
+                state,
+                stream_states,
+                msg.stream_id,
+                agent_id,
+                AgentPermission::SendMessages,
+            )
+            .await?
+            {
+                tracing::warn!(%agent_id, stream_id = %msg.stream_id, "agent missing send_messages permission for stream");
+                return Ok(());
+            }
             let typing_context = stream_states
                 .get(&msg.stream_id)
                 .map(|state| (state.conversation_id, state.thread_id));
@@ -817,6 +1111,26 @@ async fn relay_agent_stream_message(
     }
 
     Ok(())
+}
+
+async fn stream_has_permission(
+    state: &AppState,
+    stream_states: &HashMap<Uuid, StreamRelayState>,
+    stream_id: Uuid,
+    agent_id: Uuid,
+    permission: AgentPermission,
+) -> anyhow::Result<bool> {
+    let Some(stream_state) = stream_states.get(&stream_id) else {
+        return Ok(true);
+    };
+
+    check_agent_permission(
+        &state.db,
+        stream_state.conversation_id,
+        agent_id,
+        permission,
+    )
+    .await
 }
 
 fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {

@@ -215,6 +215,7 @@ fn protocol_message_received_all_fields() {
         seq: 42,
         created_at: Utc::now(),
         blocks: vec![],
+        attachments: vec![],
     };
     let json = serde_json::to_value(&msg).unwrap();
 
@@ -893,6 +894,7 @@ fn gap_fill_messages_must_be_monotonically_increasing() {
             seq,
             created_at: now + Duration::seconds(seq),
             blocks: vec![],
+            attachments: vec![],
         })
         .collect();
 
@@ -968,6 +970,7 @@ fn test_inbound_context_serialization() {
         seq: 1,
         created_at: Utc::now(),
         blocks: vec![],
+        attachments: vec![],
     };
 
     let ctx = paw_proto::InboundContext {
@@ -1070,6 +1073,7 @@ fn test_agent_stream_msg_roundtrip() {
                 assert_eq!(msg.tokens, 42);
                 assert_eq!(msg.duration_ms, 1234);
             }
+            _ => {}
         }
     }
 }

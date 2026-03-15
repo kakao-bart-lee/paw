@@ -302,6 +302,7 @@ mod tests {
             seq,
             created_at: Utc::now(),
             blocks: vec![],
+            attachments: vec![],
         }
     }
 
