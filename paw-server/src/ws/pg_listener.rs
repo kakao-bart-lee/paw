@@ -1,6 +1,9 @@
 use crate::db::DbPool;
 use crate::ws::hub::Hub;
-use paw_proto::{MessageFormat, MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION};
+use paw_proto::{
+    ForwardedFrom, MessageFormat, MessageForwardedMsg, MessageReceivedMsg, ServerMessage,
+    PROTOCOL_VERSION,
+};
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -44,15 +47,21 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
             continue;
         };
 
-        let members = match conversation_members(pool.as_ref(), message.conversation_id).await {
+        let conversation_id = match &message {
+            ServerMessage::MessageReceived(frame) => frame.conversation_id,
+            ServerMessage::MessageForwarded(frame) => frame.conversation_id,
+            _ => continue,
+        };
+
+        let members = match conversation_members(pool.as_ref(), conversation_id).await {
             Ok(members) => members,
             Err(err) => {
-                tracing::error!(%err, conversation_id = %message.conversation_id, "failed to load conversation members");
+                tracing::error!(%err, conversation_id = %conversation_id, "failed to load conversation members");
                 continue;
             }
         };
 
-        let frame = match serde_json::to_string(&ServerMessage::MessageReceived(message)) {
+        let frame = match serde_json::to_string(&message) {
             Ok(frame) => frame,
             Err(err) => {
                 tracing::error!(%err, "failed to serialize message_received frame");
@@ -80,7 +89,7 @@ async fn conversation_members(
     Ok(user_ids)
 }
 
-fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg> {
+fn payload_to_message(payload: &serde_json::Value) -> Option<ServerMessage> {
     let id = payload.get("id")?.as_str().and_then(parse_uuid)?;
     let conversation_id = payload
         .get("conversation_id")?
@@ -112,7 +121,7 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         _ => Vec::new(),
     };
 
-    Some(MessageReceivedMsg {
+    let message_received = MessageReceivedMsg {
         v: PROTOCOL_VERSION,
         id,
         conversation_id,
@@ -124,9 +133,57 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         created_at,
         blocks,
         attachments: Vec::new(),
-    })
+    };
+
+    let forwarded_from = payload
+        .get("forwarded_from")
+        .and_then(|value| serde_json::from_value::<ForwardedFrom>(value.clone()).ok());
+
+    match forwarded_from {
+        Some(forwarded_from) => Some(ServerMessage::MessageForwarded(MessageForwardedMsg {
+            v: message_received.v,
+            id: message_received.id,
+            conversation_id: message_received.conversation_id,
+            thread_id: message_received.thread_id,
+            sender_id: message_received.sender_id,
+            content: message_received.content,
+            format: message_received.format,
+            seq: message_received.seq,
+            created_at: message_received.created_at,
+            blocks: message_received.blocks,
+            attachments: message_received.attachments,
+            forwarded_from,
+        })),
+        None => Some(ServerMessage::MessageReceived(message_received)),
+    }
 }
 
 fn parse_uuid(value: &str) -> Option<Uuid> {
     Uuid::parse_str(value).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::payload_to_message;
+
+    #[test]
+    fn forwarded_payload_maps_to_message_forwarded_variant() {
+        let payload = serde_json::json!({
+            "id": uuid::Uuid::new_v4().to_string(),
+            "conversation_id": uuid::Uuid::new_v4().to_string(),
+            "sender_id": uuid::Uuid::new_v4().to_string(),
+            "seq": 3,
+            "content": "forwarded",
+            "format": "plain",
+            "blocks": [],
+            "created_at": chrono::Utc::now().to_rfc3339(),
+            "forwarded_from": {
+                "original_message_id": uuid::Uuid::new_v4().to_string(),
+                "source_conversation_id": uuid::Uuid::new_v4().to_string()
+            }
+        });
+
+        let parsed = payload_to_message(&payload).expect("payload should parse");
+        assert!(matches!(parsed, paw_proto::ServerMessage::MessageForwarded(_)));
+    }
 }

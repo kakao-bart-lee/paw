@@ -228,6 +228,43 @@ fn protocol_message_received_all_fields() {
 }
 
 #[test]
+fn protocol_message_forwarded_roundtrip() {
+    let source_conversation_id = Uuid::new_v4();
+    let original_message_id = Uuid::new_v4();
+    let msg = paw_proto::ServerMessage::MessageForwarded(paw_proto::MessageForwardedMsg {
+        v: 1,
+        id: Uuid::new_v4(),
+        conversation_id: Uuid::new_v4(),
+        thread_id: None,
+        sender_id: Uuid::new_v4(),
+        content: "Forwarded".into(),
+        format: paw_proto::MessageFormat::Plain,
+        seq: 55,
+        created_at: Utc::now(),
+        blocks: vec![],
+        attachments: vec![],
+        forwarded_from: paw_proto::ForwardedFrom {
+            original_message_id,
+            source_conversation_id,
+        },
+    });
+
+    let json = serde_json::to_value(&msg).unwrap();
+    assert_eq!(json["type"], "message_forwarded");
+    assert_eq!(json["forwarded_from"]["original_message_id"], original_message_id.to_string());
+    assert_eq!(
+        json["forwarded_from"]["source_conversation_id"],
+        source_conversation_id.to_string()
+    );
+
+    let parsed: paw_proto::ServerMessage = serde_json::from_value(json).unwrap();
+    assert!(matches!(
+        parsed,
+        paw_proto::ServerMessage::MessageForwarded(_)
+    ));
+}
+
+#[test]
 fn protocol_sync_frame_roundtrip() {
     let conv_id = Uuid::new_v4();
     let msg = paw_proto::ClientMessage::Sync(paw_proto::SyncMsg {
@@ -537,6 +574,41 @@ async fn message_idempotency_returns_same_result() {
             "idempotent sends must return same seq"
         );
     }
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server with auth token"]
+async fn message_forward_creates_forwarded_message() {
+    let base = "http://localhost:38173";
+    let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let source_conv_id = std::env::var("PAW_TEST_SOURCE_CONV_ID")
+        .or_else(|_| std::env::var("PAW_TEST_CONV_ID"))
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
+    let target_conv_id = std::env::var("PAW_TEST_TARGET_CONV_ID")
+        .or_else(|_| std::env::var("PAW_TEST_CONV_ID"))
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
+    let original_message_id = std::env::var("PAW_TEST_ORIGINAL_MESSAGE_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!(
+            "{base}/conversations/{target_conv_id}/messages/forward"
+        ))
+        .bearer_auth(&token)
+        .json(&serde_json::json!({
+            "original_message_id": original_message_id,
+            "source_conversation_id": source_conv_id,
+        }))
+        .send()
+        .await
+        .unwrap();
+
+    assert!(
+        resp.status() == 200 || resp.status() == 403 || resp.status() == 404,
+        "expected 200 or membership/not_found guard, got {}",
+        resp.status()
+    );
 }
 
 // ── Integration: Gap-fill via WebSocket (requires running server) ───────

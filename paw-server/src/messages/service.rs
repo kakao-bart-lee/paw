@@ -130,6 +130,31 @@ pub async fn send_message(
     .context("insert message")
 }
 
+pub async fn send_forwarded_message(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    sender_id: Uuid,
+    content: &str,
+    format: &str,
+    idempotency_key: Uuid,
+    forwarded_from: serde_json::Value,
+) -> anyhow::Result<MessageSendResult> {
+    sqlx::query_as::<_, MessageSendResult>(
+        "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key, forwarded_from)
+         VALUES ($1, $2, NULL, next_message_seq($1), $3, $4, $5, $6)
+         RETURNING id, seq, created_at",
+    )
+    .bind(conversation_id)
+    .bind(sender_id)
+    .bind(content)
+    .bind(format)
+    .bind(idempotency_key)
+    .bind(forwarded_from)
+    .fetch_one(pool.as_ref())
+    .await
+    .context("insert forwarded message")
+}
+
 pub async fn get_messages(
     pool: &DbPool,
     conversation_id: Uuid,
@@ -139,7 +164,7 @@ pub async fn get_messages(
     let max_limit = limit.clamp(1, 50);
 
     sqlx::query_as::<_, Message>(
-        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at
+        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, forwarded_from
          FROM messages
          WHERE conversation_id = $1 AND seq > $2 AND is_deleted = FALSE
          ORDER BY seq ASC

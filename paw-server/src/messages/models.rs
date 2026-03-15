@@ -12,6 +12,13 @@ pub struct Message {
     pub format: String,
     pub seq: i64,
     pub created_at: DateTime<Utc>,
+    pub forwarded_from: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForwardedFromMetadata {
+    pub original_message_id: Uuid,
+    pub source_conversation_id: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
