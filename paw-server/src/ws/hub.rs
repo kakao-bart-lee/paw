@@ -70,7 +70,10 @@ impl Hub {
             return false;
         };
 
-        let Some(entry) = entries.iter_mut().find(|entry| entry.sender.same_channel(sender)) else {
+        let Some(entry) = entries
+            .iter_mut()
+            .find(|entry| entry.sender.same_channel(sender))
+        else {
             return false;
         };
 
@@ -93,7 +96,10 @@ impl Hub {
             return false;
         };
 
-        let Some(entry) = entries.iter_mut().find(|entry| entry.sender.same_channel(sender)) else {
+        let Some(entry) = entries
+            .iter_mut()
+            .find(|entry| entry.sender.same_channel(sender))
+        else {
             return false;
         };
 
@@ -280,8 +286,13 @@ mod tests {
                 .await
         );
         assert!(
-            hub.subscribe_thread(subscribed_user_id, &subscribed_tx, conversation_id, thread_id)
-                .await
+            hub.subscribe_thread(
+                subscribed_user_id,
+                &subscribed_tx,
+                conversation_id,
+                thread_id
+            )
+            .await
         );
 
         hub.send_to_thread(
@@ -308,7 +319,10 @@ mod tests {
         let user_id = Uuid::new_v4();
         let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
 
-        assert!(hub.try_register_with_limit(user_id, tx.clone(), usize::MAX).await);
+        assert!(
+            hub.try_register_with_limit(user_id, tx.clone(), usize::MAX)
+                .await
+        );
         assert!(
             hub.subscribe_thread(user_id, &tx, conversation_id, thread_id)
                 .await

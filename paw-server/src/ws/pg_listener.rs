@@ -168,20 +168,22 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<ServerMessage> {
         .and_then(|value| serde_json::from_value::<ForwardedFrom>(value.clone()).ok());
 
     if let Some(thread_id) = thread_id {
-        return Some(ServerMessage::ThreadMessageReceived(ThreadMessageReceivedMsg {
-            v: message_received.v,
-            id: message_received.id,
-            conversation_id: message_received.conversation_id,
-            thread_id,
-            sender_id: message_received.sender_id,
-            content: message_received.content,
-            format: message_received.format,
-            seq: thread_seq.unwrap_or(message_received.seq),
-            conversation_seq: message_received.seq,
-            created_at: message_received.created_at,
-            blocks: message_received.blocks,
-            attachments: message_received.attachments,
-        }));
+        return Some(ServerMessage::ThreadMessageReceived(
+            ThreadMessageReceivedMsg {
+                v: message_received.v,
+                id: message_received.id,
+                conversation_id: message_received.conversation_id,
+                thread_id,
+                sender_id: message_received.sender_id,
+                content: message_received.content,
+                format: message_received.format,
+                seq: thread_seq.unwrap_or(message_received.seq),
+                conversation_seq: message_received.seq,
+                created_at: message_received.created_at,
+                blocks: message_received.blocks,
+                attachments: message_received.attachments,
+            },
+        ));
     }
 
     match forwarded_from {
