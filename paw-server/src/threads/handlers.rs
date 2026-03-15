@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use paw_proto::{ContextThreadCreatedMsg, PROTOCOL_VERSION};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -101,7 +102,31 @@ pub async fn create_thread(
     )
     .await
     {
-        Ok(thread) => (StatusCode::CREATED, Json(thread)).into_response(),
+        Ok(thread) => {
+            let context_engine = state.context_engine.clone();
+            let thread_id = thread.id;
+            let root_message_id = thread.root_message_id;
+            let title = thread.title.clone();
+            let occurred_at = thread.created_at;
+            tokio::spawn(async move {
+                if let Err(err) = context_engine
+                    .on_thread_created(ContextThreadCreatedMsg {
+                        v: PROTOCOL_VERSION,
+                        conversation_id,
+                        thread_id,
+                        root_message_id,
+                        title,
+                        created_by: user_id,
+                        occurred_at,
+                    })
+                    .await
+                {
+                    tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "context hook failed");
+                }
+            });
+
+            (StatusCode::CREATED, Json(thread)).into_response()
+        }
         Err(CreateThreadError::ConversationNotFound) => error(
             StatusCode::NOT_FOUND,
             "conversation_not_found",
