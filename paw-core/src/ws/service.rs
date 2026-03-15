@@ -9,6 +9,8 @@ use reqwest::Url;
 
 use super::ReconnectionManager;
 
+const THREADS_CAPABILITY: &str = "threads";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WsConnectionState {
     Disconnected,
@@ -57,6 +59,7 @@ pub struct WsService {
     connection_state: WsConnectionState,
     pending_reconnect: Option<ReconnectPlan>,
     sync_all: Option<Box<dyn Fn() -> Result<(), WsServiceError> + Send + Sync>>,
+    threads_enabled: bool,
 }
 
 impl WsService {
@@ -75,6 +78,7 @@ impl WsService {
             connection_state: WsConnectionState::Disconnected,
             pending_reconnect: None,
             sync_all: None,
+            threads_enabled: false,
         }
     }
 
@@ -101,6 +105,10 @@ impl WsService {
         self.pending_reconnect.as_ref()
     }
 
+    pub fn threads_enabled(&self) -> bool {
+        self.threads_enabled
+    }
+
     pub async fn connect(
         &mut self,
         server_url: impl Into<String>,
@@ -113,6 +121,7 @@ impl WsService {
         self.connected = false;
         self.pending_reconnect = None;
         self.access_token = Some(access_token.clone());
+        self.threads_enabled = false;
 
         self.transport.close().await?;
 
@@ -122,8 +131,7 @@ impl WsService {
             .send(ClientMessage::Connect(ConnectMsg {
                 v: PROTOCOL_VERSION,
                 token: access_token,
-                // Advertise threads once the client runtime can route thread-scoped state.
-                capabilities: None,
+                capabilities: Some(vec![THREADS_CAPABILITY.into()]),
             }))
             .await?;
         Ok(uri)
@@ -259,11 +267,20 @@ impl WsService {
         Ok(url)
     }
 
-    fn on_hello_ok(&mut self, _msg: &HelloOkMsg) -> Result<(), WsServiceError> {
+    fn on_hello_ok(&mut self, msg: &HelloOkMsg) -> Result<(), WsServiceError> {
         self.connected = true;
         self.connection_state = WsConnectionState::Connected;
         self.pending_reconnect = None;
         self.reconnection_manager.on_connected();
+        self.threads_enabled = msg
+            .capabilities
+            .as_ref()
+            .map(|capabilities| {
+                capabilities
+                    .iter()
+                    .any(|capability| capability == THREADS_CAPABILITY)
+            })
+            .unwrap_or(false);
 
         if let Some(sync_all) = &self.sync_all {
             sync_all()?;
@@ -275,6 +292,7 @@ impl WsService {
     fn on_hello_error(&mut self, _msg: &HelloErrorMsg) -> Result<(), WsServiceError> {
         self.connected = false;
         self.connection_state = WsConnectionState::Disconnected;
+        self.threads_enabled = false;
         self.schedule_reconnect();
         Ok(())
     }
@@ -380,8 +398,9 @@ mod tests {
             "wss://paw.example/ws?token=token-123"
         );
         assert!(matches!(
-            transport.sent.lock().unwrap()[0],
-            ClientMessage::Connect(_)
+            &transport.sent.lock().unwrap()[0],
+            ClientMessage::Connect(ConnectMsg { capabilities: Some(capabilities), .. })
+                if capabilities == &vec![THREADS_CAPABILITY.to_string()]
         ));
     }
 
@@ -416,7 +435,34 @@ mod tests {
 
         assert!(service.is_connected());
         assert_eq!(service.connection_state(), WsConnectionState::Connected);
+        assert!(!service.threads_enabled());
         assert_eq!(*sync_calls.lock().unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn hello_ok_enables_threads_only_when_server_echoes_capability() {
+        let transport = Arc::new(RecordingTransport::default());
+        let mut service = WsService::new(
+            "https://paw.example",
+            transport,
+            ReconnectionManager::default(),
+        );
+
+        service
+            .connect("https://paw.example", "token-123")
+            .await
+            .unwrap();
+        service
+            .handle_server_message(&ServerMessage::HelloOk(HelloOkMsg {
+                v: PROTOCOL_VERSION,
+                user_id: Uuid::new_v4(),
+                server_time: Utc::now(),
+                capabilities: Some(vec![THREADS_CAPABILITY.into()]),
+            }))
+            .await
+            .unwrap();
+
+        assert!(service.threads_enabled());
     }
 
     #[tokio::test]

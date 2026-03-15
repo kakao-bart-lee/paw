@@ -130,6 +130,7 @@ mod tests {
             db.upsert_message(&MessageRecord {
                 id: format!("msg-{index}"),
                 conversation_id: "conv-1".to_string(),
+                thread_id: None,
                 sender_id: "user-1".to_string(),
                 content: format!("Searchable content item {index}"),
                 format: "markdown".to_string(),

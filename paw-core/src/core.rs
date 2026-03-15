@@ -15,8 +15,8 @@ use crate::{
         StreamingSessionView,
     },
     sync::{
-        ConversationSyncCursor, FinalizedStreamMessage, MessageSyncOutcome, StreamingSession,
-        StreamingState, SyncEngine, SyncRequest, SyncService,
+        ConversationSyncCursor, FinalizedStreamMessage, MessageSyncOutcome, ScopedSyncCursor,
+        StreamingSession, StreamingState, SyncEngine, SyncRequest, SyncService,
     },
     ws::{WsService, WsServiceError},
 };
@@ -89,21 +89,25 @@ pub enum RuntimeEffect {
     SyncRequested(SyncRequest),
     AckRequested {
         conversation_id: Uuid,
+        thread_id: Option<Uuid>,
         last_seq: i64,
     },
     DuplicateMessage {
         conversation_id: Uuid,
+        thread_id: Option<Uuid>,
         received_seq: i64,
         last_seq: i64,
     },
     GapDetected {
         conversation_id: Uuid,
+        thread_id: Option<Uuid>,
         expected_seq: i64,
         received_seq: i64,
         request_from_seq: i64,
     },
     DeviceSyncApplied {
         conversation_id: Uuid,
+        thread_id: Option<Uuid>,
         applied_count: u32,
         highest_seq: i64,
     },
@@ -113,6 +117,27 @@ pub enum RuntimeEffect {
         conversation_ids: Vec<Uuid>,
     },
     MessagePersisted(MessageRecord),
+    ThreadCreated {
+        conversation_id: Uuid,
+        thread_id: Uuid,
+        root_message_id: Uuid,
+        title: Option<String>,
+        created_by: Uuid,
+    },
+    ThreadDeleted {
+        conversation_id: Uuid,
+        thread_id: Uuid,
+    },
+    ThreadAgentBound {
+        conversation_id: Uuid,
+        thread_id: Uuid,
+        agent_id: Uuid,
+    },
+    ThreadAgentUnbound {
+        conversation_id: Uuid,
+        thread_id: Uuid,
+        agent_id: Uuid,
+    },
     StreamUpdated(StreamingSession),
     StreamFinalized(FinalizedStreamMessage),
 }
@@ -141,6 +166,10 @@ impl RuntimeEffect {
             | Self::DeviceSyncApplied { .. }
             | Self::DeviceSyncBatchProcessed { .. }
             | Self::MessagePersisted(_) => RuntimeEffectDomain::Sync,
+            Self::ThreadCreated { .. }
+            | Self::ThreadDeleted { .. }
+            | Self::ThreadAgentBound { .. }
+            | Self::ThreadAgentUnbound { .. } => RuntimeEffectDomain::Lifecycle,
             Self::StreamUpdated(_) | Self::StreamFinalized(_) => RuntimeEffectDomain::Streaming,
         }
     }
@@ -156,8 +185,20 @@ pub struct CoreRuntime {
 
 impl CoreRuntime {
     pub fn new(db: Arc<AppDatabase>, ws_service: WsService) -> Result<Self, CoreRuntimeError> {
-        let sync_engine = SyncEngine::new(load_cursors(db.as_ref())?);
-        let sync_service = SyncService::new(db.clone(), |_conversation_id, _last_seq| {});
+        let mut sync_engine = SyncEngine::new(load_cursors(db.as_ref())?);
+        load_thread_cursors(db.as_ref())?
+            .into_iter()
+            .for_each(|cursor| {
+                sync_engine.upsert_thread_cursor(
+                    cursor.conversation_id,
+                    cursor
+                        .thread_id
+                        .expect("load_thread_cursors always sets thread_id"),
+                    cursor.last_seq,
+                )
+            });
+        let sync_service =
+            SyncService::new(db.clone(), |_conversation_id, _thread_id, _last_seq| {});
 
         Ok(Self {
             db,
@@ -181,13 +222,13 @@ impl CoreRuntime {
             connection: ConnectionSnapshot::from(&self.ws_service),
             cursors: self
                 .sync_engine
-                .cursors()
+                .scope_cursors()
                 .iter()
                 .map(ConversationCursorView::from)
                 .collect(),
             pending_recoveries: self
                 .sync_engine
-                .pending_recoveries()
+                .pending_scope_recoveries()
                 .iter()
                 .map(RecoveryCursorView::from)
                 .collect(),
@@ -310,20 +351,67 @@ impl CoreRuntime {
             ServerMessage::HelloOk(_) => {
                 self.sync_engine
                     .replace_cursors(load_cursors(self.db.as_ref())?);
+                for cursor in load_thread_cursors(self.db.as_ref())? {
+                    self.sync_engine.upsert_thread_cursor(
+                        cursor.conversation_id,
+                        cursor
+                            .thread_id
+                            .expect("load_thread_cursors always sets thread_id"),
+                        cursor.last_seq,
+                    );
+                }
                 let mut effects = vec![RuntimeEffect::ConnectionStateChanged(
                     ConnectionSnapshot::from(&self.ws_service),
                 )];
+                let sync_messages = if self.ws_service.threads_enabled() {
+                    self.sync_engine.sync_all_scopes()
+                } else {
+                    self.sync_engine.sync_all_conversations()
+                };
                 effects.extend(
-                    self.sync_service
-                        .sync_all_conversations()?
+                    sync_messages
                         .into_iter()
-                        .map(RuntimeEffect::SyncRequested),
+                        .filter_map(|message| match message {
+                            paw_proto::ClientMessage::Sync(sync) => {
+                                Some(RuntimeEffect::SyncRequested(SyncRequest {
+                                    conversation_id: sync.conversation_id.to_string(),
+                                    thread_id: sync
+                                        .thread_id
+                                        .map(|thread_id| thread_id.to_string()),
+                                    last_seq: sync.last_seq,
+                                }))
+                            }
+                            _ => None,
+                        }),
                 );
                 Ok(effects)
             }
             ServerMessage::MessageReceived(message) => self.handle_message_received(message),
             ServerMessage::DeviceSyncResponse(response) => {
                 self.handle_device_sync_response(response)
+            }
+            ServerMessage::ThreadCreated(message) => Ok(vec![RuntimeEffect::ThreadCreated {
+                conversation_id: message.conversation_id,
+                thread_id: message.thread_id,
+                root_message_id: message.root_message_id,
+                title: message.title.clone(),
+                created_by: message.created_by,
+            }]),
+            ServerMessage::ThreadDeleted(message) => Ok(vec![RuntimeEffect::ThreadDeleted {
+                conversation_id: message.conversation_id,
+                thread_id: message.thread_id,
+            }]),
+            ServerMessage::ThreadAgentBound(message) => Ok(vec![RuntimeEffect::ThreadAgentBound {
+                conversation_id: message.conversation_id,
+                thread_id: message.thread_id,
+                agent_id: message.agent_id,
+            }]),
+            ServerMessage::ThreadAgentUnbound(message) => {
+                Ok(vec![RuntimeEffect::ThreadAgentUnbound {
+                    conversation_id: message.conversation_id,
+                    thread_id: message.thread_id,
+                    agent_id: message.agent_id,
+                }])
             }
             ServerMessage::StreamStart(stream_start) => {
                 self.streaming.handle_stream_start(stream_start);
@@ -397,26 +485,38 @@ impl CoreRuntime {
             MessageSyncOutcome::DuplicateOrStale { ack_seq } => vec![
                 RuntimeEffect::DuplicateMessage {
                     conversation_id: msg.conversation_id,
+                    thread_id: msg.thread_id,
                     received_seq: msg.seq,
                     last_seq: ack_seq,
                 },
                 RuntimeEffect::AckRequested {
                     conversation_id: msg.conversation_id,
+                    thread_id: msg.thread_id,
                     last_seq: ack_seq,
                 },
             ],
             MessageSyncOutcome::GapDetected { request_from_seq } => {
-                self.sync_engine
-                    .mark_recovery_pending(msg.conversation_id, request_from_seq);
+                if let Some(thread_id) = msg.thread_id {
+                    self.sync_engine.mark_thread_recovery_pending(
+                        msg.conversation_id,
+                        thread_id,
+                        request_from_seq,
+                    );
+                } else {
+                    self.sync_engine
+                        .mark_recovery_pending(msg.conversation_id, request_from_seq);
+                }
                 vec![
                     RuntimeEffect::GapDetected {
                         conversation_id: msg.conversation_id,
+                        thread_id: msg.thread_id,
                         expected_seq: request_from_seq + 1,
                         received_seq: msg.seq,
                         request_from_seq,
                     },
                     RuntimeEffect::SyncRequested(SyncRequest {
                         conversation_id: msg.conversation_id.to_string(),
+                        thread_id: msg.thread_id.map(|thread_id| thread_id.to_string()),
                         last_seq: request_from_seq,
                     }),
                 ]
@@ -427,6 +527,7 @@ impl CoreRuntime {
                     RuntimeEffect::MessagePersisted(record),
                     RuntimeEffect::AckRequested {
                         conversation_id: msg.conversation_id,
+                        thread_id: msg.thread_id,
                         last_seq: ack_seq,
                     },
                 ]
@@ -441,28 +542,37 @@ impl CoreRuntime {
         response: &DeviceSyncResponse,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
         self.sync_engine
-            .clear_recoveries(response.conversations.iter().map(|conversation| {
-                ConversationSyncCursor {
+            .clear_scope_recoveries(response.conversations.iter().flat_map(|conversation| {
+                std::iter::once(ScopedSyncCursor {
                     conversation_id: conversation.conversation_id,
+                    thread_id: None,
                     last_seq: conversation.last_seq,
-                }
+                })
+                .chain(conversation.threads.iter().map(|thread| {
+                    ScopedSyncCursor {
+                        conversation_id: conversation.conversation_id,
+                        thread_id: Some(thread.thread_id),
+                        last_seq: thread.last_seq,
+                    }
+                }))
             }));
         self.sync_engine.apply_gap_fill(&response.messages);
 
         let mut effects = Vec::with_capacity(response.messages.len() * 2 + 1);
-        let mut highest_seq_by_conversation: BTreeMap<Uuid, i64> = BTreeMap::new();
-        let mut applied_count_by_conversation: BTreeMap<Uuid, u32> = BTreeMap::new();
+        let mut highest_seq_by_scope: BTreeMap<(Uuid, Option<Uuid>), i64> = BTreeMap::new();
+        let mut applied_count_by_scope: BTreeMap<(Uuid, Option<Uuid>), u32> = BTreeMap::new();
 
         for message in &response.messages {
             let record = self.sync_service.persist_message(message)?;
             effects.push(RuntimeEffect::MessagePersisted(record));
 
-            applied_count_by_conversation
-                .entry(message.conversation_id)
+            let key = (message.conversation_id, message.thread_id);
+            applied_count_by_scope
+                .entry(key)
                 .and_modify(|count| *count += 1)
                 .or_insert(1);
-            highest_seq_by_conversation
-                .entry(message.conversation_id)
+            highest_seq_by_scope
+                .entry(key)
                 .and_modify(|seq| *seq = (*seq).max(message.seq))
                 .or_insert(message.seq);
         }
@@ -477,24 +587,24 @@ impl CoreRuntime {
                 .collect(),
         });
 
-        effects.extend(
-            highest_seq_by_conversation
-                .iter()
-                .map(
-                    |(conversation_id, highest_seq)| RuntimeEffect::DeviceSyncApplied {
-                        conversation_id: *conversation_id,
-                        applied_count: applied_count_by_conversation
-                            .get(conversation_id)
-                            .copied()
-                            .unwrap_or_default(),
-                        highest_seq: *highest_seq,
-                    },
-                ),
-        );
+        effects.extend(highest_seq_by_scope.iter().map(
+            |((conversation_id, thread_id), highest_seq)| {
+                RuntimeEffect::DeviceSyncApplied {
+                    conversation_id: *conversation_id,
+                    thread_id: *thread_id,
+                    applied_count: applied_count_by_scope
+                        .get(&(*conversation_id, *thread_id))
+                        .copied()
+                        .unwrap_or_default(),
+                    highest_seq: *highest_seq,
+                }
+            },
+        ));
 
-        effects.extend(highest_seq_by_conversation.into_iter().map(
-            |(conversation_id, last_seq)| RuntimeEffect::AckRequested {
+        effects.extend(highest_seq_by_scope.into_iter().map(
+            |((conversation_id, thread_id), last_seq)| RuntimeEffect::AckRequested {
                 conversation_id,
+                thread_id,
                 last_seq,
             },
         ));
@@ -528,6 +638,24 @@ fn load_cursors(db: &AppDatabase) -> Result<Vec<ConversationSyncCursor>, CoreRun
             Ok(ConversationSyncCursor {
                 conversation_id,
                 last_seq: conversation.last_seq,
+            })
+        })
+        .collect()
+}
+
+fn load_thread_cursors(db: &AppDatabase) -> Result<Vec<ScopedSyncCursor>, CoreRuntimeError> {
+    db.get_thread_cursors()?
+        .into_iter()
+        .map(|cursor| {
+            let conversation_id = Uuid::parse_str(&cursor.conversation_id).map_err(|_| {
+                CoreRuntimeError::InvalidConversationId(cursor.conversation_id.clone())
+            })?;
+            let thread_id = Uuid::parse_str(&cursor.thread_id)
+                .map_err(|_| CoreRuntimeError::InvalidConversationId(cursor.thread_id.clone()))?;
+            Ok(ScopedSyncCursor {
+                conversation_id,
+                thread_id: Some(thread_id),
+                last_seq: cursor.last_seq,
             })
         })
         .collect()
@@ -742,13 +870,104 @@ mod tests {
                 }),
                 RuntimeEffect::SyncRequested(SyncRequest {
                     conversation_id: conversation_id.to_string(),
-                    last_seq: 0,
+                    thread_id: None,
+                    last_seq: 4,
                 }),
             ]
         );
         assert_eq!(
             runtime.ws_service().connection_state(),
             WsConnectionState::Connected
+        );
+    }
+
+    #[tokio::test]
+    async fn thread_lifecycle_messages_emit_runtime_effects() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let (mut runtime, _, _) = runtime_with_db(db);
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let root_message_id = Uuid::new_v4();
+        let agent_id = Uuid::new_v4();
+        let created_by = Uuid::new_v4();
+
+        assert_eq!(
+            runtime
+                .handle_server_message(&ServerMessage::ThreadCreated(paw_proto::ThreadCreatedMsg {
+                    v: PROTOCOL_VERSION,
+                    conversation_id,
+                    thread_id,
+                    root_message_id,
+                    title: Some("planning".into()),
+                    created_by,
+                    created_at: Utc::now(),
+                }))
+                .await
+                .unwrap(),
+            vec![RuntimeEffect::ThreadCreated {
+                conversation_id,
+                thread_id,
+                root_message_id,
+                title: Some("planning".into()),
+                created_by,
+            }]
+        );
+
+        assert_eq!(
+            runtime
+                .handle_server_message(&ServerMessage::ThreadAgentBound(
+                    paw_proto::ThreadAgentBoundMsg {
+                        v: PROTOCOL_VERSION,
+                        conversation_id,
+                        thread_id,
+                        agent_id,
+                        bound_at: Utc::now(),
+                    },
+                ))
+                .await
+                .unwrap(),
+            vec![RuntimeEffect::ThreadAgentBound {
+                conversation_id,
+                thread_id,
+                agent_id,
+            }]
+        );
+
+        assert_eq!(
+            runtime
+                .handle_server_message(&ServerMessage::ThreadAgentUnbound(
+                    paw_proto::ThreadAgentUnboundMsg {
+                        v: PROTOCOL_VERSION,
+                        conversation_id,
+                        thread_id,
+                        agent_id,
+                        unbound_at: Utc::now(),
+                    },
+                ))
+                .await
+                .unwrap(),
+            vec![RuntimeEffect::ThreadAgentUnbound {
+                conversation_id,
+                thread_id,
+                agent_id,
+            }]
+        );
+
+        assert_eq!(
+            runtime
+                .handle_server_message(&ServerMessage::ThreadDeleted(paw_proto::ThreadDeletedMsg {
+                    v: PROTOCOL_VERSION,
+                    conversation_id,
+                    thread_id,
+                    deleted_by: created_by,
+                    deleted_at: Utc::now(),
+                }))
+                .await
+                .unwrap(),
+            vec![RuntimeEffect::ThreadDeleted {
+                conversation_id,
+                thread_id,
+            }]
         );
     }
 
@@ -798,11 +1017,13 @@ mod tests {
             vec![
                 RuntimeEffect::DuplicateMessage {
                     conversation_id,
+                    thread_id: None,
                     received_seq: 2,
                     last_seq: 2,
                 },
                 RuntimeEffect::AckRequested {
                     conversation_id,
+                    thread_id: None,
                     last_seq: 2,
                 },
             ]
@@ -815,12 +1036,14 @@ mod tests {
             vec![
                 RuntimeEffect::GapDetected {
                     conversation_id,
+                    thread_id: None,
                     expected_seq: 3,
                     received_seq: 4,
                     request_from_seq: 2,
                 },
                 RuntimeEffect::SyncRequested(SyncRequest {
                     conversation_id: conversation_id.to_string(),
+                    thread_id: None,
                     last_seq: 2,
                 }),
             ]
@@ -829,6 +1052,7 @@ mod tests {
             runtime.snapshot().pending_recoveries,
             vec![RecoveryCursorView {
                 conversation_id: conversation_id.to_string(),
+                thread_id: None,
                 request_from_seq: 2,
             }]
         );
@@ -842,10 +1066,81 @@ mod tests {
             &effects[..],
             [
                 RuntimeEffect::MessagePersisted(MessageRecord { content, seq, .. }),
-                RuntimeEffect::AckRequested { conversation_id: ack_id, last_seq }
+                RuntimeEffect::AckRequested { conversation_id: ack_id, thread_id: None, last_seq }
             ] if content == "fresh" && *seq == 3 && *ack_id == conversation_id && *last_seq == 3
         ));
         assert_eq!(db.get_last_seq(&conversation_id.to_string()).unwrap(), 3);
+    }
+
+    #[tokio::test]
+    async fn thread_scoped_messages_use_independent_gap_and_ack_paths() {
+        let db = Arc::new(AppDatabase::open_in_memory().unwrap());
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        db.upsert_conversation(&ConversationRecord {
+            id: conversation_id.to_string(),
+            name: "threaded".into(),
+            avatar_url: None,
+            last_seq: 0,
+            unread_count: 0,
+            updated_at: Utc::now(),
+        })
+        .unwrap();
+        let (mut runtime, _, _) = runtime_with_db(db.clone());
+
+        let first = MessageReceivedMsg {
+            v: PROTOCOL_VERSION,
+            id: Uuid::new_v4(),
+            conversation_id,
+            thread_id: Some(thread_id),
+            sender_id: Uuid::new_v4(),
+            content: "t1".into(),
+            format: MessageFormat::Markdown,
+            seq: 1,
+            created_at: Utc::now(),
+            blocks: vec![],
+        };
+        let gap = MessageReceivedMsg {
+            seq: 3,
+            content: "t3".into(),
+            id: Uuid::new_v4(),
+            ..first.clone()
+        };
+
+        assert!(matches!(
+            runtime
+                .handle_server_message(&ServerMessage::MessageReceived(first))
+                .await
+                .unwrap()
+                .as_slice(),
+            [
+                RuntimeEffect::MessagePersisted(MessageRecord { thread_id: Some(saved_thread_id), .. }),
+                RuntimeEffect::AckRequested { conversation_id: ack_conversation_id, thread_id: Some(ack_thread_id), last_seq: 1 }
+            ] if saved_thread_id == &thread_id.to_string() && *ack_conversation_id == conversation_id && *ack_thread_id == thread_id
+        ));
+
+        assert_eq!(db.get_last_seq(&conversation_id.to_string()).unwrap(), 0);
+
+        assert_eq!(
+            runtime
+                .handle_server_message(&ServerMessage::MessageReceived(gap))
+                .await
+                .unwrap(),
+            vec![
+                RuntimeEffect::GapDetected {
+                    conversation_id,
+                    thread_id: Some(thread_id),
+                    expected_seq: 2,
+                    received_seq: 3,
+                    request_from_seq: 1,
+                },
+                RuntimeEffect::SyncRequested(SyncRequest {
+                    conversation_id: conversation_id.to_string(),
+                    thread_id: Some(thread_id.to_string()),
+                    last_seq: 1,
+                }),
+            ]
+        );
     }
 
     #[tokio::test]
@@ -905,6 +1200,7 @@ mod tests {
             effects.last(),
             Some(&RuntimeEffect::AckRequested {
                 conversation_id,
+                thread_id: None,
                 last_seq: 3,
             })
         );
@@ -913,6 +1209,7 @@ mod tests {
                 effect,
                 RuntimeEffect::DeviceSyncApplied {
                     conversation_id: effect_conversation_id,
+                    thread_id: None,
                     applied_count: 3,
                     highest_seq: 3,
                 } if *effect_conversation_id == conversation_id

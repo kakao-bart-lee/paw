@@ -4,7 +4,9 @@ use crate::{
     auth::{AuthState, AuthStep, SessionEvent, SessionExpiryReason},
     core::{CoreRuntime, RuntimeBootstrapReport, RuntimeEffect, RuntimeInitStep},
     db::MessageRecord,
-    sync::{FinalizedStreamMessage, StreamingSession, SyncRequest, ToolCallRecord},
+    sync::{
+        FinalizedStreamMessage, ScopedSyncCursor, StreamingSession, SyncRequest, ToolCallRecord,
+    },
     ws::{WsConnectionState, WsService},
 };
 
@@ -78,12 +80,14 @@ pub struct ActiveStreamsClearedView {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct ConversationCursorView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub last_seq: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct RecoveryCursorView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub request_from_seq: i64,
 }
 
@@ -110,6 +114,7 @@ pub struct StreamingSessionView {
 pub struct MessageRecordView {
     pub id: String,
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub sender_id: String,
     pub content: String,
     pub format: String,
@@ -136,18 +141,21 @@ pub struct FinalizedStreamMessageView {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct SyncRequestView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub last_seq: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct AckRequestView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub last_seq: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct DuplicateMessageView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub received_seq: i64,
     pub last_seq: i64,
 }
@@ -155,6 +163,7 @@ pub struct DuplicateMessageView {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct GapDetectedView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub expected_seq: i64,
     pub received_seq: i64,
     pub request_from_seq: i64,
@@ -163,8 +172,31 @@ pub struct GapDetectedView {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct DeviceSyncAppliedView {
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub applied_count: u32,
     pub highest_seq: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ThreadCreatedView {
+    pub conversation_id: String,
+    pub thread_id: String,
+    pub root_message_id: String,
+    pub title: Option<String>,
+    pub created_by: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ThreadDeletedView {
+    pub conversation_id: String,
+    pub thread_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ThreadAgentBindingView {
+    pub conversation_id: String,
+    pub thread_id: String,
+    pub agent_id: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
@@ -226,6 +258,10 @@ pub enum CoreEvent {
     DeviceSyncApplied(DeviceSyncAppliedView),
     DeviceSyncBatchProcessed(DeviceSyncBatchProcessedView),
     MessagePersisted(MessageRecordView),
+    ThreadCreated(ThreadCreatedView),
+    ThreadDeleted(ThreadDeletedView),
+    ThreadAgentBound(ThreadAgentBindingView),
+    ThreadAgentUnbound(ThreadAgentBindingView),
     StreamUpdated(StreamingSessionView),
     StreamFinalized(FinalizedStreamMessageView),
 }
@@ -255,6 +291,10 @@ impl CoreEvent {
             | Self::DeviceSyncApplied(_)
             | Self::DeviceSyncBatchProcessed(_)
             | Self::MessagePersisted(_) => CoreEventDomain::Sync,
+            Self::ThreadCreated(_)
+            | Self::ThreadDeleted(_)
+            | Self::ThreadAgentBound(_)
+            | Self::ThreadAgentUnbound(_) => CoreEventDomain::Sync,
             Self::StreamUpdated(_) | Self::StreamFinalized(_) => CoreEventDomain::Streaming,
         }
     }
@@ -319,6 +359,7 @@ impl From<&crate::sync::ConversationSyncCursor> for ConversationCursorView {
     fn from(value: &crate::sync::ConversationSyncCursor) -> Self {
         Self {
             conversation_id: value.conversation_id.to_string(),
+            thread_id: None,
             last_seq: value.last_seq,
         }
     }
@@ -328,6 +369,31 @@ impl From<&crate::sync::ConversationSyncCursor> for RecoveryCursorView {
     fn from(value: &crate::sync::ConversationSyncCursor) -> Self {
         Self {
             conversation_id: value.conversation_id.to_string(),
+            thread_id: None,
+            request_from_seq: value.last_seq,
+        }
+    }
+}
+
+impl From<&ScopedSyncCursor> for ConversationCursorView {
+    fn from(value: &ScopedSyncCursor) -> Self {
+        Self {
+            conversation_id: value.conversation_id.to_string(),
+            thread_id: value
+                .thread_id
+                .map(|thread_id: uuid::Uuid| thread_id.to_string()),
+            last_seq: value.last_seq,
+        }
+    }
+}
+
+impl From<&ScopedSyncCursor> for RecoveryCursorView {
+    fn from(value: &ScopedSyncCursor) -> Self {
+        Self {
+            conversation_id: value.conversation_id.to_string(),
+            thread_id: value
+                .thread_id
+                .map(|thread_id: uuid::Uuid| thread_id.to_string()),
             request_from_seq: value.last_seq,
         }
     }
@@ -363,6 +429,7 @@ impl From<&MessageRecord> for MessageRecordView {
         Self {
             id: value.id.clone(),
             conversation_id: value.conversation_id.clone(),
+            thread_id: value.thread_id.clone(),
             sender_id: value.sender_id.clone(),
             content: value.content.clone(),
             format: value.format.clone(),
@@ -395,6 +462,7 @@ impl From<&SyncRequest> for SyncRequestView {
     fn from(value: &SyncRequest) -> Self {
         Self {
             conversation_id: value.conversation_id.clone(),
+            thread_id: value.thread_id.clone(),
             last_seq: value.last_seq,
         }
     }
@@ -405,10 +473,12 @@ impl From<&RuntimeEffect> for DuplicateMessageView {
         match value {
             RuntimeEffect::DuplicateMessage {
                 conversation_id,
+                thread_id,
                 received_seq,
                 last_seq,
             } => Self {
                 conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.map(|thread_id| thread_id.to_string()),
                 received_seq: *received_seq,
                 last_seq: *last_seq,
             },
@@ -424,11 +494,13 @@ impl From<&RuntimeEffect> for GapDetectedView {
         match value {
             RuntimeEffect::GapDetected {
                 conversation_id,
+                thread_id,
                 expected_seq,
                 received_seq,
                 request_from_seq,
             } => Self {
                 conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.map(|thread_id| thread_id.to_string()),
                 expected_seq: *expected_seq,
                 received_seq: *received_seq,
                 request_from_seq: *request_from_seq,
@@ -445,10 +517,12 @@ impl From<&RuntimeEffect> for DeviceSyncAppliedView {
         match value {
             RuntimeEffect::DeviceSyncApplied {
                 conversation_id,
+                thread_id,
                 applied_count,
                 highest_seq,
             } => Self {
                 conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.map(|thread_id| thread_id.to_string()),
                 applied_count: *applied_count,
                 highest_seq: *highest_seq,
             },
@@ -544,9 +618,11 @@ impl From<&RuntimeEffect> for CoreEvent {
             RuntimeEffect::SyncRequested(request) => Self::SyncRequested(request.into()),
             RuntimeEffect::AckRequested {
                 conversation_id,
+                thread_id,
                 last_seq,
             } => Self::AckRequested(AckRequestView {
                 conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.map(|thread_id| thread_id.to_string()),
                 last_seq: *last_seq,
             }),
             RuntimeEffect::DuplicateMessage { .. } => Self::DuplicateMessage(value.into()),
@@ -556,6 +632,44 @@ impl From<&RuntimeEffect> for CoreEvent {
                 Self::DeviceSyncBatchProcessed(value.into())
             }
             RuntimeEffect::MessagePersisted(record) => Self::MessagePersisted(record.into()),
+            RuntimeEffect::ThreadCreated {
+                conversation_id,
+                thread_id,
+                root_message_id,
+                title,
+                created_by,
+            } => Self::ThreadCreated(ThreadCreatedView {
+                conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.to_string(),
+                root_message_id: root_message_id.to_string(),
+                title: title.clone(),
+                created_by: created_by.to_string(),
+            }),
+            RuntimeEffect::ThreadDeleted {
+                conversation_id,
+                thread_id,
+            } => Self::ThreadDeleted(ThreadDeletedView {
+                conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.to_string(),
+            }),
+            RuntimeEffect::ThreadAgentBound {
+                conversation_id,
+                thread_id,
+                agent_id,
+            } => Self::ThreadAgentBound(ThreadAgentBindingView {
+                conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.to_string(),
+                agent_id: agent_id.to_string(),
+            }),
+            RuntimeEffect::ThreadAgentUnbound {
+                conversation_id,
+                thread_id,
+                agent_id,
+            } => Self::ThreadAgentUnbound(ThreadAgentBindingView {
+                conversation_id: conversation_id.to_string(),
+                thread_id: thread_id.to_string(),
+                agent_id: agent_id.to_string(),
+            }),
             RuntimeEffect::StreamUpdated(stream) => Self::StreamUpdated(stream.into()),
             RuntimeEffect::StreamFinalized(message) => Self::StreamFinalized(message.into()),
         }
@@ -611,6 +725,7 @@ mod tests {
     fn runtime_effects_convert_to_serializable_core_events() {
         let effect = RuntimeEffect::DuplicateMessage {
             conversation_id: Uuid::nil(),
+            thread_id: None,
             received_seq: 7,
             last_seq: 9,
         };
@@ -686,6 +801,36 @@ mod tests {
         assert!(json.contains("\"message_count\":3"));
         assert!(json.contains("\"conversation_count\":1"));
         assert!(json.contains("\"conversation_ids\""));
+    }
+
+    #[test]
+    fn thread_lifecycle_effects_convert_to_serializable_core_events() {
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let root_message_id = Uuid::new_v4();
+        let agent_id = Uuid::new_v4();
+        let created_by = Uuid::new_v4();
+
+        let created = CoreEvent::from(&RuntimeEffect::ThreadCreated {
+            conversation_id,
+            thread_id,
+            root_message_id,
+            title: Some("planning".into()),
+            created_by,
+        });
+        let bound = CoreEvent::from(&RuntimeEffect::ThreadAgentBound {
+            conversation_id,
+            thread_id,
+            agent_id,
+        });
+
+        let created_json = serde_json::to_string(&created).unwrap();
+        let bound_json = serde_json::to_string(&bound).unwrap();
+
+        assert!(created_json.contains("\"ThreadCreated\""));
+        assert!(created_json.contains(&thread_id.to_string()));
+        assert!(bound_json.contains("\"ThreadAgentBound\""));
+        assert!(bound_json.contains(&agent_id.to_string()));
     }
 
     #[test]
