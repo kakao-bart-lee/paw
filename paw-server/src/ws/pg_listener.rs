@@ -123,6 +123,7 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         seq,
         created_at,
         blocks,
+        attachments: Vec::new(),
     })
 }
 
