@@ -7,6 +7,8 @@ pub struct Message {
     pub id: Uuid,
     pub conversation_id: Uuid,
     pub thread_id: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thread_seq: Option<i64>,
     pub sender_id: Uuid,
     pub content: String,
     pub format: String,

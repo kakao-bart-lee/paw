@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
@@ -8,7 +8,10 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use super::{
-    models::{ArchiveThreadResponse, CreateThreadRequest, UpdateThreadTitleRequest},
+    models::{
+        ArchiveThreadResponse, CreateThreadRequest, GetThreadMessagesQuery,
+        GetThreadMessagesResponse, ThreadMembershipResponse, UpdateThreadTitleRequest,
+    },
     service::{self, CreateThreadError},
 };
 use crate::auth::{middleware::UserId, AppState};
@@ -201,6 +204,173 @@ pub async fn get_thread(
                 "thread_get_failed",
                 &locale,
                 "Could not load thread",
+            )
+            .into_response()
+        }
+    }
+}
+
+pub async fn get_thread_messages(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, thread_id)): Path<(Uuid, Uuid)>,
+    Query(query): Query<GetThreadMessagesQuery>,
+) -> Response {
+    match ensure_membership(&state, conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(response) => return response,
+    }
+
+    match service::get_thread(&state.db, conversation_id, thread_id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "thread_not_found",
+                &locale,
+                "Thread not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "failed to load thread before message sync");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "thread_get_failed",
+                &locale,
+                "Could not load thread",
+            )
+            .into_response();
+        }
+    }
+
+    let since_seq = query.since_seq.unwrap_or(0);
+    let limit = service::clamp_thread_message_limit(query.limit.unwrap_or(50));
+
+    let mut messages = match service::get_thread_messages(
+        &state.db,
+        conversation_id,
+        thread_id,
+        since_seq,
+        limit + 1,
+    )
+    .await
+    {
+        Ok(messages) => messages,
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, since_seq, "failed to fetch thread messages");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "thread_message_history_failed",
+                &locale,
+                "Could not fetch thread message history",
+            )
+            .into_response();
+        }
+    };
+
+    let has_more = messages.len() as i64 > limit;
+    if has_more {
+        messages.truncate(limit as usize);
+    }
+
+    Json(GetThreadMessagesResponse { messages, has_more }).into_response()
+}
+
+pub async fn get_thread_state(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, thread_id)): Path<(Uuid, Uuid)>,
+) -> Response {
+    match ensure_membership(&state, conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(response) => return response,
+    }
+
+    match service::get_thread_state(&state.db, conversation_id, thread_id).await {
+        Ok(Some(snapshot)) => Json(snapshot).into_response(),
+        Ok(None) => error(
+            StatusCode::NOT_FOUND,
+            "thread_not_found",
+            &locale,
+            "Thread not found",
+        )
+        .into_response(),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "failed to load thread state");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "thread_state_failed",
+                &locale,
+                "Could not load thread state",
+            )
+            .into_response()
+        }
+    }
+}
+
+pub async fn join_thread(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, thread_id)): Path<(Uuid, Uuid)>,
+) -> Response {
+    match ensure_membership(&state, conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(response) => return response,
+    }
+
+    match service::join_thread(&state.db, conversation_id, thread_id, user_id).await {
+        Ok(true) => Json(ThreadMembershipResponse { ok: true }).into_response(),
+        Ok(false) => error(
+            StatusCode::NOT_FOUND,
+            "thread_not_found",
+            &locale,
+            "Thread not found",
+        )
+        .into_response(),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, user_id = %user_id, "failed to join thread");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "thread_join_failed",
+                &locale,
+                "Could not join thread",
+            )
+            .into_response()
+        }
+    }
+}
+
+pub async fn leave_thread(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, thread_id)): Path<(Uuid, Uuid)>,
+) -> Response {
+    match ensure_membership(&state, conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(response) => return response,
+    }
+
+    match service::leave_thread(&state.db, conversation_id, thread_id, user_id).await {
+        Ok(true) => Json(ThreadMembershipResponse { ok: true }).into_response(),
+        Ok(false) => error(
+            StatusCode::NOT_FOUND,
+            "thread_not_found",
+            &locale,
+            "Thread not found",
+        )
+        .into_response(),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, user_id = %user_id, "failed to leave thread");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "thread_leave_failed",
+                &locale,
+                "Could not leave thread",
             )
             .into_response()
         }

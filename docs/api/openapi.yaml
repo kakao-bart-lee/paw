@@ -54,12 +54,20 @@ components:
         id: { type: string, format: uuid }
         conversation_id: { type: string, format: uuid }
         thread_id: { type: string, format: uuid, nullable: true, description: "Null for main timeline messages, UUID for thread-scoped messages" }
+        thread_seq: { type: integer, nullable: true, description: "Per-thread sequence for thread-scoped messages" }
         sender_id: { type: string, format: uuid }
         content: { type: string }
         format: { type: string, enum: [plain, markdown] }
+        seq: { type: integer, description: "Conversation-wide monotonic sequence" }
         attachments:
           type: array
           items: { $ref: '#/components/schemas/MessageAttachment' }
+        forwarded_from:
+          type: object
+          nullable: true
+          properties:
+            original_message_id: { type: string, format: uuid }
+            source_conversation_id: { type: string, format: uuid }
         created_at: { type: string, format: date-time }
 
     MessageAttachment:
@@ -103,6 +111,33 @@ components:
         thread_id: { type: string, format: uuid }
         agent_id: { type: string, format: uuid }
         bound_at: { type: string, format: date-time }
+
+    ThreadStateSnapshot:
+      type: object
+      required: [thread_id, message_count, last_seq, participants]
+      properties:
+        thread_id: { type: string, format: uuid }
+        message_count: { type: integer }
+        last_seq: { type: integer }
+        participants:
+          type: array
+          items: { type: string, format: uuid }
+        last_message_at: { type: string, format: date-time, nullable: true }
+
+    ThreadMessagesResponse:
+      type: object
+      required: [messages, has_more]
+      properties:
+        messages:
+          type: array
+          items: { $ref: '#/components/schemas/Message' }
+        has_more: { type: boolean }
+
+    ThreadMembershipResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
 
     ErrorResponse:
       type: object
@@ -680,6 +715,112 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Thread' }
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}/messages:
+    get:
+      summary: Gap-fill thread messages after a thread sequence
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: since_seq
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 100 }
+      responses:
+        '200':
+          description: Thread-scoped message gap-fill payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThreadMessagesResponse' }
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}/state:
+    get:
+      summary: Get a thread synchronization snapshot
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Thread state snapshot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThreadStateSnapshot' }
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}/join:
+    post:
+      summary: Join a thread and initialize read tracking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Thread join recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThreadMembershipResponse' }
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}/leave:
+    post:
+      summary: Leave a thread and clear membership tracking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Thread leave recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThreadMembershipResponse' }
         '404':
           description: Thread not found
           content:

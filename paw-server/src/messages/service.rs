@@ -252,7 +252,7 @@ async fn insert_message(
         None => None,
     };
 
-    sqlx::query_as::<_, MessageSendResult>(
+    let created = sqlx::query_as::<_, MessageSendResult>(
         "INSERT INTO messages (
              conversation_id,
              sender_id,
@@ -277,7 +277,26 @@ async fn insert_message(
     .bind(forwarded_from)
     .fetch_one(&mut **tx)
     .await
-    .context("insert message")
+    .context("insert message")?;
+
+    if let (Some(thread_id), Some(thread_seq)) = (thread_id, created.thread_seq) {
+        sqlx::query(
+            "INSERT INTO thread_read_state (thread_id, user_id, last_read_seq, updated_at)
+             VALUES ($1, $2, $3, NOW())
+             ON CONFLICT (thread_id, user_id)
+             DO UPDATE SET
+                 last_read_seq = GREATEST(thread_read_state.last_read_seq, EXCLUDED.last_read_seq),
+                 updated_at = NOW()",
+        )
+        .bind(thread_id)
+        .bind(sender_id)
+        .bind(thread_seq)
+        .execute(&mut **tx)
+        .await
+        .context("upsert thread read state")?;
+    }
+
+    Ok(created)
 }
 
 pub async fn get_messages(
@@ -289,11 +308,11 @@ pub async fn get_messages(
     let max_limit = limit.clamp(1, 50);
 
     sqlx::query_as::<_, Message>(
-        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, forwarded_from
-         FROM messages
-         WHERE conversation_id = $1 AND seq > $2 AND is_deleted = FALSE
-         ORDER BY seq ASC
-         LIMIT $3",
+        "SELECT id, conversation_id, thread_id, thread_seq, sender_id, content, format, seq, created_at, forwarded_from
+          FROM messages
+          WHERE conversation_id = $1 AND seq > $2 AND is_deleted = FALSE
+          ORDER BY seq ASC
+          LIMIT $3",
     )
     .bind(conversation_id)
     .bind(after_seq)
