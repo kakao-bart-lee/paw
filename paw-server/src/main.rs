@@ -193,6 +193,22 @@ async fn main() -> anyhow::Result<()> {
             get(threads::handlers::get_thread).patch(threads::handlers::update_thread_title),
         )
         .route(
+            "/conversations/{id}/threads/{thread_id}/messages",
+            get(threads::handlers::get_thread_messages),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}/state",
+            get(threads::handlers::get_thread_state),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}/join",
+            post(threads::handlers::join_thread),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}/leave",
+            post(threads::handlers::leave_thread),
+        )
+        .route(
             "/conversations/{id}/threads/{thread_id}/archive",
             post(threads::handlers::archive_thread),
         )
