@@ -15,7 +15,11 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
+use chrono::Utc;
+use paw_proto::{
+    ContextConversationSettingsChangedMsg, ContextMemberJoinedMsg, ContextMemberLeftMsg,
+    ContextMessageDeletedMsg, InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
@@ -150,6 +154,7 @@ pub async fn send_message(
             let db = state.db.clone();
             let hub = state.hub.clone();
             let notify_state = state.clone();
+            let context_engine = state.context_engine.clone();
             let created_message = MessageReceivedMsg {
                 v: PROTOCOL_VERSION,
                 id: created.id,
@@ -174,6 +179,25 @@ pub async fn send_message(
             tokio::spawn(async move {
                 if let Err(err) = notify_agents_of_message(notify_state, created_message).await {
                     tracing::error!(%err, conversation_id = %conv_id, "agent inbound notification failed");
+                }
+            });
+
+            let context_message =
+                crate::context_engine::message_created_event(MessageReceivedMsg {
+                    v: PROTOCOL_VERSION,
+                    id: created.id,
+                    conversation_id: conv_id,
+                    thread_id: None,
+                    sender_id: user_id,
+                    content: payload.content.trim().to_owned(),
+                    format: to_message_format(&format),
+                    seq: created.seq,
+                    created_at: created.created_at,
+                    blocks: Vec::new(),
+                });
+            tokio::spawn(async move {
+                if let Err(err) = context_engine.on_message_created(context_message).await {
+                    tracing::error!(%err, conversation_id = %conv_id, "context hook failed");
                 }
             });
 
@@ -423,6 +447,7 @@ pub async fn delete_message(
     };
 
     if deleted {
+        let context_engine = state.context_engine.clone();
         if let Some(thread_id) = thread_id {
             let latest = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
                 "SELECT MAX(created_at)
@@ -448,6 +473,22 @@ pub async fn delete_message(
             .execute(state.db.as_ref())
             .await;
         }
+
+        tokio::spawn(async move {
+            if let Err(err) = context_engine
+                .on_message_deleted(ContextMessageDeletedMsg {
+                    v: PROTOCOL_VERSION,
+                    conversation_id: conv_id,
+                    thread_id,
+                    message_id,
+                    deleted_by: user_id,
+                    occurred_at: Utc::now(),
+                })
+                .await
+            {
+                tracing::error!(%err, conversation_id = %conv_id, message_id = %message_id, "context hook failed");
+            }
+        });
     }
 
     Json(DeleteMessageResponse { deleted }).into_response()
@@ -522,7 +563,28 @@ pub async fn add_member_handler(
     Json(payload): Json<AddMemberRequest>,
 ) -> Response {
     match service::add_member(&state.db, conversation_id, user_id, payload.user_id).await {
-        Ok(added) => Json(AddMemberResponse { added }).into_response(),
+        Ok(added) => {
+            if added {
+                let context_engine = state.context_engine.clone();
+                let member_id = payload.user_id;
+                tokio::spawn(async move {
+                    if let Err(err) = context_engine
+                        .on_member_joined(ContextMemberJoinedMsg {
+                            v: PROTOCOL_VERSION,
+                            conversation_id,
+                            member_id,
+                            joined_by: user_id,
+                            occurred_at: Utc::now(),
+                        })
+                        .await
+                    {
+                        tracing::error!(%err, conversation_id = %conversation_id, member_id = %member_id, "context hook failed");
+                    }
+                });
+            }
+
+            Json(AddMemberResponse { added }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -534,7 +596,27 @@ pub async fn remove_member_handler(
     Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
 ) -> Response {
     match service::remove_member(&state.db, conversation_id, user_id, target_user_id).await {
-        Ok(removed) => Json(RemoveMemberResponse { removed }).into_response(),
+        Ok(removed) => {
+            if removed {
+                let context_engine = state.context_engine.clone();
+                tokio::spawn(async move {
+                    if let Err(err) = context_engine
+                        .on_member_left(ContextMemberLeftMsg {
+                            v: PROTOCOL_VERSION,
+                            conversation_id,
+                            member_id: target_user_id,
+                            left_by: user_id,
+                            occurred_at: Utc::now(),
+                        })
+                        .await
+                    {
+                        tracing::error!(%err, conversation_id = %conversation_id, member_id = %target_user_id, "context hook failed");
+                    }
+                });
+            }
+
+            Json(RemoveMemberResponse { removed }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -547,7 +629,28 @@ pub async fn update_group_name_handler(
     Json(payload): Json<UpdateGroupNameRequest>,
 ) -> Response {
     match service::update_group_name(&state.db, conversation_id, user_id, &payload.name).await {
-        Ok(updated) => Json(UpdateGroupNameResponse { updated }).into_response(),
+        Ok(updated) => {
+            if updated {
+                let context_engine = state.context_engine.clone();
+                let title = payload.name.trim().to_owned();
+                tokio::spawn(async move {
+                    if let Err(err) = context_engine
+                        .on_conversation_settings_changed(ContextConversationSettingsChangedMsg {
+                            v: PROTOCOL_VERSION,
+                            conversation_id,
+                            changed_by: user_id,
+                            occurred_at: Utc::now(),
+                            changes: serde_json::json!({ "title": title }),
+                        })
+                        .await
+                    {
+                        tracing::error!(%err, conversation_id = %conversation_id, "context hook failed");
+                    }
+                });
+            }
+
+            Json(UpdateGroupNameResponse { updated }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
