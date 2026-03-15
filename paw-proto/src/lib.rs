@@ -188,6 +188,17 @@ pub struct ErrorMsg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageAttachment {
+    pub id: Uuid,
+    pub file_type: String,
+    pub file_url: String,
+    pub file_size: i64,
+    pub mime_type: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub thumbnail_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageReceivedMsg {
     pub v: u8,
     pub id: Uuid,
@@ -201,6 +212,8 @@ pub struct MessageReceivedMsg {
     pub created_at: DateTime<Utc>,
     #[serde(default)]
     pub blocks: Vec<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<MessageAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

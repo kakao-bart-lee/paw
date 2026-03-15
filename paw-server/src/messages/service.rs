@@ -1,10 +1,11 @@
 use crate::db::DbPool;
 use crate::messages::models::{
-    ConversationCreateResult, ConversationListItem, Message, MessageSendResult,
+    ConversationCreateResult, ConversationListItem, MediaAttachment, Message, MessageAttachment,
+    MessageSendResult,
 };
 use anyhow::{anyhow, Context};
 use sqlx::{Postgres, Transaction};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 pub const MAX_GROUP_MEMBERS: usize = 100;
@@ -87,8 +88,11 @@ pub async fn send_message(
     content: &str,
     format: &str,
     idempotency_key: Uuid,
+    attachments: &[MediaAttachment],
 ) -> anyhow::Result<MessageSendResult> {
-    sqlx::query_as::<_, MessageSendResult>(
+    let mut tx = pool.begin().await.context("begin message transaction")?;
+
+    let created = sqlx::query_as::<_, MessageSendResult>(
         "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key)
          VALUES ($1, $2, $3, next_message_seq($1), $4, $5, $6)
          RETURNING id, seq, created_at",
@@ -99,9 +103,111 @@ pub async fn send_message(
     .bind(content)
     .bind(format)
     .bind(idempotency_key)
-    .fetch_one(pool.as_ref())
+    .fetch_one(&mut *tx)
     .await
-    .context("insert message")
+    .context("insert message")?;
+
+    for attachment in attachments {
+        sqlx::query(
+            "INSERT INTO message_attachments (
+                 message_id,
+                 file_type,
+                 file_url,
+                 file_size,
+                 mime_type,
+                 thumbnail_url
+             )
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(created.id)
+        .bind(&attachment.media_type)
+        .bind(&attachment.s3_key)
+        .bind(attachment.file_size)
+        .bind(&attachment.mime_type)
+        .bind(&attachment.thumbnail_s3_key)
+        .execute(&mut *tx)
+        .await
+        .context("insert message attachment")?;
+    }
+
+    tx.commit().await.context("commit message transaction")?;
+    Ok(created)
+}
+
+pub async fn fetch_media_attachments(
+    pool: &DbPool,
+    uploader_id: Uuid,
+    attachment_ids: &[Uuid],
+) -> anyhow::Result<Vec<MediaAttachment>> {
+    if attachment_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let rows = sqlx::query_as::<_, MediaAttachment>(
+        "SELECT id, media_type, mime_type, file_size, s3_key, thumbnail_s3_key
+         FROM media_attachments
+         WHERE uploader_id = $1 AND id = ANY($2)",
+    )
+    .bind(uploader_id)
+    .bind(attachment_ids)
+    .fetch_all(pool.as_ref())
+    .await
+    .context("load media attachments")?;
+
+    let by_id: HashMap<Uuid, MediaAttachment> = rows.into_iter().map(|row| (row.id, row)).collect();
+
+    let mut ordered = Vec::with_capacity(attachment_ids.len());
+    for attachment_id in attachment_ids {
+        let Some(attachment) = by_id.get(attachment_id) else {
+            return Err(anyhow!("attachment_not_found_or_not_owned"));
+        };
+        ordered.push(attachment.clone());
+    }
+
+    Ok(ordered)
+}
+
+pub async fn list_message_attachments(
+    pool: &DbPool,
+    message_id: Uuid,
+) -> anyhow::Result<Vec<MessageAttachment>> {
+    sqlx::query_as::<_, MessageAttachment>(
+        "SELECT id, message_id, file_type, file_url, file_size, mime_type, thumbnail_url, created_at
+         FROM message_attachments
+         WHERE message_id = $1
+         ORDER BY created_at ASC",
+    )
+    .bind(message_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .context("list message attachments")
+}
+
+pub async fn list_message_attachments_map(
+    pool: &DbPool,
+    message_ids: &[Uuid],
+) -> anyhow::Result<HashMap<Uuid, Vec<MessageAttachment>>> {
+    if message_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let rows = sqlx::query_as::<_, MessageAttachment>(
+        "SELECT id, message_id, file_type, file_url, file_size, mime_type, thumbnail_url, created_at
+         FROM message_attachments
+         WHERE message_id = ANY($1)
+         ORDER BY created_at ASC",
+    )
+    .bind(message_ids)
+    .fetch_all(pool.as_ref())
+    .await
+    .context("list message attachments map")?;
+
+    let mut by_message_id: HashMap<Uuid, Vec<MessageAttachment>> = HashMap::new();
+    for row in rows {
+        by_message_id.entry(row.message_id).or_default().push(row);
+    }
+
+    Ok(by_message_id)
 }
 
 pub async fn get_messages(

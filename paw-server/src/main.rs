@@ -153,6 +153,10 @@ async fn main() -> anyhow::Result<()> {
             delete(messages::handlers::delete_message),
         )
         .route(
+            "/messages/{message_id}/attachments",
+            get(messages::handlers::get_message_attachments),
+        )
+        .route(
             "/conversations/{conv_id}/threads",
             get(threads::handlers::list_threads).post(threads::handlers::create_thread),
         )

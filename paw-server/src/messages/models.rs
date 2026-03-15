@@ -21,6 +21,28 @@ pub struct MessageSendResult {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct MessageAttachment {
+    pub id: Uuid,
+    pub message_id: Uuid,
+    pub file_type: String,
+    pub file_url: String,
+    pub file_size: i64,
+    pub mime_type: String,
+    pub thumbnail_url: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct MediaAttachment {
+    pub id: Uuid,
+    pub media_type: String,
+    pub mime_type: String,
+    pub file_size: i64,
+    pub s3_key: String,
+    pub thumbnail_s3_key: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ConversationListItem {
     pub id: Uuid,
