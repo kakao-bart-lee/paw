@@ -83,17 +83,19 @@ pub async fn send_message(
     pool: &DbPool,
     conversation_id: Uuid,
     sender_id: Uuid,
+    thread_id: Option<Uuid>,
     content: &str,
     format: &str,
     idempotency_key: Uuid,
 ) -> anyhow::Result<MessageSendResult> {
     sqlx::query_as::<_, MessageSendResult>(
-        "INSERT INTO messages (conversation_id, sender_id, seq, content, format, idempotency_key)
-         VALUES ($1, $2, next_message_seq($1), $3, $4, $5)
+        "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key)
+         VALUES ($1, $2, $3, next_message_seq($1), $4, $5, $6)
          RETURNING id, seq, created_at",
     )
     .bind(conversation_id)
     .bind(sender_id)
+    .bind(thread_id)
     .bind(content)
     .bind(format)
     .bind(idempotency_key)
@@ -111,9 +113,9 @@ pub async fn get_messages(
     let max_limit = limit.clamp(1, 50);
 
     sqlx::query_as::<_, Message>(
-        "SELECT id, conversation_id, sender_id, content, format, seq, created_at
+        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at
          FROM messages
-         WHERE conversation_id = $1 AND seq > $2
+         WHERE conversation_id = $1 AND seq > $2 AND is_deleted = FALSE
          ORDER BY seq ASC
          LIMIT $3",
     )
@@ -145,7 +147,7 @@ pub async fn list_conversations(
          LEFT JOIN LATERAL (
             SELECT content
             FROM messages
-            WHERE conversation_id = c.id
+            WHERE conversation_id = c.id AND is_deleted = FALSE
             ORDER BY seq DESC
             LIMIT 1
          ) lm ON true
@@ -411,4 +413,23 @@ async fn get_role(
     .fetch_optional(pool.as_ref())
     .await
     .context("load member role")
+}
+
+pub async fn delete_message(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    message_id: Uuid,
+) -> anyhow::Result<bool> {
+    let deleted = sqlx::query(
+        "DELETE FROM messages
+         WHERE id = $1 AND conversation_id = $2",
+    )
+    .bind(message_id)
+    .bind(conversation_id)
+    .execute(pool.as_ref())
+    .await
+    .context("delete message")?
+    .rows_affected();
+
+    Ok(deleted > 0)
 }

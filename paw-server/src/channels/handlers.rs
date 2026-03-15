@@ -221,6 +221,7 @@ pub async fn send_channel_message(
         &state.db,
         channel_id,
         user_id,
+        None,
         payload.content.trim(),
         &format,
         payload.idempotency_key,

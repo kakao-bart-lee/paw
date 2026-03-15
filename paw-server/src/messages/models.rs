@@ -6,6 +6,7 @@ use uuid::Uuid;
 pub struct Message {
     pub id: Uuid,
     pub conversation_id: Uuid,
+    pub thread_id: Option<Uuid>,
     pub sender_id: Uuid,
     pub content: String,
     pub format: String,

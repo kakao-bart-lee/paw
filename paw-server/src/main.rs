@@ -12,6 +12,7 @@ mod moderation;
 mod observability;
 mod push;
 mod rate_limit;
+mod threads;
 mod users;
 mod ws;
 
@@ -129,6 +130,31 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/conversations/{conv_id}/messages",
             get(messages::handlers::get_messages),
+        )
+        .route(
+            "/conversations/{conv_id}/messages/{message_id}",
+            delete(messages::handlers::delete_message),
+        )
+        .route(
+            "/conversations/{id}/threads",
+            get(threads::handlers::list_threads).post(threads::handlers::create_thread),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}",
+            get(threads::handlers::get_thread).delete(threads::handlers::delete_thread),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}/messages",
+            get(threads::handlers::list_thread_messages)
+                .post(threads::handlers::send_thread_message),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}/agents",
+            get(threads::handlers::list_thread_agents).post(threads::handlers::bind_agent),
+        )
+        .route(
+            "/conversations/{id}/threads/{thread_id}/agents/{agent_id}",
+            delete(threads::handlers::unbind_agent),
         )
         .route("/api/v1/channels", post(channels::handlers::create_channel))
         .route("/api/v1/channels", get(channels::handlers::list_channels))
