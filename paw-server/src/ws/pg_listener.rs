@@ -2,7 +2,7 @@ use crate::db::DbPool;
 use crate::ws::hub::Hub;
 use paw_proto::{
     ForwardedFrom, MessageAttachment, MessageFormat, MessageForwardedMsg, MessageReceivedMsg,
-    ServerMessage, PROTOCOL_VERSION,
+    ServerMessage, ThreadMessageReceivedMsg, PROTOCOL_VERSION,
 };
 use sqlx::Row;
 use std::sync::Arc;
@@ -57,6 +57,7 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
 
         let conversation_id = match &message {
             ServerMessage::MessageReceived(frame) => frame.conversation_id,
+            ServerMessage::ThreadMessageReceived(frame) => frame.conversation_id,
             ServerMessage::MessageForwarded(frame) => frame.conversation_id,
             _ => continue,
         };
@@ -77,7 +78,21 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
             }
         };
 
-        hub.broadcast_to_conversation(members, &frame).await;
+        match &message {
+            ServerMessage::ThreadMessageReceived(thread_message) => {
+                hub.send_to_thread(
+                    thread_message.conversation_id,
+                    thread_message.thread_id,
+                    members,
+                    &frame,
+                )
+                .await;
+            }
+            ServerMessage::MessageReceived(_) | ServerMessage::MessageForwarded(_) => {
+                hub.broadcast_to_conversation(members, &frame).await;
+            }
+            _ => {}
+        }
     }
 }
 
@@ -104,6 +119,11 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<ServerMessage> {
         .as_str()
         .and_then(parse_uuid)?;
     let sender_id = payload.get("sender_id")?.as_str().and_then(parse_uuid)?;
+    let thread_id = payload
+        .get("thread_id")
+        .and_then(|value| value.as_str())
+        .and_then(parse_uuid);
+    let thread_seq = payload.get("thread_seq").and_then(|value| value.as_i64());
     let content = payload.get("content")?.as_str()?.to_owned();
     let seq = payload.get("seq")?.as_i64()?;
 
@@ -133,7 +153,7 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<ServerMessage> {
         v: PROTOCOL_VERSION,
         id,
         conversation_id,
-        thread_id: None,
+        thread_id,
         sender_id,
         content,
         format,
@@ -146,6 +166,23 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<ServerMessage> {
     let forwarded_from = payload
         .get("forwarded_from")
         .and_then(|value| serde_json::from_value::<ForwardedFrom>(value.clone()).ok());
+
+    if let Some(thread_id) = thread_id {
+        return Some(ServerMessage::ThreadMessageReceived(ThreadMessageReceivedMsg {
+            v: message_received.v,
+            id: message_received.id,
+            conversation_id: message_received.conversation_id,
+            thread_id,
+            sender_id: message_received.sender_id,
+            content: message_received.content,
+            format: message_received.format,
+            seq: thread_seq.unwrap_or(message_received.seq),
+            conversation_seq: message_received.seq,
+            created_at: message_received.created_at,
+            blocks: message_received.blocks,
+            attachments: message_received.attachments,
+        }));
+    }
 
     match forwarded_from {
         Some(forwarded_from) => Some(ServerMessage::MessageForwarded(MessageForwardedMsg {
@@ -172,6 +209,7 @@ async fn enrich_with_attachments(
 ) -> anyhow::Result<ServerMessage> {
     let message_id = match &message {
         ServerMessage::MessageReceived(frame) => frame.id,
+        ServerMessage::ThreadMessageReceived(frame) => frame.id,
         ServerMessage::MessageForwarded(frame) => frame.id,
         _ => return Ok(message),
     };
@@ -209,6 +247,10 @@ async fn enrich_with_attachments(
         ServerMessage::MessageReceived(mut frame) => {
             frame.attachments = attachments;
             ServerMessage::MessageReceived(frame)
+        }
+        ServerMessage::ThreadMessageReceived(mut frame) => {
+            frame.attachments = attachments;
+            ServerMessage::ThreadMessageReceived(frame)
         }
         ServerMessage::MessageForwarded(mut frame) => {
             frame.attachments = attachments;
@@ -248,5 +290,32 @@ mod tests {
             parsed,
             paw_proto::ServerMessage::MessageForwarded(_)
         ));
+    }
+
+    #[test]
+    fn thread_payload_maps_to_thread_message_received_variant() {
+        let thread_id = uuid::Uuid::new_v4();
+        let payload = serde_json::json!({
+            "id": uuid::Uuid::new_v4().to_string(),
+            "conversation_id": uuid::Uuid::new_v4().to_string(),
+            "thread_id": thread_id.to_string(),
+            "thread_seq": 5,
+            "sender_id": uuid::Uuid::new_v4().to_string(),
+            "seq": 17,
+            "content": "thread hello",
+            "format": "plain",
+            "blocks": [],
+            "created_at": chrono::Utc::now().to_rfc3339(),
+        });
+
+        let parsed = payload_to_message(&payload).expect("payload should parse");
+        match parsed {
+            paw_proto::ServerMessage::ThreadMessageReceived(frame) => {
+                assert_eq!(frame.thread_id, thread_id);
+                assert_eq!(frame.seq, 5);
+                assert_eq!(frame.conversation_seq, 17);
+            }
+            other => panic!("expected ThreadMessageReceived variant, got {other:?}"),
+        }
     }
 }

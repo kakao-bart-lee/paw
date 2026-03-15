@@ -37,6 +37,8 @@ pub struct ForwardedFromMetadata {
 pub struct MessageSendResult {
     pub id: Uuid,
     pub seq: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thread_seq: Option<i64>,
     pub created_at: DateTime<Utc>,
 }
 
