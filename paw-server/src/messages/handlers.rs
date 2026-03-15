@@ -8,7 +8,7 @@ use crate::context_engine::models::{
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
-        AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse,
+        AddMemberRequest, ConversationListItem, ForwardedFromMetadata, Message, RemoveMemberResponse,
         UpdateGroupNameRequest, UpdateMemberRoleRequest, UpdateMemberRoleResponse,
     },
     service::{self, GroupManagementError, Membership},
@@ -41,6 +41,12 @@ pub struct SendMessageRequest {
 pub struct GetMessagesQuery {
     pub after_seq: Option<i64>,
     pub limit: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ForwardMessageRequest {
+    pub original_message_id: Uuid,
+    pub source_conversation_id: Uuid,
 }
 
 #[derive(Debug, Deserialize)]
@@ -376,6 +382,128 @@ pub async fn get_messages(
     }
 
     Json(GetMessagesResponse { messages, has_more }).into_response()
+}
+
+pub async fn forward_message(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(target_conv_id): Path<Uuid>,
+    Json(payload): Json<ForwardMessageRequest>,
+) -> Response {
+    match ensure_membership(&state, target_conv_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match ensure_membership(&state, payload.source_conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    let original = match sqlx::query(
+        "SELECT content, format
+         FROM messages
+         WHERE id = $1
+           AND conversation_id = $2
+           AND is_deleted = FALSE",
+    )
+    .bind(payload.original_message_id)
+    .bind(payload.source_conversation_id)
+    .fetch_optional(state.db.as_ref())
+    .await
+    {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "message_not_found",
+                &locale,
+                "Original message not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(
+                %err,
+                conversation_id = %payload.source_conversation_id,
+                message_id = %payload.original_message_id,
+                "failed to load source message for forwarding"
+            );
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response();
+        }
+    };
+
+    let content = match original.try_get::<String, _>("content") {
+        Ok(value) => value,
+        Err(err) => {
+            tracing::error!(%err, "source message row missing content");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response();
+        }
+    };
+    let format = original
+        .try_get::<Option<String>, _>("format")
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "markdown".to_owned());
+
+    let forwarded_from = ForwardedFromMetadata {
+        original_message_id: payload.original_message_id,
+        source_conversation_id: payload.source_conversation_id,
+    };
+
+    let forwarded_json = match serde_json::to_value(&forwarded_from) {
+        Ok(value) => value,
+        Err(err) => {
+            tracing::error!(%err, "failed to serialize forwarded_from metadata");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response();
+        }
+    };
+
+    match service::send_forwarded_message(
+        &state.db,
+        target_conv_id,
+        user_id,
+        &content,
+        &format,
+        Uuid::new_v4(),
+        forwarded_json,
+    )
+    .await
+    {
+        Ok(created) => {
+            crate::metrics::record_message_sent();
+            Json(created).into_response()
+        }
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %target_conv_id, sender_id = %user_id, "forwarded message insert failed");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response()
+        }
+    }
 }
 
 pub async fn delete_message(
