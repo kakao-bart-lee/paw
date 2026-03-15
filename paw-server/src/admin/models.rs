@@ -224,8 +224,7 @@ mod tests {
 
     #[test]
     fn user_list_query_defaults() {
-        let q: AdminUserListQuery =
-            serde_json::from_str("{}").unwrap();
+        let q: AdminUserListQuery = serde_json::from_str("{}").unwrap();
         assert_eq!(q.page, 1);
         assert_eq!(q.limit, 20);
         assert!(q.search.is_none());
@@ -241,8 +240,7 @@ mod tests {
 
     #[test]
     fn audit_log_query_defaults() {
-        let q: AuditLogQuery =
-            serde_json::from_str("{}").unwrap();
+        let q: AuditLogQuery = serde_json::from_str("{}").unwrap();
         assert_eq!(q.page, 1);
         assert_eq!(q.limit, 20);
         assert!(q.actor_id.is_none());

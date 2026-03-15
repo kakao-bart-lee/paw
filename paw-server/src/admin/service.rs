@@ -8,11 +8,7 @@ use uuid::Uuid;
 // ---------------------------------------------------------------------------
 
 /// Check whether `user_id` has at least `required` role level.
-pub async fn require_role(
-    db: &DbPool,
-    user_id: Uuid,
-    required: AdminRole,
-) -> anyhow::Result<bool> {
+pub async fn require_role(db: &DbPool, user_id: Uuid, required: AdminRole) -> anyhow::Result<bool> {
     let role_str: Option<String> =
         sqlx::query_scalar("SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL")
             .bind(user_id)
@@ -103,10 +99,7 @@ pub async fn list_users(
     Ok((rows, total))
 }
 
-pub async fn get_user_detail(
-    db: &DbPool,
-    user_id: Uuid,
-) -> anyhow::Result<Option<AdminUserRow>> {
+pub async fn get_user_detail(db: &DbPool, user_id: Uuid) -> anyhow::Result<Option<AdminUserRow>> {
     sqlx::query_as::<_, AdminUserRow>(
         "SELECT id, phone, username, display_name, role, created_at
          FROM users WHERE id = $1 AND deleted_at IS NULL",
@@ -117,10 +110,7 @@ pub async fn get_user_detail(
     .context("get user detail")
 }
 
-pub async fn get_user_devices(
-    db: &DbPool,
-    user_id: Uuid,
-) -> anyhow::Result<Vec<AdminUserDevice>> {
+pub async fn get_user_devices(db: &DbPool, user_id: Uuid) -> anyhow::Result<Vec<AdminUserDevice>> {
     sqlx::query_as::<_, AdminUserDevice>(
         "SELECT id, device_name, created_at FROM devices WHERE user_id = $1 ORDER BY created_at DESC",
     )

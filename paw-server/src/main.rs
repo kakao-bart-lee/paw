@@ -274,10 +274,7 @@ async fn main() -> anyhow::Result<()> {
             get(moderation::handlers::list_pending_reports),
         )
         // --- Admin RBAC API ---
-        .route(
-            "/api/v1/admin/users",
-            get(admin::handlers::list_users),
-        )
+        .route("/api/v1/admin/users", get(admin::handlers::list_users))
         .route(
             "/api/v1/admin/users/{id}",
             get(admin::handlers::get_user_detail),
@@ -304,8 +301,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .route(
             "/api/v1/admin/spam-patterns",
-            get(admin::handlers::list_spam_patterns)
-                .post(admin::handlers::create_spam_pattern),
+            get(admin::handlers::list_spam_patterns).post(admin::handlers::create_spam_pattern),
         )
         .route(
             "/api/v1/admin/spam-patterns/{id}",
