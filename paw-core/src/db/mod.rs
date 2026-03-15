@@ -6,7 +6,7 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 #[derive(Debug, Error)]
 pub enum DbError {
@@ -24,6 +24,7 @@ pub type DbResult<T> = Result<T, DbError>;
 pub struct MessageRecord {
     pub id: String,
     pub conversation_id: String,
+    pub thread_id: Option<String>,
     pub sender_id: String,
     pub content: String,
     pub format: String,
@@ -41,6 +42,13 @@ pub struct ConversationRecord {
     pub last_seq: i64,
     pub unread_count: i64,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ThreadCursorRecord {
+    pub conversation_id: String,
+    pub thread_id: String,
+    pub last_seq: i64,
 }
 
 pub struct AppDatabase {
@@ -93,6 +101,7 @@ impl AppDatabase {
             CREATE TABLE IF NOT EXISTS messages_table (
                 id TEXT PRIMARY KEY,
                 conversation_id TEXT NOT NULL,
+                thread_id TEXT,
                 sender_id TEXT NOT NULL,
                 content TEXT NOT NULL,
                 format TEXT NOT NULL DEFAULT 'markdown',
@@ -104,6 +113,9 @@ impl AppDatabase {
 
             CREATE INDEX IF NOT EXISTS messages_conv_seq
             ON messages_table (conversation_id, seq);
+
+            CREATE INDEX IF NOT EXISTS messages_conv_thread_seq
+            ON messages_table (conversation_id, thread_id, seq);
 
             CREATE TABLE IF NOT EXISTS conversations_table (
                 id TEXT PRIMARY KEY,
@@ -159,10 +171,11 @@ impl AppDatabase {
         conn.execute(
             r#"
             INSERT INTO messages_table (
-                id, conversation_id, sender_id, content, format, seq, created_at, is_me, is_agent
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                id, conversation_id, thread_id, sender_id, content, format, seq, created_at, is_me, is_agent
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
             ON CONFLICT(id) DO UPDATE SET
                 conversation_id = excluded.conversation_id,
+                thread_id = excluded.thread_id,
                 sender_id = excluded.sender_id,
                 content = excluded.content,
                 format = excluded.format,
@@ -174,6 +187,7 @@ impl AppDatabase {
             params![
                 message.id.as_str(),
                 message.conversation_id.as_str(),
+                message.thread_id.as_deref(),
                 message.sender_id.as_str(),
                 message.content.as_str(),
                 message.format.as_str(),
@@ -194,9 +208,9 @@ impl AppDatabase {
         let conn = self.conn()?;
         let mut stmt = conn.prepare(
             r#"
-            SELECT id, conversation_id, sender_id, content, format, seq, created_at, is_me, is_agent
+            SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, is_me, is_agent
             FROM messages_table
-            WHERE conversation_id = ?1 AND seq > ?2
+            WHERE conversation_id = ?1 AND thread_id IS NULL AND seq > ?2
             ORDER BY seq ASC
             "#,
         )?;
@@ -207,11 +221,32 @@ impl AppDatabase {
     pub fn get_last_seq(&self, conversation_id: &str) -> DbResult<i64> {
         let conn = self.conn()?;
         let seq = conn.query_row(
-            "SELECT COALESCE(MAX(seq), 0) FROM messages_table WHERE conversation_id = ?1",
+            "SELECT COALESCE(MAX(seq), 0) FROM messages_table WHERE conversation_id = ?1 AND thread_id IS NULL",
             [conversation_id],
             |row| row.get(0),
         )?;
         Ok(seq)
+    }
+
+    pub fn get_thread_cursors(&self) -> DbResult<Vec<ThreadCursorRecord>> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT conversation_id, thread_id, MAX(seq) AS last_seq
+            FROM messages_table
+            WHERE thread_id IS NOT NULL
+            GROUP BY conversation_id, thread_id
+            ORDER BY conversation_id ASC, thread_id ASC
+            "#,
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(ThreadCursorRecord {
+                conversation_id: row.get(0)?,
+                thread_id: row.get(1)?,
+                last_seq: row.get(2)?,
+            })
+        })?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
     pub fn upsert_conversation(&self, conversation: &ConversationRecord) -> DbResult<()> {
@@ -290,16 +325,17 @@ fn read_message(row: &rusqlite::Row<'_>) -> rusqlite::Result<MessageRecord> {
     Ok(MessageRecord {
         id: row.get(0)?,
         conversation_id: row.get(1)?,
-        sender_id: row.get(2)?,
-        content: row.get(3)?,
-        format: row.get(4)?,
-        seq: row.get(5)?,
+        thread_id: row.get(2)?,
+        sender_id: row.get(3)?,
+        content: row.get(4)?,
+        format: row.get(5)?,
+        seq: row.get(6)?,
         created_at: Utc
-            .timestamp_opt(row.get::<_, i64>(6)?, 0)
+            .timestamp_opt(row.get::<_, i64>(7)?, 0)
             .single()
             .unwrap(),
-        is_me: row.get(7)?,
-        is_agent: row.get(8)?,
+        is_me: row.get(8)?,
+        is_agent: row.get(9)?,
     })
 }
 
@@ -328,6 +364,7 @@ mod tests {
         MessageRecord {
             id: id.to_string(),
             conversation_id: conversation_id.to_string(),
+            thread_id: None,
             sender_id: "user-1".to_string(),
             content: content.to_string(),
             format: "markdown".to_string(),
@@ -364,6 +401,25 @@ mod tests {
         assert_eq!(messages[0].id, "msg-2");
         assert_eq!(db.get_last_seq("conv-1").unwrap(), 2);
         assert_eq!(db.get_last_seq("missing").unwrap(), 0);
+    }
+
+    #[test]
+    fn thread_messages_do_not_advance_main_timeline_cursor() {
+        let db = AppDatabase::open_in_memory().unwrap();
+        let main_message = message("msg-1", "conv-1", 1, "main");
+        let mut thread_message = message("msg-2", "conv-1", 9, "thread");
+        thread_message.thread_id = Some("thread-1".into());
+
+        db.upsert_message(&main_message).unwrap();
+        db.upsert_message(&thread_message).unwrap();
+
+        assert_eq!(db.get_last_seq("conv-1").unwrap(), 1);
+
+        let thread_cursors = db.get_thread_cursors().unwrap();
+        assert_eq!(thread_cursors.len(), 1);
+        assert_eq!(thread_cursors[0].conversation_id, "conv-1");
+        assert_eq!(thread_cursors[0].thread_id, "thread-1");
+        assert_eq!(thread_cursors[0].last_seq, 9);
     }
 
     #[test]
