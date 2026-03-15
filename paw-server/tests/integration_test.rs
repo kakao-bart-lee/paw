@@ -1508,8 +1508,8 @@ fn e2ee_push_payload_has_no_content_field() {
 }
 
 #[tokio::test]
-#[ignore = "requires running paw-server with auth token and group conversation"]
-async fn thread_create_list_get_delete_flow() {
+#[ignore = "requires running paw-server with auth token, group conversation, and seeded root message"]
+async fn thread_create_list_get_update_flow() {
     let base = "http://localhost:38173";
     let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
     let conv_id = std::env::var("PAW_TEST_GROUP_CONV_ID")
@@ -1530,10 +1530,85 @@ async fn thread_create_list_get_delete_flow() {
         .unwrap();
 
     assert!(
-        response.status().is_success() || response.status().as_u16() == 409,
-        "expected success or duplicate/thread-limit style conflict, got {}",
+        response.status().as_u16() == 201 || response.status().as_u16() == 409,
+        "expected created or duplicate-root conflict, got {}",
         response.status()
     );
+
+    let created_body: serde_json::Value = response
+        .json()
+        .await
+        .unwrap_or_else(|_| serde_json::json!({}));
+    let mut thread_id = created_body
+        .get("id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
+
+    let list_response = client
+        .get(format!("{base}/conversations/{conv_id}/threads"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(list_response.status(), 200);
+    let list_body: serde_json::Value = list_response.json().await.unwrap();
+    let threads = list_body.as_array().expect("thread list must be an array");
+
+    if thread_id.is_none() {
+        thread_id = threads.iter().find_map(|thread| {
+            let matches_root = thread
+                .get("root_message_id")
+                .and_then(serde_json::Value::as_str)
+                == Some(root_message_id.as_str());
+            if matches_root {
+                thread
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned)
+            } else {
+                None
+            }
+        });
+    }
+
+    let thread_id = thread_id.expect("thread id should be available after create or list");
+    assert!(
+        threads.iter().any(|thread| {
+            thread.get("id").and_then(serde_json::Value::as_str) == Some(thread_id.as_str())
+        }),
+        "thread should appear in list response"
+    );
+
+    let get_response = client
+        .get(format!(
+            "{base}/conversations/{conv_id}/threads/{thread_id}"
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(get_response.status(), 200);
+    let get_body: serde_json::Value = get_response.json().await.unwrap();
+    assert_eq!(get_body["id"], thread_id);
+
+    let patch_response = client
+        .patch(format!(
+            "{base}/conversations/{conv_id}/threads/{thread_id}"
+        ))
+        .bearer_auth(&token)
+        .json(&serde_json::json!({
+            "title": "updated integration thread"
+        }))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(patch_response.status(), 200);
+    let patch_body: serde_json::Value = patch_response.json().await.unwrap();
+    assert_eq!(patch_body["id"], thread_id);
+    assert_eq!(patch_body["title"], "updated integration thread");
 }
 
 #[tokio::test]
@@ -1556,6 +1631,48 @@ async fn thread_create_in_direct_conversation_returns_threads_not_allowed() {
         .unwrap();
 
     assert_eq!(response.status().as_u16(), 400);
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server with auth token, group conversation, and an active thread id"]
+async fn thread_archive_flow() {
+    let base = "http://localhost:38173";
+    let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let conv_id = std::env::var("PAW_TEST_GROUP_CONV_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000010".into());
+    let thread_id = std::env::var("PAW_TEST_ACTIVE_THREAD_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000012".into());
+    let client = reqwest::Client::new();
+
+    let response = client
+        .post(format!(
+            "{base}/conversations/{conv_id}/threads/{thread_id}/archive"
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+
+    assert!(
+        response.status().as_u16() == 200 || response.status().as_u16() == 404,
+        "expected archive success or already-archived/not-found, got {}",
+        response.status()
+    );
+
+    if response.status().as_u16() == 200 {
+        let body: serde_json::Value = response.json().await.unwrap();
+        assert_eq!(body["archived"], true);
+
+        let get_response = client
+            .get(format!(
+                "{base}/conversations/{conv_id}/threads/{thread_id}"
+            ))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(get_response.status().as_u16(), 404);
+    }
 }
 
 #[tokio::test]

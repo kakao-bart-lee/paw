@@ -156,25 +156,16 @@ async fn main() -> anyhow::Result<()> {
             delete(messages::handlers::delete_message),
         )
         .route(
-            "/conversations/{conv_id}/threads",
+            "/conversations/{id}/threads",
             get(threads::handlers::list_threads).post(threads::handlers::create_thread),
         )
         .route(
-            "/conversations/{conv_id}/threads/{thread_id}",
-            get(threads::handlers::get_thread).delete(threads::handlers::delete_thread),
+            "/conversations/{id}/threads/{thread_id}",
+            get(threads::handlers::get_thread).patch(threads::handlers::update_thread_title),
         )
         .route(
-            "/conversations/{conv_id}/threads/{thread_id}/messages",
-            get(threads::handlers::list_thread_messages)
-                .post(threads::handlers::send_thread_message),
-        )
-        .route(
-            "/conversations/{conv_id}/threads/{thread_id}/agents",
-            get(threads::handlers::list_thread_agents).post(threads::handlers::bind_agent),
-        )
-        .route(
-            "/conversations/{conv_id}/threads/{thread_id}/agents/{agent_id}",
-            delete(threads::handlers::unbind_agent),
+            "/conversations/{id}/threads/{thread_id}/archive",
+            post(threads::handlers::archive_thread),
         )
         .route("/api/v1/channels", post(channels::handlers::create_channel))
         .route("/api/v1/channels", get(channels::handlers::list_channels))
