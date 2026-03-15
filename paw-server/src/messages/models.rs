@@ -49,3 +49,13 @@ pub struct RemoveMemberResponse {
 pub struct UpdateGroupNameRequest {
     pub name: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateMemberRoleRequest {
+    pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateMemberRoleResponse {
+    pub updated: bool,
+}

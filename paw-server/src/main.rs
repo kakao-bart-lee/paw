@@ -133,7 +133,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .route(
             "/conversations/{id}/members/{user_id}",
-            delete(messages::handlers::remove_member_handler),
+            delete(messages::handlers::remove_member_handler)
+                .patch(messages::handlers::update_member_role_handler),
         )
         .route(
             "/conversations/{id}/agents",
