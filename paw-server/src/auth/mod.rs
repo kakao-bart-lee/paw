@@ -8,6 +8,7 @@ pub mod handlers;
 pub mod jwt;
 pub mod middleware;
 pub mod otp;
+pub mod otp_attempts;
 
 #[derive(Clone)]
 pub struct AppState {
