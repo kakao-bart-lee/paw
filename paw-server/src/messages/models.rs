@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -10,6 +11,8 @@ pub struct Message {
     pub sender_id: Uuid,
     pub content: String,
     pub format: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub forwarded_from: Option<Value>,
     pub seq: i64,
     pub created_at: DateTime<Utc>,
 }

@@ -458,6 +458,7 @@ async fn fetch_messages_after_seq(
             seq: row.try_get("seq")?,
             created_at: row.try_get("created_at")?,
             blocks,
+            attachments: Vec::new(),
         });
     }
 

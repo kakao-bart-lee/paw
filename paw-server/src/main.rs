@@ -157,6 +157,10 @@ async fn main() -> anyhow::Result<()> {
             delete(messages::handlers::delete_message),
         )
         .route(
+            "/conversations/{target_conv_id}/messages/forward",
+            post(messages::handlers::forward_message),
+        )
+        .route(
             "/conversations/{id}/threads",
             get(threads::handlers::list_threads).post(threads::handlers::create_thread),
         )

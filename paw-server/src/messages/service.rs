@@ -139,7 +139,7 @@ pub async fn get_messages(
     let max_limit = limit.clamp(1, 50);
 
     sqlx::query_as::<_, Message>(
-        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at
+        "SELECT id, conversation_id, thread_id, sender_id, content, format, forwarded_from, seq, created_at
          FROM messages
          WHERE conversation_id = $1 AND seq > $2 AND is_deleted = FALSE
          ORDER BY seq ASC
@@ -151,6 +151,73 @@ pub async fn get_messages(
     .fetch_all(pool.as_ref())
     .await
     .context("fetch conversation messages")
+}
+
+#[derive(sqlx::FromRow)]
+struct ForwardSourceMessage {
+    sender_id: Uuid,
+    content: String,
+    format: String,
+}
+
+pub async fn forward_message(
+    pool: &DbPool,
+    target_conversation_id: Uuid,
+    source_conversation_id: Uuid,
+    requester_id: Uuid,
+    original_message_id: Uuid,
+) -> anyhow::Result<Option<MessageSendResult>> {
+    let mut tx = pool.begin().await.context("begin forward transaction")?;
+
+    let source = sqlx::query_as::<_, ForwardSourceMessage>(
+        "SELECT sender_id, content, format
+         FROM messages
+         WHERE id = $1 AND conversation_id = $2 AND is_deleted = FALSE
+         LIMIT 1",
+    )
+    .bind(original_message_id)
+    .bind(source_conversation_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .context("load source message for forward")?;
+
+    let Some(source) = source else {
+        tx.rollback().await.context("rollback missing source")?;
+        return Ok(None);
+    };
+
+    let forwarded_from = serde_json::json!({
+        "message_id": original_message_id,
+        "conversation_id": source_conversation_id,
+        "sender_id": source.sender_id,
+    });
+
+    let created = sqlx::query_as::<_, MessageSendResult>(
+        "INSERT INTO messages (
+            conversation_id,
+            sender_id,
+            thread_id,
+            seq,
+            content,
+            format,
+            idempotency_key,
+            forwarded_from
+         )
+         VALUES ($1, $2, NULL, next_message_seq($1), $3, $4, $5, $6)
+         RETURNING id, seq, created_at",
+    )
+    .bind(target_conversation_id)
+    .bind(requester_id)
+    .bind(source.content)
+    .bind(source.format)
+    .bind(Uuid::new_v4())
+    .bind(forwarded_from)
+    .fetch_one(&mut *tx)
+    .await
+    .context("insert forwarded message")?;
+
+    tx.commit().await.context("commit forward transaction")?;
+    Ok(Some(created))
 }
 
 pub async fn list_conversations(

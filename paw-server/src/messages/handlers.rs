@@ -31,6 +31,12 @@ pub struct SendMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ForwardMessageRequest {
+    pub original_message_id: Uuid,
+    pub source_conversation_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct GetMessagesQuery {
     pub after_seq: Option<i64>,
     pub limit: Option<i64>,
@@ -161,6 +167,7 @@ pub async fn send_message(
                 seq: created.seq,
                 created_at: created.created_at,
                 blocks: Vec::new(),
+                attachments: Vec::new(),
             };
 
             tokio::spawn(async move {
@@ -198,6 +205,60 @@ pub async fn send_message(
                 )
                 .into_response(),
             }
+        }
+    }
+}
+
+pub async fn forward_message(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(target_conv_id): Path<Uuid>,
+    Json(payload): Json<ForwardMessageRequest>,
+) -> Response {
+    match ensure_membership(&state, target_conv_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match ensure_membership(&state, payload.source_conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match service::forward_message(
+        &state.db,
+        target_conv_id,
+        payload.source_conversation_id,
+        user_id,
+        payload.original_message_id,
+    )
+    .await
+    {
+        Ok(Some(created)) => Json(created).into_response(),
+        Ok(None) => error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            &locale,
+            "Original message not found",
+        )
+        .into_response(),
+        Err(err) => {
+            tracing::error!(
+                %err,
+                target_conversation_id = %target_conv_id,
+                source_conversation_id = %payload.source_conversation_id,
+                original_message_id = %payload.original_message_id,
+                sender_id = %user_id,
+                "message forward failed"
+            );
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response()
         }
     }
 }
@@ -283,6 +344,7 @@ fn message_received_from_row(
         seq: row.try_get("seq")?,
         created_at: row.try_get("created_at")?,
         blocks,
+        attachments: Vec::new(),
     })
 }
 

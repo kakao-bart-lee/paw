@@ -561,7 +561,10 @@ async fn handle_agent_socket(
         }
     };
 
-    state.hub.register(agent_id, outbound_tx.clone()).await;
+    let _ = state
+        .hub
+        .try_register_with_limit(agent_id, outbound_tx.clone(), usize::MAX)
+        .await;
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 
