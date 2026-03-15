@@ -1,5 +1,10 @@
 use crate::auth::{middleware::UserId, AppState};
 use crate::agents::permissions::{check_agent_permission, AgentPermission};
+use crate::context_engine::LifecycleHooks;
+use crate::context_engine::models::{
+    ConversationSettingsChangedHook, MemberJoinedHook, MemberLeftHook, MessageDeletedHook,
+    MessageCreatedHook,
+};
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
@@ -16,6 +21,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use chrono::Utc;
 use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -151,6 +157,7 @@ pub async fn send_message(
             let db = state.db.clone();
             let hub = state.hub.clone();
             let notify_state = state.clone();
+            let context_engine = state.context_engine.clone();
             let created_message = MessageReceivedMsg {
                 v: PROTOCOL_VERSION,
                 id: created.id,
@@ -178,6 +185,19 @@ pub async fn send_message(
                     tracing::error!(%err, conversation_id = %conv_id, "agent inbound notification failed");
                 }
             });
+
+            context_engine
+                .on_message_created(MessageCreatedHook {
+                    conversation_id: conv_id,
+                    message_id: created.id,
+                    thread_id: None,
+                    sender_id: user_id,
+                    content: payload.content.trim().to_owned(),
+                    format,
+                    seq: created.seq,
+                    timestamp: created.created_at,
+                })
+                .await;
 
             Json(created).into_response()
         }
@@ -451,6 +471,17 @@ pub async fn delete_message(
     };
 
     if deleted {
+        state
+            .context_engine
+            .on_message_deleted(MessageDeletedHook {
+                conversation_id: conv_id,
+                message_id,
+                thread_id,
+                deleted_by: user_id,
+                timestamp: Utc::now(),
+            })
+            .await;
+
         if let Some(thread_id) = thread_id {
             let latest = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
                 "SELECT MAX(created_at)
@@ -550,7 +581,21 @@ pub async fn add_member_handler(
     Json(payload): Json<AddMemberRequest>,
 ) -> Response {
     match service::add_member(&state.db, conversation_id, user_id, payload.user_id).await {
-        Ok(added) => Json(AddMemberResponse { added }).into_response(),
+        Ok(added) => {
+            if added {
+                state
+                    .context_engine
+                    .on_member_joined(MemberJoinedHook {
+                        conversation_id,
+                        member_id: payload.user_id,
+                        joined_by: user_id,
+                        timestamp: Utc::now(),
+                    })
+                    .await;
+            }
+
+            Json(AddMemberResponse { added }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -562,7 +607,21 @@ pub async fn remove_member_handler(
     Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
 ) -> Response {
     match service::remove_member(&state.db, conversation_id, user_id, target_user_id).await {
-        Ok(removed) => Json(RemoveMemberResponse { removed }).into_response(),
+        Ok(removed) => {
+            if removed {
+                state
+                    .context_engine
+                    .on_member_left(MemberLeftHook {
+                        conversation_id,
+                        member_id: target_user_id,
+                        left_by: user_id,
+                        timestamp: Utc::now(),
+                    })
+                    .await;
+            }
+
+            Json(RemoveMemberResponse { removed }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -575,7 +634,21 @@ pub async fn update_group_name_handler(
     Json(payload): Json<UpdateGroupNameRequest>,
 ) -> Response {
     match service::update_group_name(&state.db, conversation_id, user_id, &payload.name).await {
-        Ok(updated) => Json(UpdateGroupNameResponse { updated }).into_response(),
+        Ok(updated) => {
+            if updated {
+                state
+                    .context_engine
+                    .on_conversation_settings_changed(ConversationSettingsChangedHook {
+                        conversation_id,
+                        changed_by: user_id,
+                        changes: serde_json::json!({"title": payload.name}),
+                        timestamp: Utc::now(),
+                    })
+                    .await;
+            }
+
+            Json(UpdateGroupNameResponse { updated }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -596,7 +669,26 @@ pub async fn update_member_role_handler(
     )
     .await
     {
-        Ok(updated) => Json(UpdateMemberRoleResponse { updated }).into_response(),
+        Ok(updated) => {
+            if updated {
+                state
+                    .context_engine
+                    .on_conversation_settings_changed(ConversationSettingsChangedHook {
+                        conversation_id,
+                        changed_by: user_id,
+                        changes: serde_json::json!({
+                            "member_role": {
+                                "user_id": target_user_id,
+                                "role": payload.role,
+                            }
+                        }),
+                        timestamp: Utc::now(),
+                    })
+                    .await;
+            }
+
+            Json(UpdateMemberRoleResponse { updated }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
