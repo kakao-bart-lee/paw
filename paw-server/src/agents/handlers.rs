@@ -43,6 +43,33 @@ pub struct RemoveAgentResponse {
     pub removed: bool,
 }
 
+pub async fn get_agent_permissions_handler(
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Path((_conversation_id, _agent_id)): Path<(Uuid, Uuid)>,
+) -> Response {
+    error(
+        StatusCode::NOT_IMPLEMENTED,
+        "not_implemented",
+        &locale,
+        "Agent permissions API is not implemented",
+    )
+    .into_response()
+}
+
+pub async fn put_agent_permissions_handler(
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Path((_conversation_id, _agent_id)): Path<(Uuid, Uuid)>,
+    Json(_payload): Json<Value>,
+) -> Response {
+    error(
+        StatusCode::NOT_IMPLEMENTED,
+        "not_implemented",
+        &locale,
+        "Agent permissions API is not implemented",
+    )
+    .into_response()
+}
+
 pub async fn register_agent_handler(
     State(state): State<AppState>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
@@ -561,7 +588,25 @@ async fn handle_agent_socket(
         }
     };
 
-    state.hub.register(agent_id, outbound_tx.clone()).await;
+    if !state
+        .hub
+        .try_register_with_limit(
+            agent_id,
+            outbound_tx.clone(),
+            crate::ws::MAX_WS_CONNECTIONS_PER_USER,
+        )
+        .await
+    {
+        let err = agent_error_frame(
+            "too_many_connections",
+            &locale,
+            "Too many concurrent websocket connections",
+        );
+        let _ = outbound_tx.send(Message::Text(err.to_string().into()));
+        drop(outbound_tx);
+        let _ = writer.await;
+        return;
+    }
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 

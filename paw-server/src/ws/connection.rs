@@ -1,5 +1,6 @@
 use crate::auth::AppState;
 use crate::i18n::localized_message;
+use crate::messages::{models::MessageAttachment, service as message_service};
 use crate::messages::service::{self, Membership};
 use crate::ws::hub::WsSender;
 use axum::extract::ws::{close_code, CloseFrame, Message, WebSocket};
@@ -428,8 +429,16 @@ async fn fetch_messages_after_seq(
     .fetch_all(state.db.as_ref())
     .await?;
 
+    let message_ids: Vec<Uuid> = rows
+        .iter()
+        .map(|row| row.try_get::<Uuid, _>("id"))
+        .collect::<Result<Vec<_>, _>>()?;
+    let attachments_map = message_service::list_message_attachments_map(&state.db, &message_ids)
+        .await?;
+
     let mut messages = Vec::with_capacity(rows.len());
     for row in rows {
+        let id: Uuid = row.try_get("id")?;
         let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
         let format = match format_raw
             .unwrap_or_else(|| "markdown".to_owned())
@@ -449,7 +458,7 @@ async fn fetch_messages_after_seq(
 
         messages.push(MessageReceivedMsg {
             v: PROTOCOL_VERSION,
-            id: row.try_get("id")?,
+            id,
             conversation_id: row.try_get("conversation_id")?,
             thread_id: None,
             sender_id: row.try_get("sender_id")?,
@@ -458,6 +467,9 @@ async fn fetch_messages_after_seq(
             seq: row.try_get("seq")?,
             created_at: row.try_get("created_at")?,
             blocks,
+            attachments: proto_attachments_from_message(
+                attachments_map.get(&id).map(Vec::as_slice).unwrap_or(&[]),
+            ),
         });
     }
 
@@ -512,6 +524,22 @@ async fn send_protocol_error(
 
 fn exceeds_ws_message_size(frame_len: usize) -> bool {
     frame_len > crate::ws::MAX_WS_MESSAGE_SIZE_BYTES
+}
+
+fn proto_attachments_from_message(
+    attachments: &[MessageAttachment],
+) -> Vec<paw_proto::MessageAttachment> {
+    attachments
+        .iter()
+        .map(|attachment| paw_proto::MessageAttachment {
+            id: attachment.id,
+            file_type: attachment.file_type.clone(),
+            file_url: attachment.file_url.clone(),
+            file_size: attachment.file_size,
+            mime_type: attachment.mime_type.clone(),
+            thumbnail_url: attachment.thumbnail_url.clone(),
+        })
+        .collect()
 }
 
 #[cfg(test)]

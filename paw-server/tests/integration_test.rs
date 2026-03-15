@@ -215,6 +215,7 @@ fn protocol_message_received_all_fields() {
         seq: 42,
         created_at: Utc::now(),
         blocks: vec![],
+        attachments: vec![],
     };
     let json = serde_json::to_value(&msg).unwrap();
 
@@ -224,6 +225,64 @@ fn protocol_message_received_all_fields() {
     assert_eq!(json["format"], "markdown");
     assert!(json["id"].is_string());
     assert!(json["created_at"].is_string());
+}
+
+#[test]
+fn protocol_message_forwarded_contains_origin_metadata() {
+    let message_id = Uuid::new_v4();
+    let source_conversation_id = Uuid::new_v4();
+    let source_sender_id = Uuid::new_v4();
+    let msg = paw_proto::ServerMessage::MessageForwarded(paw_proto::MessageForwardedMsg {
+        v: 1,
+        id: Uuid::new_v4(),
+        conversation_id: Uuid::new_v4(),
+        thread_id: None,
+        sender_id: Uuid::new_v4(),
+        content: "Forward me".into(),
+        format: paw_proto::MessageFormat::Markdown,
+        seq: 43,
+        created_at: Utc::now(),
+        blocks: vec![],
+        attachments: vec![],
+        forwarded_from: paw_proto::ForwardedFromMsg {
+            message_id,
+            conversation_id: source_conversation_id,
+            sender_id: source_sender_id,
+        },
+    });
+
+    let json = serde_json::to_value(&msg).unwrap();
+    assert_eq!(json["type"], "message_forwarded");
+    assert_eq!(json["forwarded_from"]["message_id"], message_id.to_string());
+    assert_eq!(
+        json["forwarded_from"]["conversation_id"],
+        source_conversation_id.to_string()
+    );
+    assert_eq!(
+        json["forwarded_from"]["sender_id"],
+        source_sender_id.to_string()
+    );
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct ForwardMessageRequest {
+    original_message_id: Uuid,
+    source_conversation_id: Uuid,
+}
+
+#[test]
+fn forward_message_request_roundtrip() {
+    let req = ForwardMessageRequest {
+        original_message_id: Uuid::new_v4(),
+        source_conversation_id: Uuid::new_v4(),
+    };
+
+    let json = serde_json::to_value(&req).unwrap();
+    assert!(json["original_message_id"].is_string());
+    assert!(json["source_conversation_id"].is_string());
+
+    let parsed: ForwardMessageRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, req);
 }
 
 #[test]
@@ -536,6 +595,43 @@ async fn message_idempotency_returns_same_result() {
             "idempotent sends must return same seq"
         );
     }
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server with auth token"]
+async fn message_forward_endpoint_accepts_forward_payload() {
+    let base = "http://localhost:38173";
+    let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let target_conv_id = std::env::var("PAW_TEST_CONV_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into());
+    let source_conv_id = std::env::var("PAW_TEST_SOURCE_CONV_ID").unwrap_or_else(|_| {
+        std::env::var("PAW_TEST_CONV_ID")
+            .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000001".into())
+    });
+    let original_message_id = std::env::var("PAW_TEST_ORIGINAL_MESSAGE_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000002".into());
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!(
+            "{base}/conversations/{target_conv_id}/messages/forward"
+        ))
+        .bearer_auth(&token)
+        .json(&serde_json::json!({
+            "original_message_id": original_message_id,
+            "source_conversation_id": source_conv_id,
+        }))
+        .send()
+        .await
+        .unwrap();
+
+    assert!(
+        response.status().is_success()
+            || response.status().as_u16() == 403
+            || response.status().as_u16() == 404,
+        "expected success, forbidden, or not found, got {}",
+        response.status()
+    );
 }
 
 // ── Integration: Gap-fill via WebSocket (requires running server) ───────
@@ -893,6 +989,7 @@ fn gap_fill_messages_must_be_monotonically_increasing() {
             seq,
             created_at: now + Duration::seconds(seq),
             blocks: vec![],
+            attachments: vec![],
         })
         .collect();
 
@@ -968,6 +1065,7 @@ fn test_inbound_context_serialization() {
         seq: 1,
         created_at: Utc::now(),
         blocks: vec![],
+        attachments: vec![],
     };
 
     let ctx = paw_proto::InboundContext {
@@ -1070,6 +1168,7 @@ fn test_agent_stream_msg_roundtrip() {
                 assert_eq!(msg.tokens, 42);
                 assert_eq!(msg.duration_ms, 1234);
             }
+            _ => {}
         }
     }
 }

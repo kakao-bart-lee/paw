@@ -2,23 +2,30 @@ use crate::auth::{middleware::UserId, AppState};
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
-        AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse,
+        AddMemberRequest, ConversationListItem, MediaAttachment, Message, MessageAttachment,
+        RemoveMemberResponse,
         UpdateGroupNameRequest, UpdateMemberRoleRequest, UpdateMemberRoleResponse,
     },
     service::{self, GroupManagementError, Membership},
 };
 use crate::moderation;
 use crate::push;
+use chrono::Utc;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
+use paw_proto::{
+    ContextConversationSettingsChangedMsg, ContextMemberJoinedMsg, ContextMemberLeftMsg,
+    ContextMessageDeletedMsg, InboundContext, MessageFormat, MessageReceivedMsg,
+    PROTOCOL_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 type ApiResult<T> = Result<Json<T>, (StatusCode, Json<Value>)>;
@@ -28,6 +35,14 @@ pub struct SendMessageRequest {
     pub content: String,
     pub format: String,
     pub idempotency_key: Uuid,
+    #[serde(default)]
+    pub attachment_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ForwardMessageRequest {
+    pub original_message_id: Uuid,
+    pub source_conversation_id: Uuid,
 }
 
 #[derive(Debug, Deserialize)]
@@ -74,6 +89,22 @@ pub struct UpdateGroupNameResponse {
     pub updated: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct MessageAttachmentsResponse {
+    pub attachments: Vec<MessageAttachment>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AttachmentLimits {
+    max_text_plain_bytes: i64,
+    max_image_bytes: i64,
+}
+
+const DEFAULT_MAX_TEXT_PLAIN_ATTACHMENT_BYTES: i64 = 256 * 1024;
+const DEFAULT_MAX_IMAGE_ATTACHMENT_BYTES: i64 = 512 * 1024;
+const ATTACHMENT_MAX_TEXT_PLAIN_BYTES_ENV: &str = "PAW_ATTACHMENT_MAX_TEXT_PLAIN_BYTES";
+const ATTACHMENT_MAX_IMAGE_BYTES_ENV: &str = "PAW_ATTACHMENT_MAX_IMAGE_BYTES";
+
 pub async fn send_message(
     State(state): State<AppState>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
@@ -117,6 +148,46 @@ pub async fn send_message(
         .into_response();
     }
 
+    if has_duplicates(&payload.attachment_ids) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_attachment_ids",
+            &locale,
+            "attachment_ids must not contain duplicates",
+        )
+        .into_response();
+    }
+
+    let media_attachments =
+        match service::fetch_media_attachments(&state.db, user_id, &payload.attachment_ids).await {
+            Ok(attachments) => attachments,
+            Err(err) if err.to_string().contains("attachment_not_found_or_not_owned") => {
+                return error(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_attachment_ids",
+                    &locale,
+                    "attachment_ids contains unknown attachments",
+                )
+                .into_response();
+            }
+            Err(err) => {
+                tracing::error!(%err, conversation_id = %conv_id, sender_id = %user_id, "failed to load attachments");
+                return error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "attachment_lookup_failed",
+                    &locale,
+                    "Could not process attachments",
+                )
+                .into_response();
+            }
+        };
+
+    if let Err((code, message)) =
+        validate_attachment_totals(&media_attachments, attachment_limits_from_env())
+    {
+        return error(StatusCode::PAYLOAD_TOO_LARGE, code, &locale, message).into_response();
+    }
+
     match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key)
         .await
     {
@@ -142,6 +213,7 @@ pub async fn send_message(
         payload.content.trim(),
         &format,
         payload.idempotency_key,
+        &media_attachments,
     )
     .await
     {
@@ -150,6 +222,7 @@ pub async fn send_message(
             let db = state.db.clone();
             let hub = state.hub.clone();
             let notify_state = state.clone();
+            let context_engine = state.context_engine.clone();
             let created_message = MessageReceivedMsg {
                 v: PROTOCOL_VERSION,
                 id: created.id,
@@ -161,7 +234,9 @@ pub async fn send_message(
                 seq: created.seq,
                 created_at: created.created_at,
                 blocks: Vec::new(),
+                attachments: proto_attachments_from_media(&media_attachments),
             };
+            let context_message = crate::context_engine::message_created_event(created_message.clone());
 
             tokio::spawn(async move {
                 if let Err(err) =
@@ -174,6 +249,12 @@ pub async fn send_message(
             tokio::spawn(async move {
                 if let Err(err) = notify_agents_of_message(notify_state, created_message).await {
                     tracing::error!(%err, conversation_id = %conv_id, "agent inbound notification failed");
+                }
+            });
+
+            tokio::spawn(async move {
+                if let Err(err) = context_engine.on_message_created(context_message).await {
+                    tracing::error!(%err, conversation_id = %conv_id, "context hook failed");
                 }
             });
 
@@ -198,6 +279,60 @@ pub async fn send_message(
                 )
                 .into_response(),
             }
+        }
+    }
+}
+
+pub async fn forward_message(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(target_conv_id): Path<Uuid>,
+    Json(payload): Json<ForwardMessageRequest>,
+) -> Response {
+    match ensure_membership(&state, target_conv_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match ensure_membership(&state, payload.source_conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match service::forward_message(
+        &state.db,
+        target_conv_id,
+        payload.source_conversation_id,
+        user_id,
+        payload.original_message_id,
+    )
+    .await
+    {
+        Ok(Some(created)) => Json(created).into_response(),
+        Ok(None) => error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            &locale,
+            "Original message not found",
+        )
+        .into_response(),
+        Err(err) => {
+            tracing::error!(
+                %err,
+                target_conversation_id = %target_conv_id,
+                source_conversation_id = %payload.source_conversation_id,
+                original_message_id = %payload.original_message_id,
+                sender_id = %user_id,
+                "message forward failed"
+            );
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response()
         }
     }
 }
@@ -232,9 +367,15 @@ async fn notify_agents_of_message(
     .fetch_all(state.db.as_ref())
     .await?;
 
+    let message_ids: Vec<Uuid> = rows
+        .iter()
+        .map(|row| row.try_get::<Uuid, _>("id"))
+        .collect::<Result<Vec<_>, _>>()?;
+    let attachments_map = service::list_message_attachments_map(&state.db, &message_ids).await?;
+
     let mut recent_messages = Vec::with_capacity(rows.len());
     for row in rows {
-        recent_messages.push(message_received_from_row(&row)?);
+        recent_messages.push(message_received_from_row(&row, &attachments_map)?);
     }
     recent_messages.reverse();
 
@@ -263,7 +404,9 @@ async fn notify_agents_of_message(
 
 fn message_received_from_row(
     row: &sqlx::postgres::PgRow,
+    attachments_map: &HashMap<Uuid, Vec<MessageAttachment>>,
 ) -> Result<MessageReceivedMsg, sqlx::Error> {
+    let id: Uuid = row.try_get("id")?;
     let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
     let blocks_raw: Option<serde_json::Value> =
         row.try_get::<Option<serde_json::Value>, _>("blocks")?;
@@ -274,7 +417,7 @@ fn message_received_from_row(
 
     Ok(MessageReceivedMsg {
         v: PROTOCOL_VERSION,
-        id: row.try_get("id")?,
+        id,
         conversation_id: row.try_get("conversation_id")?,
         thread_id: row.try_get("thread_id")?,
         sender_id: row.try_get("sender_id")?,
@@ -283,6 +426,9 @@ fn message_received_from_row(
         seq: row.try_get("seq")?,
         created_at: row.try_get("created_at")?,
         blocks,
+        attachments: proto_attachments_from_message(
+            attachments_map.get(&id).map(Vec::as_slice).unwrap_or(&[]),
+        ),
     })
 }
 
@@ -290,6 +436,206 @@ fn to_message_format(raw: &str) -> MessageFormat {
     match raw.to_ascii_lowercase().as_str() {
         "plain" => MessageFormat::Plain,
         _ => MessageFormat::Markdown,
+    }
+}
+
+pub async fn get_message_attachments(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(message_id): Path<Uuid>,
+) -> Response {
+    let conversation_id = match sqlx::query_scalar::<_, Uuid>(
+        "SELECT conversation_id FROM messages WHERE id = $1",
+    )
+    .bind(message_id)
+    .fetch_optional(state.db.as_ref())
+    .await
+    {
+        Ok(Some(conversation_id)) => conversation_id,
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "message_not_found",
+                &locale,
+                "Message not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, "failed to resolve conversation for message attachments");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_lookup_failed",
+                &locale,
+                "Could not fetch message attachments",
+            )
+            .into_response();
+        }
+    };
+
+    match ensure_membership(&state, conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match service::list_message_attachments(&state.db, message_id).await {
+        Ok(attachments) => Json(MessageAttachmentsResponse { attachments }).into_response(),
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, "failed to list message attachments");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "attachment_list_failed",
+                &locale,
+                "Could not fetch message attachments",
+            )
+            .into_response()
+        }
+    }
+}
+
+fn attachment_limits_from_env() -> AttachmentLimits {
+    AttachmentLimits {
+        max_text_plain_bytes: parse_positive_env_i64(
+            ATTACHMENT_MAX_TEXT_PLAIN_BYTES_ENV,
+            DEFAULT_MAX_TEXT_PLAIN_ATTACHMENT_BYTES,
+        ),
+        max_image_bytes: parse_positive_env_i64(
+            ATTACHMENT_MAX_IMAGE_BYTES_ENV,
+            DEFAULT_MAX_IMAGE_ATTACHMENT_BYTES,
+        ),
+    }
+}
+
+fn parse_positive_env_i64(name: &str, default: i64) -> i64 {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.parse::<i64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(default)
+}
+
+fn validate_attachment_totals(
+    attachments: &[MediaAttachment],
+    limits: AttachmentLimits,
+) -> Result<(), (&'static str, &'static str)> {
+    let mut text_total = 0_i64;
+    let mut image_total = 0_i64;
+
+    for attachment in attachments {
+        if attachment.mime_type.eq_ignore_ascii_case("text/plain") {
+            text_total += attachment.file_size;
+            continue;
+        }
+
+        if attachment
+            .mime_type
+            .to_ascii_lowercase()
+            .starts_with("image/")
+        {
+            image_total += attachment.file_size;
+        } else {
+            text_total += attachment.file_size;
+        }
+    }
+
+    if text_total > limits.max_text_plain_bytes {
+        return Err((
+            "attachment_size_exceeded",
+            "Total text/file attachment size exceeds configured limit",
+        ));
+    }
+
+    if image_total > limits.max_image_bytes {
+        return Err((
+            "attachment_size_exceeded",
+            "Total image attachment size exceeds configured limit",
+        ));
+    }
+
+    Ok(())
+}
+
+fn has_duplicates(values: &[Uuid]) -> bool {
+    let mut set = HashSet::with_capacity(values.len());
+    values.iter().any(|value| !set.insert(*value))
+}
+
+fn proto_attachments_from_media(attachments: &[MediaAttachment]) -> Vec<paw_proto::MessageAttachment> {
+    attachments
+        .iter()
+        .map(|attachment| paw_proto::MessageAttachment {
+            id: attachment.id,
+            file_type: attachment.media_type.clone(),
+            file_url: attachment.s3_key.clone(),
+            file_size: attachment.file_size,
+            mime_type: attachment.mime_type.clone(),
+            thumbnail_url: attachment.thumbnail_s3_key.clone(),
+        })
+        .collect()
+}
+
+fn proto_attachments_from_message(
+    attachments: &[MessageAttachment],
+) -> Vec<paw_proto::MessageAttachment> {
+    attachments
+        .iter()
+        .map(|attachment| paw_proto::MessageAttachment {
+            id: attachment.id,
+            file_type: attachment.file_type.clone(),
+            file_url: attachment.file_url.clone(),
+            file_size: attachment.file_size,
+            mime_type: attachment.mime_type.clone(),
+            thumbnail_url: attachment.thumbnail_url.clone(),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn media_attachment(mime_type: &str, file_size: i64) -> MediaAttachment {
+        MediaAttachment {
+            id: Uuid::new_v4(),
+            media_type: if mime_type.starts_with("image/") {
+                "image".to_owned()
+            } else {
+                "file".to_owned()
+            },
+            mime_type: mime_type.to_owned(),
+            file_size,
+            s3_key: "media/key".to_owned(),
+            thumbnail_s3_key: None,
+        }
+    }
+
+    #[test]
+    fn duplicate_attachment_ids_are_rejected() {
+        let id = Uuid::new_v4();
+        assert!(has_duplicates(&[id, id]));
+        assert!(!has_duplicates(&[id, Uuid::new_v4()]));
+    }
+
+    #[test]
+    fn attachment_totals_enforce_text_and_image_limits() {
+        let limits = AttachmentLimits {
+            max_text_plain_bytes: 256 * 1024,
+            max_image_bytes: 512 * 1024,
+        };
+
+        let ok = vec![
+            media_attachment("text/plain", 128 * 1024),
+            media_attachment("application/pdf", 64 * 1024),
+            media_attachment("image/png", 512 * 1024),
+        ];
+        assert!(validate_attachment_totals(&ok, limits).is_ok());
+
+        let text_over = vec![media_attachment("text/plain", 300 * 1024)];
+        assert!(validate_attachment_totals(&text_over, limits).is_err());
+
+        let image_over = vec![media_attachment("image/jpeg", 600 * 1024)];
+        assert!(validate_attachment_totals(&image_over, limits).is_err());
     }
 }
 
@@ -423,6 +769,7 @@ pub async fn delete_message(
     };
 
     if deleted {
+        let context_engine = state.context_engine.clone();
         if let Some(thread_id) = thread_id {
             let latest = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
                 "SELECT MAX(created_at)
@@ -448,6 +795,22 @@ pub async fn delete_message(
             .execute(state.db.as_ref())
             .await;
         }
+
+        tokio::spawn(async move {
+            if let Err(err) = context_engine
+                .on_message_deleted(ContextMessageDeletedMsg {
+                    v: PROTOCOL_VERSION,
+                    conversation_id: conv_id,
+                    thread_id,
+                    message_id,
+                    deleted_by: user_id,
+                    occurred_at: Utc::now(),
+                })
+                .await
+            {
+                tracing::error!(%err, conversation_id = %conv_id, message_id = %message_id, "context hook failed");
+            }
+        });
     }
 
     Json(DeleteMessageResponse { deleted }).into_response()
@@ -522,7 +885,28 @@ pub async fn add_member_handler(
     Json(payload): Json<AddMemberRequest>,
 ) -> Response {
     match service::add_member(&state.db, conversation_id, user_id, payload.user_id).await {
-        Ok(added) => Json(AddMemberResponse { added }).into_response(),
+        Ok(added) => {
+            if added {
+                let context_engine = state.context_engine.clone();
+                let member_id = payload.user_id;
+                tokio::spawn(async move {
+                    if let Err(err) = context_engine
+                        .on_member_joined(ContextMemberJoinedMsg {
+                            v: PROTOCOL_VERSION,
+                            conversation_id,
+                            member_id,
+                            joined_by: user_id,
+                            occurred_at: Utc::now(),
+                        })
+                        .await
+                    {
+                        tracing::error!(%err, conversation_id = %conversation_id, member_id = %member_id, "context hook failed");
+                    }
+                });
+            }
+
+            Json(AddMemberResponse { added }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -534,7 +918,27 @@ pub async fn remove_member_handler(
     Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
 ) -> Response {
     match service::remove_member(&state.db, conversation_id, user_id, target_user_id).await {
-        Ok(removed) => Json(RemoveMemberResponse { removed }).into_response(),
+        Ok(removed) => {
+            if removed {
+                let context_engine = state.context_engine.clone();
+                tokio::spawn(async move {
+                    if let Err(err) = context_engine
+                        .on_member_left(ContextMemberLeftMsg {
+                            v: PROTOCOL_VERSION,
+                            conversation_id,
+                            member_id: target_user_id,
+                            left_by: user_id,
+                            occurred_at: Utc::now(),
+                        })
+                        .await
+                    {
+                        tracing::error!(%err, conversation_id = %conversation_id, member_id = %target_user_id, "context hook failed");
+                    }
+                });
+            }
+
+            Json(RemoveMemberResponse { removed }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }
@@ -547,7 +951,28 @@ pub async fn update_group_name_handler(
     Json(payload): Json<UpdateGroupNameRequest>,
 ) -> Response {
     match service::update_group_name(&state.db, conversation_id, user_id, &payload.name).await {
-        Ok(updated) => Json(UpdateGroupNameResponse { updated }).into_response(),
+        Ok(updated) => {
+            if updated {
+                let context_engine = state.context_engine.clone();
+                let title = payload.name.trim().to_owned();
+                tokio::spawn(async move {
+                    if let Err(err) = context_engine
+                        .on_conversation_settings_changed(ContextConversationSettingsChangedMsg {
+                            v: PROTOCOL_VERSION,
+                            conversation_id,
+                            changed_by: user_id,
+                            occurred_at: Utc::now(),
+                            changes: serde_json::json!({ "title": title }),
+                        })
+                        .await
+                    {
+                        tracing::error!(%err, conversation_id = %conversation_id, "context hook failed");
+                    }
+                });
+            }
+
+            Json(UpdateGroupNameResponse { updated }).into_response()
+        }
         Err(err) => group_management_error_to_response(err, &locale).into_response(),
     }
 }

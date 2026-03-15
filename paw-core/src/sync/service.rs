@@ -154,6 +154,7 @@ mod tests {
             seq: 9,
             created_at: Utc::now(),
             blocks: vec![],
+            attachments: vec![],
         };
 
         service.persist_message(&msg).unwrap();

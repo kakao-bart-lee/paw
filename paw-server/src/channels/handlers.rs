@@ -225,6 +225,7 @@ pub async fn send_channel_message(
         payload.content.trim(),
         &format,
         payload.idempotency_key,
+        &[],
     )
     .await
     {

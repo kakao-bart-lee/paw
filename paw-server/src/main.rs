@@ -2,6 +2,7 @@ mod agents;
 mod auth;
 mod backup;
 mod channels;
+mod context_engine;
 mod db;
 mod i18n;
 mod keys;
@@ -68,6 +69,11 @@ async fn main() -> anyhow::Result<()> {
 
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
+    let context_engine: Arc<dyn context_engine::ContextEngine> =
+        Arc::new(context_engine::DefaultContextEngine::new(
+            db.clone(),
+            hub.clone(),
+        ));
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
 
     let nats_url =
@@ -92,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        context_engine,
         agent_limiter: agent_limiter.clone(),
         media_service,
         nats: nats_client,
@@ -145,6 +152,11 @@ async fn main() -> anyhow::Result<()> {
             delete(agents::handlers::remove_agent_handler),
         )
         .route(
+            "/conversations/{id}/agents/{agent_id}/permissions",
+            get(agents::handlers::get_agent_permissions_handler)
+                .put(agents::handlers::put_agent_permissions_handler),
+        )
+        .route(
             "/conversations/{conv_id}/messages",
             post(messages::handlers::send_message),
         )
@@ -153,8 +165,16 @@ async fn main() -> anyhow::Result<()> {
             get(messages::handlers::get_messages),
         )
         .route(
+            "/conversations/{target_conv_id}/messages/forward",
+            post(messages::handlers::forward_message),
+        )
+        .route(
             "/conversations/{conv_id}/messages/{message_id}",
             delete(messages::handlers::delete_message),
+        )
+        .route(
+            "/messages/{id}/attachments",
+            get(messages::handlers::get_message_attachments),
         )
         .route(
             "/conversations/{id}/threads",

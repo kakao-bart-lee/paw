@@ -1,6 +1,10 @@
 use crate::db::DbPool;
+use crate::messages::{models::MessageAttachment, service as message_service};
 use crate::ws::hub::Hub;
-use paw_proto::{MessageFormat, MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION};
+use paw_proto::{
+    ForwardedFromMsg, MessageFormat, MessageForwardedMsg, MessageReceivedMsg, ServerMessage,
+    PROTOCOL_VERSION,
+};
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -36,13 +40,22 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
             }
         };
 
-        let Some(message) = payload_to_message(&payload) else {
+        let Some(mut message) = payload_to_message(&payload) else {
             tracing::warn!(
                 payload = notification.payload(),
                 "pg_notify payload missing fields"
             );
             continue;
         };
+
+        let attachments = match message_service::list_message_attachments(&pool, message.id).await {
+            Ok(attachments) => attachments,
+            Err(err) => {
+                tracing::error!(%err, message_id = %message.id, "failed to load message attachments");
+                continue;
+            }
+        };
+        message.attachments = proto_attachments_from_message(&attachments);
 
         let members = match conversation_members(pool.as_ref(), message.conversation_id).await {
             Ok(members) => members,
@@ -52,11 +65,36 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
             }
         };
 
-        let frame = match serde_json::to_string(&ServerMessage::MessageReceived(message)) {
-            Ok(frame) => frame,
-            Err(err) => {
-                tracing::error!(%err, "failed to serialize message_received frame");
-                continue;
+        let frame = if let Some(forwarded_from) = parse_forwarded_from(&payload) {
+            let forwarded = MessageForwardedMsg {
+                v: message.v,
+                id: message.id,
+                conversation_id: message.conversation_id,
+                thread_id: message.thread_id,
+                sender_id: message.sender_id,
+                content: message.content,
+                format: message.format,
+                seq: message.seq,
+                created_at: message.created_at,
+                blocks: message.blocks,
+                attachments: message.attachments,
+                forwarded_from,
+            };
+
+            match serde_json::to_string(&ServerMessage::MessageForwarded(forwarded)) {
+                Ok(frame) => frame,
+                Err(err) => {
+                    tracing::error!(%err, "failed to serialize message_forwarded frame");
+                    continue;
+                }
+            }
+        } else {
+            match serde_json::to_string(&ServerMessage::MessageReceived(message)) {
+                Ok(frame) => frame,
+                Err(err) => {
+                    tracing::error!(%err, "failed to serialize message_received frame");
+                    continue;
+                }
             }
         };
 
@@ -123,9 +161,38 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         seq,
         created_at,
         blocks,
+        attachments: Vec::new(),
     })
 }
 
 fn parse_uuid(value: &str) -> Option<Uuid> {
     Uuid::parse_str(value).ok()
+}
+
+fn parse_forwarded_from(payload: &serde_json::Value) -> Option<ForwardedFromMsg> {
+    let value = payload.get("forwarded_from")?;
+    Some(ForwardedFromMsg {
+        message_id: value.get("message_id")?.as_str().and_then(parse_uuid)?,
+        conversation_id: value
+            .get("conversation_id")?
+            .as_str()
+            .and_then(parse_uuid)?,
+        sender_id: value.get("sender_id")?.as_str().and_then(parse_uuid)?,
+    })
+}
+
+fn proto_attachments_from_message(
+    attachments: &[MessageAttachment],
+) -> Vec<paw_proto::MessageAttachment> {
+    attachments
+        .iter()
+        .map(|attachment| paw_proto::MessageAttachment {
+            id: attachment.id,
+            file_type: attachment.file_type.clone(),
+            file_url: attachment.file_url.clone(),
+            file_size: attachment.file_size,
+            mime_type: attachment.mime_type.clone(),
+            thumbnail_url: attachment.thumbnail_url.clone(),
+        })
+        .collect()
 }

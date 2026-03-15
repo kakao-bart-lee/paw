@@ -57,6 +57,21 @@ components:
         sender_id: { type: string, format: uuid }
         content: { type: string }
         format: { type: string, enum: [plain, markdown] }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/MessageAttachment' }
+        created_at: { type: string, format: date-time }
+
+    MessageAttachment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        message_id: { type: string, format: uuid }
+        file_type: { type: string }
+        file_url: { type: string }
+        file_size: { type: integer }
+        mime_type: { type: string }
+        thumbnail_url: { type: string, nullable: true }
         created_at: { type: string, format: date-time }
 
     Agent:
@@ -444,6 +459,10 @@ paths:
               properties:
                 content: { type: string }
                 format: { type: string, enum: [plain, markdown] }
+                idempotency_key: { type: string, format: uuid }
+                attachment_ids:
+                  type: array
+                  items: { type: string, format: uuid }
       responses:
         '201':
           description: Message sent
@@ -476,6 +495,67 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /messages/{id}/attachments:
+    get:
+      summary: List attachments for a message
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Message attachments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attachments:
+                    type: array
+                    items: { $ref: '#/components/schemas/MessageAttachment' }
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /link-previews:
+    get:
+      summary: Get link preview status for a URL
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, format: uri }
+      responses:
+        '200':
+          description: Link preview status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkPreview' }
+        '404':
+          description: Link preview not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    post:
+      summary: Request asynchronous link preview extraction
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestLinkPreviews' }
+      responses:
+        '202':
+          description: Link preview fetch started or reused from cache
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequestLinkPreviewsResponse' }
 
   /conversations/{conv_id}/threads:
     get:

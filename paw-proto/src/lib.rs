@@ -41,6 +41,7 @@ pub enum ServerMessage {
     HelloError(HelloErrorMsg),
     Error(ErrorMsg),
     MessageReceived(MessageReceivedMsg),
+    MessageForwarded(MessageForwardedMsg),
     DeviceSyncResponse(DeviceSyncResponse),
     TypingStart(TypingMsg),
     TypingStop(TypingMsg),
@@ -219,6 +220,32 @@ pub struct MessageReceivedMsg {
     pub blocks: Vec<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<MessageAttachment>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForwardedFromMsg {
+    pub message_id: Uuid,
+    pub conversation_id: Uuid,
+    pub sender_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageForwardedMsg {
+    pub v: u8,
+    pub id: Uuid,
+    pub conversation_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub thread_id: Option<Uuid>,
+    pub sender_id: Uuid,
+    pub content: String,
+    pub format: MessageFormat,
+    pub seq: i64,
+    pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub blocks: Vec<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<MessageAttachment>,
+    pub forwarded_from: ForwardedFromMsg,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -507,6 +534,44 @@ mod tests {
         };
         let json = serde_json::to_string(&msg).unwrap();
         let _: MessageSendMsg = serde_json::from_str(&json).unwrap();
+    }
+
+    #[test]
+    fn test_message_forwarded_roundtrip() {
+        let msg = ServerMessage::MessageForwarded(MessageForwardedMsg {
+            v: PROTOCOL_VERSION,
+            id: Uuid::new_v4(),
+            conversation_id: Uuid::new_v4(),
+            thread_id: None,
+            sender_id: Uuid::new_v4(),
+            content: "Forwarded content".to_string(),
+            format: MessageFormat::Markdown,
+            seq: 12,
+            created_at: "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+            blocks: Vec::new(),
+            attachments: Vec::new(),
+            forwarded_from: ForwardedFromMsg {
+                message_id: Uuid::new_v4(),
+                conversation_id: Uuid::new_v4(),
+                sender_id: Uuid::new_v4(),
+            },
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "message_forwarded");
+        assert!(json["forwarded_from"]["message_id"].is_string());
+        assert!(json["forwarded_from"]["conversation_id"].is_string());
+        assert!(json["forwarded_from"]["sender_id"].is_string());
+
+        let parsed: ServerMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ServerMessage::MessageForwarded(forwarded) => {
+                assert_eq!(forwarded.v, PROTOCOL_VERSION);
+                assert_eq!(forwarded.seq, 12);
+                assert!(!forwarded.content.is_empty());
+            }
+            _ => panic!("expected MessageForwarded variant"),
+        }
     }
 
     #[test]

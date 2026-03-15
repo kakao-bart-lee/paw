@@ -1,3 +1,4 @@
+use crate::context_engine::ContextEngine;
 use crate::db::DbPool;
 use crate::media::service::MediaService;
 use crate::rate_limit::RateLimiter;
@@ -17,6 +18,7 @@ pub struct AppState {
     pub jwt_secret: String,
     pub default_locale: String,
     pub hub: Arc<Hub>,
+    pub context_engine: Arc<dyn ContextEngine>,
     pub agent_limiter: RateLimiter,
     pub media_service: Arc<MediaService>,
     pub nats: Option<Arc<async_nats::Client>>,
