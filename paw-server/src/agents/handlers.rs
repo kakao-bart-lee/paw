@@ -532,7 +532,10 @@ async fn handle_agent_socket(
         }
     };
 
-    state.hub.register(agent_id, outbound_tx.clone()).await;
+    state
+        .hub
+        .register_agent(agent_id, outbound_tx.clone())
+        .await;
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 
@@ -591,7 +594,7 @@ async fn handle_agent_socket(
         _ = ws_to_server => {}
     }
 
-    state.hub.unregister(agent_id, &outbound_tx).await;
+    state.hub.unregister_agent(agent_id, &outbound_tx).await;
     drop(outbound_tx);
     let _ = writer.await;
     crate::metrics::ws_connection_closed();
@@ -650,7 +653,10 @@ async fn relay_agent_stream_message(
         AgentStreamMsg::AgentTypingStart(msg) => {
             require_v(msg.v)?;
             if msg.agent_id != agent_id {
-                anyhow::bail!("agent_id mismatch for typing_start in conversation {}", msg.conversation_id);
+                anyhow::bail!(
+                    "agent_id mismatch for typing_start in conversation {}",
+                    msg.conversation_id
+                );
             }
             broadcast_agent_typing(
                 state,
@@ -664,7 +670,10 @@ async fn relay_agent_stream_message(
         AgentStreamMsg::AgentTypingEnd(msg) => {
             require_v(msg.v)?;
             if msg.agent_id != agent_id {
-                anyhow::bail!("agent_id mismatch for typing_end in conversation {}", msg.conversation_id);
+                anyhow::bail!(
+                    "agent_id mismatch for typing_end in conversation {}",
+                    msg.conversation_id
+                );
             }
             broadcast_agent_typing(
                 state,
@@ -938,7 +947,10 @@ async fn persist_tool_call_result(
     Ok(())
 }
 
-async fn persist_tool_call_end(state: &AppState, msg: &paw_proto::ToolCallEndMsg) -> anyhow::Result<()> {
+async fn persist_tool_call_end(
+    state: &AppState,
+    msg: &paw_proto::ToolCallEndMsg,
+) -> anyhow::Result<()> {
     sqlx::query(
         "UPDATE agent_tool_calls
          SET status = CASE WHEN status = 'error' THEN 'error' ELSE 'completed' END,

@@ -132,16 +132,35 @@ pub async fn invite_agent_to_conversation(
     }
 }
 
+pub async fn can_manage_conversation_agents(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    user_id: Uuid,
+) -> anyhow::Result<bool> {
+    sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM conversation_members
+            WHERE conversation_id = $1 AND user_id = $2 AND role = 'admin'
+        )",
+    )
+    .bind(conversation_id)
+    .bind(user_id)
+    .fetch_one(pool.as_ref())
+    .await
+    .map_err(Into::into)
+}
+
 pub async fn remove_agent_from_conversation(
     pool: &DbPool,
     conversation_id: Uuid,
     agent_id: Uuid,
     requester_id: Uuid,
 ) -> anyhow::Result<bool> {
-    let is_owner = sqlx::query_scalar::<_, bool>(
+    let is_admin = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(\
             SELECT 1 FROM conversation_members\
-            WHERE conversation_id = $1 AND user_id = $2 AND role = 'owner'\
+            WHERE conversation_id = $1 AND user_id = $2 AND role = 'admin'\
         )",
     )
     .bind(conversation_id)
@@ -149,8 +168,8 @@ pub async fn remove_agent_from_conversation(
     .fetch_one(pool.as_ref())
     .await?;
 
-    if !is_owner {
-        return Err(anyhow!("not_owner"));
+    if !is_admin {
+        return Err(anyhow!("not_admin"));
     }
 
     let removed =

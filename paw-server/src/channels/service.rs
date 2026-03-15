@@ -174,7 +174,7 @@ pub async fn unsubscribe(
 
     sqlx::query(
         "DELETE FROM conversation_members
-         WHERE conversation_id = $1 AND user_id = $2 AND role <> 'owner'",
+         WHERE conversation_id = $1 AND user_id = $2 AND role <> 'admin'",
     )
     .bind(channel_id)
     .bind(user_id)
@@ -293,7 +293,7 @@ async fn insert_owner_membership(
 ) -> anyhow::Result<()> {
     sqlx::query(
         "INSERT INTO conversation_members (conversation_id, user_id, role)
-         VALUES ($1, $2, 'owner')
+         VALUES ($1, $2, 'admin')
          ON CONFLICT (conversation_id, user_id) DO NOTHING",
     )
     .bind(channel_id)

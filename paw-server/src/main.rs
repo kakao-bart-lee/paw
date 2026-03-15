@@ -2,9 +2,11 @@ mod agents;
 mod auth;
 mod backup;
 mod channels;
+mod context_engine;
 mod db;
 mod i18n;
 mod keys;
+mod link_preview;
 mod media;
 mod messages;
 mod metrics;
@@ -69,6 +71,7 @@ async fn main() -> anyhow::Result<()> {
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
+    let link_preview_service = Arc::new(link_preview::LinkPreviewService::new()?);
 
     let nats_url =
         std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:34223".to_string());
@@ -84,20 +87,29 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let prometheus_handle = metrics::init_metrics();
+    let rate_limiter = rate_limit::limiter_from_env();
+    let agent_limiter = rate_limit::limiter_from_env();
+    let context_engine = Arc::new(context_engine::DefaultContextEngine::new(
+        db.clone(),
+        hub.clone(),
+    ));
 
     let state = AppState {
         db: db.clone(),
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        context_engine,
+        agent_limiter: agent_limiter.clone(),
         media_service,
+        link_preview_service,
         nats: nats_client,
     };
 
     tokio::spawn(ws::pg_listener::start_pg_listener(db.clone(), hub));
 
-    let rate_limiter = rate_limit::limiter_from_env();
     rate_limit::spawn_cleanup_task(rate_limiter.clone());
+    rate_limit::spawn_cleanup_task(agent_limiter);
 
     let media_upload = Router::new()
         .route("/media/upload", post(media::handlers::upload))
@@ -130,7 +142,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .route(
             "/conversations/{id}/members/{user_id}",
-            delete(messages::handlers::remove_member_handler),
+            delete(messages::handlers::remove_member_handler)
+                .patch(messages::handlers::update_member_role_handler),
         )
         .route(
             "/conversations/{id}/agents",
@@ -151,6 +164,15 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/conversations/{conv_id}/messages/{message_id}",
             delete(messages::handlers::delete_message),
+        )
+        .route(
+            "/messages/{message_id}/attachments",
+            get(messages::handlers::get_message_attachments),
+        )
+        .route(
+            "/messages/{id}/preview",
+            get(link_preview::handlers::get_message_preview)
+                .post(link_preview::handlers::trigger_message_preview),
         )
         .route(
             "/conversations/{conv_id}/threads",
