@@ -2,6 +2,7 @@ mod agents;
 mod auth;
 mod backup;
 mod channels;
+mod context_engine;
 mod db;
 mod i18n;
 mod keys;
@@ -68,6 +69,11 @@ async fn main() -> anyhow::Result<()> {
 
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
+    let context_engine: Arc<dyn context_engine::ContextEngine> =
+        Arc::new(context_engine::DefaultContextEngine::new(
+            db.clone(),
+            hub.clone(),
+        ));
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
 
     let nats_url =
@@ -92,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        context_engine,
         agent_limiter: agent_limiter.clone(),
         media_service,
         nats: nats_client,
