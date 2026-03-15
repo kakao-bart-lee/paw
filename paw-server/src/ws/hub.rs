@@ -18,9 +18,19 @@ impl Hub {
         }
     }
 
-    pub async fn register(&self, user_id: Uuid, sender: WsSender) {
+    pub async fn try_register_with_limit(
+        &self,
+        user_id: Uuid,
+        sender: WsSender,
+        max_connections: usize,
+    ) -> bool {
         let mut guard = self.connections.write().await;
-        guard.entry(user_id).or_default().push(sender);
+        let senders = guard.entry(user_id).or_default();
+        if senders.len() >= max_connections {
+            return false;
+        }
+        senders.push(sender);
+        true
     }
 
     pub async fn unregister(&self, user_id: Uuid, sender: &WsSender) {
@@ -31,6 +41,12 @@ impl Hub {
                 guard.remove(&user_id);
             }
         }
+    }
+
+    #[cfg(test)]
+    pub async fn connection_count(&self, user_id: Uuid) -> usize {
+        let guard = self.connections.read().await;
+        guard.get(&user_id).map(|senders| senders.len()).unwrap_or(0)
     }
 
     pub async fn send_to_user(&self, user_id: Uuid, msg: &str) {
@@ -100,8 +116,12 @@ mod tests {
         let (tx1, mut rx1) = mpsc::unbounded_channel::<Message>();
         let (tx2, mut rx2) = mpsc::unbounded_channel::<Message>();
 
-        hub.register(user_id, tx1).await;
-        hub.register(user_id, tx2).await;
+        assert!(hub
+            .try_register_with_limit(user_id, tx1, usize::MAX)
+            .await);
+        assert!(hub
+            .try_register_with_limit(user_id, tx2, usize::MAX)
+            .await);
 
         hub.send_to_user(user_id, "{\"v\":1,\"type\":\"ping\"}")
             .await;
@@ -117,5 +137,46 @@ mod tests {
 
         assert!(matches!(msg1, Message::Text(_)));
         assert!(matches!(msg2, Message::Text(_)));
+    }
+
+    #[tokio::test]
+    async fn tracks_connection_count_per_user() {
+        let hub = Hub::new();
+        let user_id = Uuid::new_v4();
+        let (tx1, _rx1) = mpsc::unbounded_channel::<Message>();
+        let (tx2, _rx2) = mpsc::unbounded_channel::<Message>();
+
+        assert_eq!(hub.connection_count(user_id).await, 0);
+        assert!(hub
+            .try_register_with_limit(user_id, tx1.clone(), usize::MAX)
+            .await);
+        assert_eq!(hub.connection_count(user_id).await, 1);
+        assert!(hub
+            .try_register_with_limit(user_id, tx2, usize::MAX)
+            .await);
+        assert_eq!(hub.connection_count(user_id).await, 2);
+
+        hub.unregister(user_id, &tx1).await;
+        assert_eq!(hub.connection_count(user_id).await, 1);
+    }
+
+    #[tokio::test]
+    async fn registration_respects_per_user_limit() {
+        let hub = Hub::new();
+        let user_id = Uuid::new_v4();
+        let max_connections = 2;
+        let (tx1, _rx1) = mpsc::unbounded_channel::<Message>();
+        let (tx2, _rx2) = mpsc::unbounded_channel::<Message>();
+        let (tx3, _rx3) = mpsc::unbounded_channel::<Message>();
+
+        assert!(hub
+            .try_register_with_limit(user_id, tx1, max_connections)
+            .await);
+        assert!(hub
+            .try_register_with_limit(user_id, tx2, max_connections)
+            .await);
+        assert!(!hub
+            .try_register_with_limit(user_id, tx3, max_connections)
+            .await);
     }
 }

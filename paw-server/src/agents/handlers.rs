@@ -17,6 +17,7 @@ use super::models::{
     AgentProfile, InstallAgentResponse, InstalledAgentsResponse, InviteAgentRequest,
     InviteAgentResponse, MarketplaceSearchQuery, MarketplaceSearchResponse, PublishAgentRequest,
     PublishAgentResponse, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
+    RotateAgentKeyResponse,
     UninstallAgentResponse,
 };
 use super::service;
@@ -106,6 +107,35 @@ pub async fn revoke_agent_handler(
                 "internal_error",
                 &locale,
                 "Failed to revoke agent token",
+            )
+        })?;
+
+    match result {
+        Some(r) => Ok(Json(r)),
+        None => Err(error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found_or_not_owner",
+            &locale,
+            "Agent not found or you are not the owner",
+        )),
+    }
+}
+
+pub async fn rotate_agent_key_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(user_id): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<Json<RotateAgentKeyResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let result = service::rotate_agent_token(&state.db, agent_id, user_id.0)
+        .await
+        .map_err(|e| {
+            tracing::error!("failed to rotate agent token: {e}");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "rotate_failed",
+                &locale,
+                "Failed to rotate agent key",
             )
         })?;
 
@@ -518,35 +548,48 @@ async fn handle_agent_socket(
 
     let ws_to_server = async {
         let mut stream_states: HashMap<Uuid, StreamRelayState> = HashMap::new();
+        let rate_limit_key = format!("agent:{agent_id}");
 
         while let Some(Ok(msg)) = ws_rx.next().await {
             match msg {
-                Message::Text(text) => match serde_json::from_str::<AgentStreamMsg>(&text) {
-                    Ok(stream_msg) => {
-                        if let Err(e) = relay_agent_stream_message(
-                            &state,
-                            agent_id,
-                            &mut stream_states,
-                            stream_msg,
-                        )
-                        .await
-                        {
-                            tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
-                        }
+                Message::Text(text) => {
+                    if text.len() > crate::ws::MAX_WS_MESSAGE_SIZE_BYTES {
+                        tracing::warn!(%agent_id, "agent websocket frame exceeds max size");
+                        break;
                     }
-                    Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
-                        Ok(agent_msg) => {
-                            tracing::info!(
-                                "agent {agent_id} response for conv {}: {} bytes",
-                                agent_msg.conversation_id,
-                                agent_msg.content.len()
-                            );
+
+                    if !state.agent_limiter.check(&rate_limit_key) {
+                        tracing::warn!(%agent_id, "agent rate limit exceeded");
+                        break;
+                    }
+
+                    match serde_json::from_str::<AgentStreamMsg>(&text) {
+                        Ok(stream_msg) => {
+                            if let Err(e) = relay_agent_stream_message(
+                                &state,
+                                agent_id,
+                                &mut stream_states,
+                                stream_msg,
+                            )
+                            .await
+                            {
+                                tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
+                            }
                         }
-                        Err(e) => {
-                            tracing::warn!("invalid agent message from {agent_id}: {e}");
-                        }
-                    },
-                },
+                        Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
+                            Ok(agent_msg) => {
+                                tracing::info!(
+                                    "agent {agent_id} response for conv {}: {} bytes",
+                                    agent_msg.conversation_id,
+                                    agent_msg.content.len()
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!("invalid agent message from {agent_id}: {e}");
+                            }
+                        },
+                    }
+                }
                 Message::Close(_) => break,
                 _ => {}
             }

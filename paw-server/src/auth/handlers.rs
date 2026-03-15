@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::middleware::UserId;
 use super::{device, jwt, otp, otp_attempts, AppState};
 use crate::i18n::{error_response, error_response_with_details, RequestLocale};
 
@@ -318,11 +319,14 @@ pub async fn register_device(
         );
     }
 
-    let claims = match jwt::verify_token(
+    let claims = match jwt::verify_token_with_revocation(
         &payload.session_token,
         &state.jwt_secret,
         Some(jwt::TOKEN_TYPE_SESSION),
-    ) {
+        &state.db,
+    )
+    .await
+    {
         Ok(claims) => claims,
         Err(_) => {
             return error_response(
@@ -410,11 +414,14 @@ pub async fn refresh_token(
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Json(payload): Json<RefreshTokenRequest>,
 ) -> (axum::http::StatusCode, Json<Value>) {
-    let claims = match jwt::verify_token(
+    let claims = match jwt::verify_token_with_revocation(
         &payload.refresh_token,
         &state.jwt_secret,
         Some(jwt::TOKEN_TYPE_REFRESH),
-    ) {
+        &state.db,
+    )
+    .await
+    {
         Ok(claims) => claims,
         Err(_) => {
             return error_response(
@@ -443,6 +450,39 @@ pub async fn refresh_token(
         axum::http::StatusCode::OK,
         Json(json!({
             "access_token": access_token,
+        })),
+    )
+}
+
+pub async fn revoke_all_sessions(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(user_id): Extension<UserId>,
+) -> (axum::http::StatusCode, Json<Value>) {
+    let token_revoked_at = sqlx::query_scalar::<_, chrono::DateTime<Utc>>(
+        "UPDATE users SET token_revoked_at = NOW() WHERE id = $1 RETURNING token_revoked_at",
+    )
+    .bind(user_id.0)
+    .fetch_one(state.db.as_ref())
+    .await;
+
+    let token_revoked_at = match token_revoked_at {
+        Ok(value) => value,
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "session_revoke_failed",
+                &locale,
+                "Failed to revoke sessions",
+            )
+        }
+    };
+
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "revoked": true,
+            "token_revoked_at": token_revoked_at,
         })),
     )
 }
