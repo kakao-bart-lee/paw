@@ -7,6 +7,11 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use std::collections::HashMap;
 
+#[tracing::instrument(
+    name = "ws_upgrade",
+    skip(ws, locale, params, state),
+    fields(has_token = %params.contains_key("token"))
+)]
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
