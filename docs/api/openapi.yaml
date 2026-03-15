@@ -231,6 +231,12 @@ paths:
           description: Invalid username
         '409':
           description: Username already taken
+    delete:
+      summary: Soft delete current user account
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204':
+          description: Account soft-deleted and sessions revoked
 
   /users/search:
     get:

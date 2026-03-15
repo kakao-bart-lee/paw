@@ -43,7 +43,14 @@ pub async fn auth_middleware(
         return unauthorized("invalid_authorization", "Expected Bearer token", &request);
     };
 
-    let claims = match jwt::verify_token(token, &state.jwt_secret, Some(jwt::TOKEN_TYPE_ACCESS)) {
+    let claims = match jwt::verify_token_with_revocation(
+        token,
+        &state.jwt_secret,
+        Some(jwt::TOKEN_TYPE_ACCESS),
+        &state.db,
+    )
+    .await
+    {
         Ok(claims) => claims,
         Err(_) => return unauthorized("invalid_token", "Access token is invalid", &request),
     };

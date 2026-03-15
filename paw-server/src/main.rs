@@ -91,7 +91,9 @@ async fn main() -> anyhow::Result<()> {
     let protected_routes = Router::new()
         .route(
             "/users/me",
-            get(users::handlers::get_me).patch(users::handlers::update_me),
+            get(users::handlers::get_me)
+                .patch(users::handlers::update_me)
+                .delete(users::handlers::delete_me),
         )
         .route("/users/search", get(users::handlers::search_user))
         .route("/users/{user_id}", get(users::handlers::get_user))
