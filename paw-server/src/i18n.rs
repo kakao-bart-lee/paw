@@ -145,6 +145,7 @@ pub fn localized_message<'a>(code: &'a str, locale: &str, fallback: &'a str) -> 
         ("ko", "message_send_failed") => "메시지를 전송하지 못했습니다",
         ("ko", "forbidden") => "이 작업을 수행할 권한이 없습니다",
         ("ko", "conversation_not_found") => "대화를 찾을 수 없습니다",
+        ("ko", "message_not_found") => "메시지를 찾을 수 없습니다",
         ("ko", "membership_check_failed") => "대화 멤버십을 확인하지 못했습니다",
         ("ko", "message_history_failed") => "메시지 기록을 불러오지 못했습니다",
         ("ko", "conversation_list_failed") => "대화 목록을 불러오지 못했습니다",

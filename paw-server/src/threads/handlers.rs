@@ -242,7 +242,7 @@ pub async fn create_thread(
 
     if thread_count >= 100 {
         return error(
-            StatusCode::TOO_MANY_REQUESTS,
+            StatusCode::CONFLICT,
             "thread_limit_exceeded",
             &locale,
             "Maximum 100 threads per conversation reached",
@@ -264,7 +264,7 @@ pub async fn create_thread(
         Ok(None) => {
             return error(
                 StatusCode::BAD_REQUEST,
-                "thread_not_found",
+                "message_not_found",
                 &locale,
                 "Root message not found in this conversation",
             )
@@ -286,7 +286,7 @@ pub async fn create_thread(
     if root_thread_id.is_some() {
         return error(
             StatusCode::BAD_REQUEST,
-            "thread_not_found",
+            "message_not_found",
             &locale,
             "Root message must belong to the main timeline",
         )
@@ -431,7 +431,7 @@ pub async fn delete_thread(
         .into_response();
     }
 
-    let unbound = sqlx::query_as::<_, ThreadAgent>(
+    let unbound = match sqlx::query_as::<_, ThreadAgent>(
         "DELETE FROM thread_agents
          WHERE thread_id = $1 AND conversation_id = $2
          RETURNING thread_id, agent_id, bound_at",
@@ -440,7 +440,19 @@ pub async fn delete_thread(
     .bind(conversation_id)
     .fetch_all(state.db.as_ref())
     .await
-    .unwrap_or_default();
+    {
+        Ok(bindings) => bindings,
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "failed to unbind thread agents before delete");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "query_failed",
+                &locale,
+                "Could not delete thread",
+            )
+            .into_response();
+        }
+    };
 
     let deleted = match sqlx::query("DELETE FROM threads WHERE id = $1 AND conversation_id = $2")
         .bind(thread_id)
@@ -627,7 +639,7 @@ pub async fn send_thread_message(
         }
     };
 
-    let _ = sqlx::query(
+    if let Err(err) = sqlx::query(
         "UPDATE threads
          SET message_count = message_count + 1,
              last_message_at = $3
@@ -637,7 +649,10 @@ pub async fn send_thread_message(
     .bind(conversation_id)
     .bind(created.created_at)
     .execute(state.db.as_ref())
-    .await;
+    .await
+    {
+        tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, "failed to update thread counters after message insert");
+    }
 
     let response = Message {
         id: created.id,
@@ -828,6 +843,15 @@ pub async fn bind_agent(
     .await
     {
         Ok(binding) => binding,
+        Err(sqlx::Error::Database(db_err)) if db_err.code().as_deref() == Some("23505") => {
+            return error(
+                StatusCode::CONFLICT,
+                "agent_already_bound",
+                &locale,
+                "Agent is already bound to another thread in this conversation",
+            )
+            .into_response();
+        }
         Err(err) => {
             tracing::error!(%err, conversation_id = %conversation_id, thread_id = %thread_id, agent_id = %payload.agent_id, "failed to bind agent");
             return error(
@@ -889,8 +913,8 @@ pub async fn unbind_agent(
 
     let Some(binding) = deleted else {
         return error(
-            StatusCode::NOT_FOUND,
-            "thread_not_found",
+            StatusCode::BAD_REQUEST,
+            "agent_not_in_conversation",
             &locale,
             "Thread or agent binding not found",
         )
