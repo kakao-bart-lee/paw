@@ -1,6 +1,8 @@
-use chrono::{Duration, Utc};
+use crate::db::DbPool;
+use chrono::{DateTime, Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use uuid::Uuid;
 
 pub const TOKEN_TYPE_ACCESS: &str = "access";
@@ -102,4 +104,76 @@ pub fn verify_token(
     }
 
     Ok(data.claims)
+}
+
+pub fn is_token_issued_before_revocation(
+    iat: i64,
+    token_revoked_at: Option<DateTime<Utc>>,
+) -> bool {
+    token_revoked_at
+        .map(|revoked_at| iat < revoked_at.timestamp())
+        .unwrap_or(false)
+}
+
+pub async fn verify_token_with_revocation(
+    token: &str,
+    secret: &str,
+    expected_type: Option<&str>,
+    db: &DbPool,
+) -> Result<Claims, String> {
+    let claims = verify_token(token, secret, expected_type)?;
+
+    let user_row = sqlx::query("SELECT token_revoked_at, deleted_at FROM users WHERE id = $1")
+        .bind(claims.sub)
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|_| "token verification failed".to_string())?;
+
+    let Some(user_row) = user_row else {
+        return Err("invalid token".to_string());
+    };
+
+    let token_revoked_at = user_row
+        .try_get::<Option<DateTime<Utc>>, _>("token_revoked_at")
+        .map_err(|_| "token verification failed".to_string())?;
+
+    let deleted_at = user_row
+        .try_get::<Option<DateTime<Utc>>, _>("deleted_at")
+        .map_err(|_| "token verification failed".to_string())?;
+
+    if deleted_at.is_some() {
+        return Err("token revoked".to_string());
+    }
+
+    if is_token_issued_before_revocation(claims.iat, token_revoked_at) {
+        return Err("token revoked".to_string());
+    }
+
+    Ok(claims)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_token_issued_before_revocation;
+    use chrono::{Duration, Utc};
+
+    #[test]
+    fn token_before_revocation_is_rejected() {
+        let revoked_at = Utc::now();
+        let iat = (revoked_at - Duration::seconds(5)).timestamp();
+        assert!(is_token_issued_before_revocation(iat, Some(revoked_at)));
+    }
+
+    #[test]
+    fn token_after_revocation_is_allowed() {
+        let revoked_at = Utc::now();
+        let iat = (revoked_at + Duration::seconds(5)).timestamp();
+        assert!(!is_token_issued_before_revocation(iat, Some(revoked_at)));
+    }
+
+    #[test]
+    fn token_without_revocation_is_allowed() {
+        let iat = Utc::now().timestamp();
+        assert!(!is_token_issued_before_revocation(iat, None));
+    }
 }

@@ -14,7 +14,7 @@ pub async fn ws_handler(
     State(state): State<AppState>,
 ) -> Response {
     let token = params.get("token").cloned().unwrap_or_default();
-    let (user_id, device_id) = match validate_jwt(&token, &state.jwt_secret) {
+    let (user_id, device_id) = match validate_jwt(&token, &state).await {
         Ok(ids) => ids,
         Err(_) => {
             return error_response(
@@ -39,9 +39,15 @@ pub async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, user_id, device_id, effective_locale, state))
 }
 
-fn validate_jwt(token: &str, secret: &str) -> anyhow::Result<(uuid::Uuid, uuid::Uuid)> {
-    let claims = jwt::verify_token(token, secret, Some(jwt::TOKEN_TYPE_ACCESS))
-        .map_err(|message| anyhow::anyhow!(message))?;
+async fn validate_jwt(token: &str, state: &AppState) -> anyhow::Result<(uuid::Uuid, uuid::Uuid)> {
+    let claims = jwt::verify_token_with_revocation(
+        token,
+        &state.jwt_secret,
+        Some(jwt::TOKEN_TYPE_ACCESS),
+        &state.db,
+    )
+    .await
+    .map_err(|message| anyhow::anyhow!(message))?;
     let device_id = claims
         .device_id
         .ok_or_else(|| anyhow::anyhow!("missing device_id in access token"))?;

@@ -128,12 +128,14 @@ pub async fn list_pending_reports(db: &DbPool) -> anyhow::Result<Vec<Report>> {
 }
 
 pub async fn is_admin(db: &DbPool, user_id: Uuid) -> anyhow::Result<bool> {
-    sqlx::query_scalar::<_, bool>("SELECT COALESCE(is_admin, false) FROM users WHERE id = $1")
-        .bind(user_id)
-        .fetch_optional(db.as_ref())
-        .await
-        .context("check admin status")
-        .map(|opt| opt.unwrap_or(false))
+    let role: Option<String> =
+        sqlx::query_scalar("SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL")
+            .bind(user_id)
+            .fetch_optional(db.as_ref())
+            .await
+            .context("check admin status")?;
+
+    Ok(matches!(role.as_deref(), Some("admin" | "super_admin")))
 }
 
 #[cfg(test)]

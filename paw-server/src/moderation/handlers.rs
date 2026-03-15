@@ -1,3 +1,4 @@
+use crate::admin::service as admin_service;
 use crate::auth::{middleware::UserId, AppState};
 use crate::i18n::{error_response, RequestLocale};
 use crate::moderation::{models::*, service};
@@ -177,7 +178,23 @@ pub async fn suspend_user(
     )
     .await
     {
-        Ok(suspended) => Json(SuspendResponse { suspended }).into_response(),
+        Ok(suspended) => {
+            if suspended {
+                if let Err(err) = admin_service::log_admin_action(
+                    &state.db,
+                    admin_id,
+                    "user.suspend",
+                    Some("user"),
+                    Some(target_id),
+                    Some(serde_json::json!({ "reason": payload.reason })),
+                )
+                .await
+                {
+                    tracing::warn!(%err, "failed to write audit log");
+                }
+            }
+            Json(SuspendResponse { suspended }).into_response()
+        }
         Err(err) => {
             tracing::error!(%err, "failed to suspend user");
             error(
@@ -221,7 +238,23 @@ pub async fn unsuspend_user(
     }
 
     match service::unsuspend_user(&state.db, target_id).await {
-        Ok(unsuspended) => Json(UnsuspendResponse { unsuspended }).into_response(),
+        Ok(unsuspended) => {
+            if unsuspended {
+                if let Err(err) = admin_service::log_admin_action(
+                    &state.db,
+                    admin_id,
+                    "user.unsuspend",
+                    Some("user"),
+                    Some(target_id),
+                    None,
+                )
+                .await
+                {
+                    tracing::warn!(%err, "failed to write audit log");
+                }
+            }
+            Json(UnsuspendResponse { unsuspended }).into_response()
+        }
         Err(err) => {
             tracing::error!(%err, "failed to unsuspend user");
             error(

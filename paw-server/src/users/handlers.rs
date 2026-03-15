@@ -1,10 +1,11 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
+    response::{IntoResponse, Response},
     Extension, Json,
 };
 use serde_json::Value;
-use sqlx::Error as SqlxError;
+use sqlx::{Error as SqlxError, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::auth::middleware::UserId;
@@ -27,6 +28,92 @@ fn normalize_username(input: &str) -> Option<String> {
     valid.then_some(normalized)
 }
 
+fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
+    error_response(status, code, locale, message)
+}
+
+async fn execute_account_deletion(
+    tx: &mut Transaction<'_, Postgres>,
+    user_id: Uuid,
+) -> Result<(), SqlxError> {
+    sqlx::query(
+        "UPDATE users
+         SET deleted_at = COALESCE(deleted_at, NOW()),
+             token_revoked_at = NOW()
+         WHERE id = $1",
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
+
+    sqlx::query(
+        "UPDATE conversation_members
+         SET left_at = COALESCE(left_at, NOW())
+         WHERE user_id = $1",
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
+
+    sqlx::query("DELETE FROM conversation_mutes WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    sqlx::query("DELETE FROM user_installed_agents WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    sqlx::query(
+        "DELETE FROM conversation_agents
+         WHERE agent_id IN (
+             SELECT id
+             FROM agent_tokens
+             WHERE owner_user_id = $1
+         )",
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
+
+    sqlx::query(
+        "UPDATE agent_tokens
+         SET revoked_at = COALESCE(revoked_at, NOW())
+         WHERE owner_user_id = $1",
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
+
+    sqlx::query("DELETE FROM one_time_prekeys WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    sqlx::query("DELETE FROM prekey_bundles WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    sqlx::query("DELETE FROM backups WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    sqlx::query("DELETE FROM backup_settings WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    sqlx::query("DELETE FROM devices WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn get_me(
     Extension(user_id): Extension<UserId>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
@@ -34,7 +121,7 @@ pub async fn get_me(
 ) -> (StatusCode, Json<Value>) {
     match sqlx::query_as::<_, User>(
         "SELECT id, phone, username, preferred_locale, discoverable_by_phone, phone_verified_at, display_name, avatar_url, created_at \
-         FROM users WHERE id = $1",
+         FROM users WHERE id = $1 AND deleted_at IS NULL",
     )
     .bind(user_id.0)
     .fetch_optional(state.db.as_ref())
@@ -52,6 +139,49 @@ pub async fn get_me(
             "Failed to fetch user profile",
         ),
     }
+}
+
+pub async fn delete_me(
+    Extension(user_id): Extension<UserId>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    State(state): State<AppState>,
+) -> Response {
+    let mut tx = match state.db.begin().await {
+        Ok(tx) => tx,
+        Err(_) => {
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "transaction_start_failed",
+                &locale,
+                "Failed to delete account",
+            )
+            .into_response();
+        }
+    };
+
+    if let Err(err) = execute_account_deletion(&mut tx, user_id.0).await {
+        tracing::error!(%err, user_id = %user_id.0, "failed to delete account data");
+        return error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "account_delete_failed",
+            &locale,
+            "Failed to delete account",
+        )
+        .into_response();
+    }
+
+    if let Err(err) = tx.commit().await {
+        tracing::error!(%err, user_id = %user_id.0, "failed to commit account deletion");
+        return error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "transaction_commit_failed",
+            &locale,
+            "Failed to finalize account deletion",
+        )
+        .into_response();
+    }
+
+    StatusCode::NO_CONTENT.into_response()
 }
 
 pub async fn update_me(
@@ -98,7 +228,7 @@ pub async fn update_me(
          discoverable_by_phone = COALESCE($3, discoverable_by_phone), \
          display_name = COALESCE($4, display_name), \
          avatar_url = COALESCE($5, avatar_url) \
-         WHERE id = $6 \
+         WHERE id = $6 AND deleted_at IS NULL \
          RETURNING id, phone, username, preferred_locale, discoverable_by_phone, phone_verified_at, display_name, avatar_url, created_at",
     )
     .bind(username.and_then(normalize_username))
@@ -149,7 +279,7 @@ pub async fn search_user(
         sqlx::query_as::<_, PublicUser>(
             "SELECT id, username, display_name, avatar_url \
              FROM users \
-             WHERE username = $1",
+             WHERE username = $1 AND deleted_at IS NULL",
         )
         .bind(username)
         .fetch_optional(state.db.as_ref())
@@ -160,7 +290,8 @@ pub async fn search_user(
              FROM users \
              WHERE phone = $1 \
                AND discoverable_by_phone = TRUE \
-               AND phone_verified_at IS NOT NULL",
+               AND phone_verified_at IS NOT NULL \
+               AND deleted_at IS NULL",
         )
         .bind(phone)
         .fetch_optional(state.db.as_ref())
@@ -201,7 +332,7 @@ pub async fn get_user(
     Path(target_user_id): Path<Uuid>,
 ) -> (StatusCode, Json<Value>) {
     match sqlx::query_as::<_, PublicUser>(
-        "SELECT id, username, display_name, avatar_url FROM users WHERE id = $1",
+        "SELECT id, username, display_name, avatar_url FROM users WHERE id = $1 AND deleted_at IS NULL",
     )
     .bind(target_user_id)
     .fetch_optional(state.db.as_ref())
