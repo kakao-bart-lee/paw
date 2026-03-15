@@ -1,4 +1,5 @@
 use crate::db::DbPool;
+use crate::context_engine::ContextEngine;
 use crate::link_preview::service::LinkPreviewService;
 use crate::media::service::MediaService;
 use crate::rate_limit::RateLimiter;
@@ -18,6 +19,7 @@ pub struct AppState {
     pub jwt_secret: String,
     pub default_locale: String,
     pub hub: Arc<Hub>,
+    pub context_engine: Arc<ContextEngine>,
     pub agent_limiter: RateLimiter,
     pub media_service: Arc<MediaService>,
     pub link_preview_service: Arc<LinkPreviewService>,

@@ -371,86 +371,11 @@ pub struct AgentResponseMsg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum ContextEvent {
-    MessageCreated(ContextMessageCreatedMsg),
-    MessageEdited(ContextMessageEditedMsg),
-    MessageDeleted(ContextMessageDeletedMsg),
-    MemberJoined(ContextMemberJoinedMsg),
-    MemberLeft(ContextMemberLeftMsg),
-    ThreadCreated(ContextThreadCreatedMsg),
-    ConversationSettingsChanged(ContextConversationSettingsChangedMsg),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextMessageCreatedMsg {
-    pub v: u8,
+pub struct ContextEvent {
+    pub event_type: String,
     pub conversation_id: Uuid,
-    pub occurred_at: DateTime<Utc>,
-    pub message: MessageReceivedMsg,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextMessageEditedMsg {
-    pub v: u8,
-    pub conversation_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub thread_id: Option<Uuid>,
-    pub message_id: Uuid,
-    pub edited_by: Uuid,
-    pub content: String,
-    pub format: MessageFormat,
-    pub occurred_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextMessageDeletedMsg {
-    pub v: u8,
-    pub conversation_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub thread_id: Option<Uuid>,
-    pub message_id: Uuid,
-    pub deleted_by: Uuid,
-    pub occurred_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextMemberJoinedMsg {
-    pub v: u8,
-    pub conversation_id: Uuid,
-    pub member_id: Uuid,
-    pub joined_by: Uuid,
-    pub occurred_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextMemberLeftMsg {
-    pub v: u8,
-    pub conversation_id: Uuid,
-    pub member_id: Uuid,
-    pub left_by: Uuid,
-    pub occurred_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextThreadCreatedMsg {
-    pub v: u8,
-    pub conversation_id: Uuid,
-    pub thread_id: Uuid,
-    pub root_message_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub title: Option<String>,
-    pub created_by: Uuid,
-    pub occurred_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextConversationSettingsChangedMsg {
-    pub v: u8,
-    pub conversation_id: Uuid,
-    pub changed_by: Uuid,
-    pub occurred_at: DateTime<Utc>,
-    pub changes: serde_json::Value,
+    pub data: serde_json::Value,
+    pub timestamp: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -656,71 +581,51 @@ mod tests {
     #[test]
     fn test_context_event_message_created_roundtrip() {
         let conversation_id = Uuid::new_v4();
-        let message = MessageReceivedMsg {
-            v: PROTOCOL_VERSION,
-            id: Uuid::new_v4(),
+        let event = ContextEvent {
+            event_type: "message_created".to_owned(),
             conversation_id,
-            thread_id: None,
-            sender_id: Uuid::new_v4(),
-            content: "hello agent".into(),
-            format: MessageFormat::Markdown,
-            seq: 7,
-            created_at: "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap(),
-            blocks: Vec::new(),
-            attachments: Vec::new(),
+            data: json!({
+                "message_id": Uuid::new_v4(),
+                "sender_id": Uuid::new_v4(),
+                "content": "hello agent"
+            }),
+            timestamp: "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap(),
         };
-        let event = ContextEvent::MessageCreated(ContextMessageCreatedMsg {
-            v: PROTOCOL_VERSION,
-            conversation_id,
-            occurred_at: message.created_at,
-            message: message.clone(),
-        });
 
         let json = serde_json::to_value(&event).unwrap();
-        assert_eq!(json["type"], "message_created");
+        assert_eq!(json["event_type"], "message_created");
         assert_eq!(json["conversation_id"], conversation_id.to_string());
-        assert_eq!(json["message"]["id"], message.id.to_string());
+        assert_eq!(json["data"]["content"], "hello agent");
 
         let parsed: ContextEvent = serde_json::from_value(json).unwrap();
-        match parsed {
-            ContextEvent::MessageCreated(created) => {
-                assert_eq!(created.v, PROTOCOL_VERSION);
-                assert_eq!(created.conversation_id, conversation_id);
-                assert_eq!(created.message.id, message.id);
-                assert_eq!(created.message.content, "hello agent");
-            }
-            _ => panic!("expected message_created variant"),
-        }
+        assert_eq!(parsed.event_type, "message_created");
+        assert_eq!(parsed.conversation_id, conversation_id);
+        assert_eq!(parsed.data["content"], "hello agent");
     }
 
     #[test]
     fn test_context_event_settings_changed_roundtrip() {
         let conversation_id = Uuid::new_v4();
-        let changed_by = Uuid::new_v4();
-        let occurred_at = "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
-        let event =
-            ContextEvent::ConversationSettingsChanged(ContextConversationSettingsChangedMsg {
-                v: PROTOCOL_VERSION,
-                conversation_id,
-                changed_by,
-                occurred_at,
-                changes: json!({ "title": "Design Sync" }),
-            });
+        let changed_by = Uuid::new_v4().to_string();
+        let event = ContextEvent {
+            event_type: "conversation_settings_changed".to_owned(),
+            conversation_id,
+            data: json!({
+                "changed_by": changed_by,
+                "changes": { "title": "Design Sync" }
+            }),
+            timestamp: "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+        };
 
         let json = serde_json::to_value(&event).unwrap();
-        assert_eq!(json["type"], "conversation_settings_changed");
-        assert_eq!(json["changes"]["title"], "Design Sync");
+        assert_eq!(json["event_type"], "conversation_settings_changed");
+        assert_eq!(json["data"]["changes"]["title"], "Design Sync");
 
         let parsed: ContextEvent = serde_json::from_value(json).unwrap();
-        match parsed {
-            ContextEvent::ConversationSettingsChanged(changed) => {
-                assert_eq!(changed.v, PROTOCOL_VERSION);
-                assert_eq!(changed.conversation_id, conversation_id);
-                assert_eq!(changed.changed_by, changed_by);
-                assert_eq!(changed.changes["title"], "Design Sync");
-            }
-            _ => panic!("expected conversation_settings_changed variant"),
-        }
+        assert_eq!(parsed.event_type, "conversation_settings_changed");
+        assert_eq!(parsed.conversation_id, conversation_id);
+        assert_eq!(parsed.data["changed_by"], changed_by);
+        assert_eq!(parsed.data["changes"]["title"], "Design Sync");
     }
 
     #[test]

@@ -12,8 +12,11 @@ use super::{
     service::{self, CreateThreadError},
 };
 use crate::auth::{middleware::UserId, AppState};
+use crate::context_engine::LifecycleHooks;
+use crate::context_engine::models::ThreadCreatedHook;
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::service::{self as message_service, Membership};
+use chrono::Utc;
 
 fn error(status: StatusCode, code: &str, locale: &str, message: &str) -> (StatusCode, Json<Value>) {
     error_response(status, code, locale, message)
@@ -101,7 +104,21 @@ pub async fn create_thread(
     )
     .await
     {
-        Ok(thread) => (StatusCode::CREATED, Json(thread)).into_response(),
+        Ok(thread) => {
+            state
+                .context_engine
+                .on_thread_created(ThreadCreatedHook {
+                    conversation_id,
+                    thread_id: thread.id,
+                    root_message_id: thread.root_message_id,
+                    created_by: user_id,
+                    title: thread.title.clone(),
+                    timestamp: Utc::now(),
+                })
+                .await;
+
+            (StatusCode::CREATED, Json(thread)).into_response()
+        }
         Err(CreateThreadError::ConversationNotFound) => error(
             StatusCode::NOT_FOUND,
             "conversation_not_found",
