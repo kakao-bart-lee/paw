@@ -36,13 +36,32 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
             }
         };
 
-        let Some(message) = payload_to_message(&payload) else {
+        let Some(mut message) = payload_to_message(&payload) else {
             tracing::warn!(
                 payload = notification.payload(),
                 "pg_notify payload missing fields"
             );
             continue;
         };
+
+        match crate::messages::service::list_message_attachments(&pool, message.id).await {
+            Ok(attachments) => {
+                message.attachments = attachments
+                    .into_iter()
+                    .map(|attachment| paw_proto::MessageAttachment {
+                        id: attachment.id,
+                        file_type: attachment.file_type,
+                        file_url: attachment.file_url,
+                        file_size: attachment.file_size,
+                        mime_type: attachment.mime_type,
+                        thumbnail_url: attachment.thumbnail_url,
+                    })
+                    .collect();
+            }
+            Err(err) => {
+                tracing::error!(%err, message_id = %message.id, "failed to load message attachments");
+            }
+        }
 
         let members = match conversation_members(pool.as_ref(), message.conversation_id).await {
             Ok(members) => members,
@@ -123,6 +142,7 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         seq,
         created_at,
         blocks,
+        attachments: Vec::new(),
     })
 }
 

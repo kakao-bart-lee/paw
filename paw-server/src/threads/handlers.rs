@@ -623,6 +623,7 @@ pub async fn send_thread_message(
         payload.content.trim(),
         &format,
         idempotency_key,
+        &[],
     )
     .await
     {
@@ -679,6 +680,7 @@ pub async fn send_thread_message(
         seq: response.seq,
         created_at: response.created_at,
         blocks: vec![],
+        attachments: vec![],
     });
     let _ = broadcast_to_conversation(&state, conversation_id, &event).await;
 

@@ -359,8 +359,15 @@ async fn fetch_messages_after_seq(
     .fetch_all(state.db.as_ref())
     .await?;
 
+    let message_ids: Vec<Uuid> = rows
+        .iter()
+        .map(|row| row.try_get::<Uuid, _>("id"))
+        .collect::<Result<Vec<_>, _>>()?;
+    let attachments_map = service::list_message_attachments_map(&state.db, &message_ids).await?;
+
     let mut messages = Vec::with_capacity(rows.len());
     for row in rows {
+        let id: Uuid = row.try_get("id")?;
         let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
         let format = match format_raw
             .unwrap_or_else(|| "markdown".to_owned())
@@ -380,7 +387,7 @@ async fn fetch_messages_after_seq(
 
         messages.push(MessageReceivedMsg {
             v: PROTOCOL_VERSION,
-            id: row.try_get("id")?,
+            id,
             conversation_id: row.try_get("conversation_id")?,
             thread_id: None,
             sender_id: row.try_get("sender_id")?,
@@ -389,6 +396,22 @@ async fn fetch_messages_after_seq(
             seq: row.try_get("seq")?,
             created_at: row.try_get("created_at")?,
             blocks,
+            attachments: attachments_map
+                .get(&id)
+                .map(|attachments| {
+                    attachments
+                        .iter()
+                        .map(|attachment| paw_proto::MessageAttachment {
+                            id: attachment.id,
+                            file_type: attachment.file_type.clone(),
+                            file_url: attachment.file_url.clone(),
+                            file_size: attachment.file_size,
+                            mime_type: attachment.mime_type.clone(),
+                            thumbnail_url: attachment.thumbnail_url.clone(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
         });
     }
 

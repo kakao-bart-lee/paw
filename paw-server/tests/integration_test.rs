@@ -215,6 +215,7 @@ fn protocol_message_received_all_fields() {
         seq: 42,
         created_at: Utc::now(),
         blocks: vec![],
+        attachments: vec![],
     };
     let json = serde_json::to_value(&msg).unwrap();
 
@@ -224,6 +225,38 @@ fn protocol_message_received_all_fields() {
     assert_eq!(json["format"], "markdown");
     assert!(json["id"].is_string());
     assert!(json["created_at"].is_string());
+}
+
+#[test]
+fn protocol_message_received_includes_attachments_metadata() {
+    let attachment_id = Uuid::new_v4();
+    let msg = paw_proto::MessageReceivedMsg {
+        v: 1,
+        id: Uuid::new_v4(),
+        conversation_id: Uuid::new_v4(),
+        thread_id: None,
+        sender_id: Uuid::new_v4(),
+        content: "Hello with file".into(),
+        format: paw_proto::MessageFormat::Markdown,
+        seq: 7,
+        created_at: Utc::now(),
+        blocks: vec![],
+        attachments: vec![paw_proto::MessageAttachment {
+            id: attachment_id,
+            file_type: "image".to_string(),
+            file_url: "media/user/image.png".to_string(),
+            file_size: 1024,
+            mime_type: "image/png".to_string(),
+            thumbnail_url: Some("media/user/image-thumb.png".to_string()),
+        }],
+    };
+
+    let json = serde_json::to_value(&msg).unwrap();
+    assert!(json["attachments"].is_array());
+    assert_eq!(json["attachments"][0]["id"], attachment_id.to_string());
+    assert_eq!(json["attachments"][0]["file_type"], "image");
+    assert_eq!(json["attachments"][0]["mime_type"], "image/png");
+    assert_eq!(json["attachments"][0]["file_size"], 1024);
 }
 
 #[test]
@@ -893,6 +926,7 @@ fn gap_fill_messages_must_be_monotonically_increasing() {
             seq,
             created_at: now + Duration::seconds(seq),
             blocks: vec![],
+            attachments: vec![],
         })
         .collect();
 
@@ -968,6 +1002,7 @@ fn test_inbound_context_serialization() {
         seq: 1,
         created_at: Utc::now(),
         blocks: vec![],
+        attachments: vec![],
     };
 
     let ctx = paw_proto::InboundContext {
@@ -1070,6 +1105,7 @@ fn test_agent_stream_msg_roundtrip() {
                 assert_eq!(msg.tokens, 42);
                 assert_eq!(msg.duration_ms, 1234);
             }
+            _ => {}
         }
     }
 }
