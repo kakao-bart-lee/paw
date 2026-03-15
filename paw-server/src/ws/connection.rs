@@ -32,6 +32,8 @@ pub async fn handle_socket(
     locale: String,
     state: AppState,
 ) {
+    let mut socket = socket;
+
     let connection = WsConnection {
         user_id,
         device_id,
@@ -48,10 +50,36 @@ pub async fn handle_socket(
     crate::metrics::ws_connection_opened();
 
     let (outbound_tx, mut outbound_rx) = mpsc::unbounded_channel::<Message>();
-    state
+    if !state
         .hub
-        .register(connection.user_id, outbound_tx.clone())
-        .await;
+        .try_register_with_limit(
+            connection.user_id,
+            outbound_tx.clone(),
+            crate::ws::MAX_WS_CONNECTIONS_PER_USER,
+        )
+        .await
+    {
+        if let Ok(payload) = serde_json::to_string(&ServerMessage::Error(ErrorMsg {
+            v: PROTOCOL_VERSION,
+            code: "too_many_connections".to_string(),
+            ref_type: "connection".to_string(),
+            message: localized_message(
+                "too_many_connections",
+                &locale,
+                "Too many concurrent websocket connections",
+            )
+            .to_string(),
+        })) {
+            let _ = socket.send(Message::Text(payload.into())).await;
+        }
+        let _ = socket
+            .send(Message::Close(Some(CloseFrame {
+                code: close_code::POLICY,
+                reason: "too many connections".into(),
+            })))
+            .await;
+        return;
+    }
 
     if let Ok(frame) = serde_json::to_string(&ServerMessage::HelloOk(HelloOkMsg {
         v: PROTOCOL_VERSION,
@@ -97,6 +125,23 @@ pub async fn handle_socket(
             maybe_msg = ws_receiver.next() => {
                 match maybe_msg {
                     Some(Ok(Message::Text(text))) => {
+                        if exceeds_ws_message_size(text.len()) {
+                            let _ = send_protocol_error(
+                                &outbound_tx,
+                                "message_too_large",
+                                "frame",
+                                &locale,
+                                Some("websocket text frame exceeds max size"),
+                                "WebSocket frame exceeds size limit",
+                            )
+                            .await;
+                            let _ = outbound_tx.send(Message::Close(Some(CloseFrame {
+                                code: close_code::POLICY,
+                                reason: "message too large".into(),
+                            })));
+                            break;
+                        }
+
                         match serde_json::from_str::<ClientMessage>(&text) {
                             Ok(client_msg) => {
                                 if let Err(err) = handle_client_message(&state, connection.user_id, &outbound_tx, client_msg, &locale).await {
@@ -129,10 +174,34 @@ pub async fn handle_socket(
                         last_pong = Instant::now();
                     }
                     Some(Ok(Message::Ping(payload))) => {
+                        if exceeds_ws_message_size(payload.len()) {
+                            let _ = outbound_tx.send(Message::Close(Some(CloseFrame {
+                                code: close_code::POLICY,
+                                reason: "message too large".into(),
+                            })));
+                            break;
+                        }
                         let _ = outbound_tx.send(Message::Pong(payload));
                     }
                     Some(Ok(Message::Close(_))) => break,
-                    Some(Ok(Message::Binary(_))) => {
+                    Some(Ok(Message::Binary(payload))) => {
+                        if exceeds_ws_message_size(payload.len()) {
+                            let _ = send_protocol_error(
+                                &outbound_tx,
+                                "message_too_large",
+                                "frame",
+                                &locale,
+                                Some("websocket binary frame exceeds max size"),
+                                "WebSocket frame exceeds size limit",
+                            )
+                            .await;
+                            let _ = outbound_tx.send(Message::Close(Some(CloseFrame {
+                                code: close_code::POLICY,
+                                reason: "message too large".into(),
+                            })));
+                            break;
+                        }
+
                         let _ = send_protocol_error(
                             &outbound_tx,
                             "invalid_frame",
@@ -439,4 +508,24 @@ async fn send_protocol_error(
     }))?;
     let _ = outbound_tx.send(Message::Text(payload.into()));
     Ok(())
+}
+
+fn exceeds_ws_message_size(frame_len: usize) -> bool {
+    frame_len > crate::ws::MAX_WS_MESSAGE_SIZE_BYTES
+}
+
+#[cfg(test)]
+mod tests {
+    use super::exceeds_ws_message_size;
+
+    #[test]
+    fn websocket_message_size_limit_is_64kb() {
+        assert!(!exceeds_ws_message_size(64 * 1024));
+        assert!(exceeds_ws_message_size((64 * 1024) + 1));
+    }
+
+    #[test]
+    fn websocket_connection_limit_is_five_per_user() {
+        assert_eq!(crate::ws::MAX_WS_CONNECTIONS_PER_USER, 5);
+    }
 }

@@ -84,20 +84,23 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let prometheus_handle = metrics::init_metrics();
+    let rate_limiter = rate_limit::limiter_from_env();
+    let agent_limiter = rate_limit::agent_limiter_from_env();
 
     let state = AppState {
         db: db.clone(),
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        agent_limiter: agent_limiter.clone(),
         media_service,
         nats: nats_client,
     };
 
     tokio::spawn(ws::pg_listener::start_pg_listener(db.clone(), hub));
 
-    let rate_limiter = rate_limit::limiter_from_env();
     rate_limit::spawn_cleanup_task(rate_limiter.clone());
+    rate_limit::spawn_cleanup_task(agent_limiter);
 
     let media_upload = Router::new()
         .route("/media/upload", post(media::handlers::upload))
@@ -211,6 +214,10 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/api/v1/agents/{agent_id}/revoke",
             post(agents::handlers::revoke_agent_handler),
+        )
+        .route(
+            "/api/v1/agents/{agent_id}/rotate-key",
+            post(agents::handlers::rotate_agent_key_handler),
         )
         .route(
             "/api/v1/agents/{agent_id}/publish",

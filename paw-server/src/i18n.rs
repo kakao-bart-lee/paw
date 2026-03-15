@@ -182,6 +182,9 @@ pub fn localized_message<'a>(code: &'a str, locale: &str, fallback: &'a str) -> 
         ("ko", "mute_failed") => "대화를 음소거하지 못했습니다",
         ("ko", "unmute_failed") => "대화 음소거를 해제하지 못했습니다",
         ("ko", "invalid_frame") => "올바르지 않은 WebSocket 프레임입니다",
+        ("ko", "message_too_large") => "WebSocket 메시지가 허용 크기를 초과했습니다",
+        ("ko", "rate_limit_exceeded") => "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+        ("ko", "too_many_connections") => "동시 WebSocket 연결 수를 초과했습니다",
         ("ko", "not_found") => "대상을 찾을 수 없습니다",
         ("ko", "unsupported_protocol_version") => "지원하지 않는 프로토콜 버전입니다",
         ("ko", "invalid_agent_token") => "에이전트 토큰이 올바르지 않습니다",
@@ -205,6 +208,7 @@ pub fn localized_message<'a>(code: &'a str, locale: &str, fallback: &'a str) -> 
         ("ko", "internal_error") => "내부 오류가 발생했습니다",
         ("ko", "agent_not_found") => "에이전트를 찾을 수 없습니다",
         ("ko", "agent_not_found_or_not_owner") => "에이전트를 찾을 수 없거나 소유자가 아닙니다",
+        ("ko", "rotate_failed") => "에이전트 키를 교체하지 못했습니다",
         ("ko", "already_invited") => "에이전트가 이미 초대되어 있습니다",
         ("ko", "invite_failed") => "에이전트를 초대하지 못했습니다",
         ("ko", "remove_failed") => "에이전트를 제거하지 못했습니다",
@@ -395,6 +399,10 @@ mod tests {
         assert_eq!(
             localized_message("user_not_found", "en-US", "User not found"),
             "User not found"
+        );
+        assert_eq!(
+            localized_message("rotate_failed", "ko-KR", "Failed to rotate agent key"),
+            "에이전트 키를 교체하지 못했습니다"
         );
     }
 

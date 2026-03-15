@@ -7,6 +7,7 @@ use uuid::Uuid;
 use super::models::{
     is_valid_agent_token_format, AgentManifest, AgentProfile, InstalledAgent, MarketplaceAgent,
     MarketplaceAgentDetail, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
+    RotateAgentKeyResponse,
 };
 
 pub fn generate_agent_token() -> String {
@@ -19,13 +20,18 @@ pub fn hash_token(raw_token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
+fn generate_agent_token_pair() -> (String, String) {
+    let raw_token = generate_agent_token();
+    let token_hash = hash_token(&raw_token);
+    (raw_token, token_hash)
+}
+
 pub async fn register_agent(
     db: &PgPool,
     owner_user_id: Uuid,
     req: RegisterAgentRequest,
 ) -> Result<RegisterAgentResponse, sqlx::Error> {
-    let raw_token = generate_agent_token();
-    let token_hash = hash_token(&raw_token);
+    let (raw_token, token_hash) = generate_agent_token_pair();
 
     let row = sqlx::query_as::<_, (Uuid,)>(
         "INSERT INTO agent_tokens (name, description, avatar_url, token_hash, owner_user_id) \
@@ -77,6 +83,31 @@ pub async fn revoke_agent_token(
     Ok(result.map(|r| RevokeAgentResponse {
         agent_id: r.0,
         revoked: true,
+    }))
+}
+
+pub async fn rotate_agent_token(
+    db: &PgPool,
+    agent_id: Uuid,
+    owner_user_id: Uuid,
+) -> Result<Option<RotateAgentKeyResponse>, sqlx::Error> {
+    let (raw_token, token_hash) = generate_agent_token_pair();
+
+    let result = sqlx::query_as::<_, (Uuid,)>(
+        "UPDATE agent_tokens SET token_hash = $1, last_used_at = NULL \
+         WHERE id = $2 AND owner_user_id = $3 AND revoked_at IS NULL \
+         RETURNING id",
+    )
+    .bind(&token_hash)
+    .bind(agent_id)
+    .bind(owner_user_id)
+    .fetch_optional(db)
+    .await?;
+
+    Ok(result.map(|row| RotateAgentKeyResponse {
+        agent_id: row.0,
+        rotated: true,
+        api_key: raw_token,
     }))
 }
 
@@ -304,4 +335,25 @@ pub async fn publish_agent(
     .await?;
 
     Ok(result.rows_affected() > 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_token_pair_matches_hash() {
+        let (raw_token, token_hash) = generate_agent_token_pair();
+        assert!(is_valid_agent_token_format(&raw_token));
+        assert_eq!(token_hash, hash_token(&raw_token));
+    }
+
+    #[test]
+    fn generated_token_pair_is_unique_per_rotation() {
+        let (raw_a, hash_a) = generate_agent_token_pair();
+        let (raw_b, hash_b) = generate_agent_token_pair();
+
+        assert_ne!(raw_a, raw_b);
+        assert_ne!(hash_a, hash_b);
+    }
 }

@@ -177,6 +177,14 @@ pub fn limiter_from_env() -> RateLimiter {
     RateLimiter::new(max, Duration::from_secs(60))
 }
 
+pub fn agent_limiter_from_env() -> RateLimiter {
+    let max = std::env::var("RATE_LIMIT_AGENT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(60);
+    RateLimiter::new(max, Duration::from_secs(60))
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -309,5 +317,24 @@ mod tests {
         limiter.cleanup();
 
         assert_eq!(limiter.entries.len(), 0);
+    }
+
+    #[test]
+    fn per_agent_limits_are_isolated() {
+        let limiter = RateLimiter::new(1, Duration::from_secs(60));
+        assert!(limiter.check("agent:one").allowed);
+        assert!(!limiter.check("agent:one").allowed);
+
+        assert!(limiter.check("agent:two").allowed);
+        assert!(!limiter.check("agent:two").allowed);
+    }
+
+    #[test]
+    fn per_agent_default_limit_is_sixty_per_minute() {
+        let limiter = RateLimiter::new(60, Duration::from_secs(60));
+        for _ in 0..60 {
+            assert!(limiter.check("agent:test").allowed);
+        }
+        assert!(!limiter.check("agent:test").allowed);
     }
 }
