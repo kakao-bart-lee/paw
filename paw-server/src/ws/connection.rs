@@ -1,6 +1,7 @@
 use crate::auth::AppState;
 use crate::i18n::localized_message;
 use crate::messages::service::{self, Membership};
+use crate::threads::service as thread_service;
 use crate::ws::hub::WsSender;
 use axum::extract::ws::{close_code, CloseFrame, Message, WebSocket};
 use chrono::{DateTime, Utc};
@@ -307,14 +308,57 @@ async fn handle_client_message(
         }
         ClientMessage::MessageAck(ack) => {
             require_v(ack.v)?;
-            sqlx::query(
-                "UPDATE conversation_members SET last_read_seq = GREATEST(last_read_seq, $3) WHERE conversation_id = $1 AND user_id = $2",
-            )
-            .bind(ack.conversation_id)
-            .bind(user_id)
-            .bind(ack.last_seq)
-            .execute(state.db.as_ref())
-            .await?;
+            if let Some(thread_id) = ack.thread_id {
+                if !ensure_thread_scope(
+                    state,
+                    user_id,
+                    outbound_tx,
+                    locale,
+                    ack.conversation_id,
+                    thread_id,
+                    "message_ack",
+                )
+                .await?
+                {
+                    return Ok(());
+                }
+
+                match thread_service::mark_thread_read(
+                    &state.db,
+                    ack.conversation_id,
+                    thread_id,
+                    user_id,
+                    ack.last_seq,
+                )
+                .await
+                {
+                    Ok(()) => {}
+                    Err(thread_service::ThreadReadError::ThreadNotFound) => {
+                        let _ = send_protocol_error(
+                            outbound_tx,
+                            "thread_not_found",
+                            "message_ack",
+                            locale,
+                            None,
+                            "Thread not found",
+                        )
+                        .await;
+                        return Ok(());
+                    }
+                    Err(thread_service::ThreadReadError::Database) => {
+                        anyhow::bail!("failed to persist thread read state");
+                    }
+                }
+            } else {
+                sqlx::query(
+                    "UPDATE conversation_members SET last_read_seq = GREATEST(last_read_seq, $3) WHERE conversation_id = $1 AND user_id = $2",
+                )
+                .bind(ack.conversation_id)
+                .bind(user_id)
+                .bind(ack.last_seq)
+                .execute(state.db.as_ref())
+                .await?;
+            }
         }
         ClientMessage::Sync(sync) => {
             require_v(sync.v)?;
