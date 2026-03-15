@@ -93,7 +93,8 @@ Request messages after last_seq (gap-fill on reconnect).
   "format": "markdown",
   "seq": 1,
   "created_at": "<ISO8601>",
-  "blocks": []
+  "blocks": [],
+  "attachments": []
 }
 ```
 
@@ -123,7 +124,8 @@ Request messages after last_seq (gap-fill on reconnect).
       "format": "markdown",
       "seq": 43,
       "created_at": "<ISO8601>",
-      "blocks": []
+      "blocks": [],
+      "attachments": []
     }
   ]
 }

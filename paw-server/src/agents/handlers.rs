@@ -682,7 +682,11 @@ async fn handle_agent_socket(
 
     if !state
         .hub
-        .try_register_with_limit(agent_id, outbound_tx.clone(), MAX_CONCURRENT_STREAMS_PER_AGENT)
+        .try_register_with_limit(
+            agent_id,
+            outbound_tx.clone(),
+            MAX_CONCURRENT_STREAMS_PER_AGENT,
+        )
         .await
     {
         let err = agent_error_frame(
@@ -741,18 +745,20 @@ async fn handle_agent_socket(
                                 tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
                             }
                         }
-                        Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
-                            Ok(agent_msg) => {
-                                tracing::info!(
-                                    "agent {agent_id} response for conv {}: {} bytes",
-                                    agent_msg.conversation_id,
-                                    agent_msg.content.len()
-                                );
+                        Err(_) => {
+                            match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
+                                Ok(agent_msg) => {
+                                    tracing::info!(
+                                        "agent {agent_id} response for conv {}: {} bytes",
+                                        agent_msg.conversation_id,
+                                        agent_msg.content.len()
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::warn!("invalid agent message from {agent_id}: {e}");
+                                }
                             }
-                            Err(e) => {
-                                tracing::warn!("invalid agent message from {agent_id}: {e}");
-                            }
-                        },
+                        }
                     }
                 }
                 Message::Close(_) => break,
@@ -850,7 +856,10 @@ async fn relay_agent_stream_message(
         AgentStreamMsg::AgentTypingStart(msg) => {
             require_v(msg.v)?;
             if msg.agent_id != agent_id {
-                anyhow::bail!("agent_id mismatch for typing_start in conversation {}", msg.conversation_id);
+                anyhow::bail!(
+                    "agent_id mismatch for typing_start in conversation {}",
+                    msg.conversation_id
+                );
             }
 
             if !check_agent_permission(
@@ -890,7 +899,10 @@ async fn relay_agent_stream_message(
         AgentStreamMsg::AgentTypingEnd(msg) => {
             require_v(msg.v)?;
             if msg.agent_id != agent_id {
-                anyhow::bail!("agent_id mismatch for typing_end in conversation {}", msg.conversation_id);
+                anyhow::bail!(
+                    "agent_id mismatch for typing_end in conversation {}",
+                    msg.conversation_id
+                );
             }
 
             if !check_agent_permission(
@@ -1294,7 +1306,10 @@ async fn persist_tool_call_result(
     Ok(())
 }
 
-async fn persist_tool_call_end(state: &AppState, msg: &paw_proto::ToolCallEndMsg) -> anyhow::Result<()> {
+async fn persist_tool_call_end(
+    state: &AppState,
+    msg: &paw_proto::ToolCallEndMsg,
+) -> anyhow::Result<()> {
     sqlx::query(
         "UPDATE agent_tool_calls
          SET status = CASE WHEN status = 'error' THEN 'error' ELSE 'completed' END,

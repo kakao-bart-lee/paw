@@ -172,6 +172,10 @@ async fn main() -> anyhow::Result<()> {
             delete(messages::handlers::delete_message),
         )
         .route(
+            "/messages/{id}/attachments",
+            get(messages::handlers::get_message_attachments),
+        )
+        .route(
             "/link-previews",
             post(link_preview::handlers::request_link_previews)
                 .get(link_preview::handlers::get_link_preview),

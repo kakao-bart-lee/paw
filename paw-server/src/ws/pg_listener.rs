@@ -1,8 +1,8 @@
 use crate::db::DbPool;
 use crate::ws::hub::Hub;
 use paw_proto::{
-    ForwardedFrom, MessageFormat, MessageForwardedMsg, MessageReceivedMsg, ServerMessage,
-    PROTOCOL_VERSION,
+    ForwardedFrom, MessageAttachment, MessageFormat, MessageForwardedMsg, MessageReceivedMsg,
+    ServerMessage, PROTOCOL_VERSION,
 };
 use sqlx::Row;
 use std::sync::Arc;
@@ -45,6 +45,14 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
                 "pg_notify payload missing fields"
             );
             continue;
+        };
+
+        let message = match enrich_with_attachments(pool.as_ref(), message).await {
+            Ok(message) => message,
+            Err(err) => {
+                tracing::error!(%err, "failed to enrich message attachments for ws payload");
+                continue;
+            }
         };
 
         let conversation_id = match &message {
@@ -158,6 +166,58 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<ServerMessage> {
     }
 }
 
+async fn enrich_with_attachments(
+    pool: &sqlx::PgPool,
+    message: ServerMessage,
+) -> anyhow::Result<ServerMessage> {
+    let message_id = match &message {
+        ServerMessage::MessageReceived(frame) => frame.id,
+        ServerMessage::MessageForwarded(frame) => frame.id,
+        _ => return Ok(message),
+    };
+
+    let rows = sqlx::query(
+        "SELECT id, file_type, file_url, file_size, mime_type, thumbnail_url
+         FROM message_attachments
+         WHERE message_id = $1
+         ORDER BY created_at ASC, id ASC",
+    )
+    .bind(message_id)
+    .fetch_all(pool)
+    .await?;
+
+    let attachments = rows
+        .into_iter()
+        .map(|row| MessageAttachment {
+            id: row.try_get("id").unwrap_or_else(|_| Uuid::new_v4()),
+            file_type: row
+                .try_get::<String, _>("file_type")
+                .unwrap_or_else(|_| "file".to_owned()),
+            file_url: row.try_get::<String, _>("file_url").unwrap_or_default(),
+            file_size: row.try_get::<i64, _>("file_size").unwrap_or_default(),
+            mime_type: row
+                .try_get::<String, _>("mime_type")
+                .unwrap_or_else(|_| "application/octet-stream".to_owned()),
+            thumbnail_url: row
+                .try_get::<Option<String>, _>("thumbnail_url")
+                .ok()
+                .flatten(),
+        })
+        .collect::<Vec<_>>();
+
+    Ok(match message {
+        ServerMessage::MessageReceived(mut frame) => {
+            frame.attachments = attachments;
+            ServerMessage::MessageReceived(frame)
+        }
+        ServerMessage::MessageForwarded(mut frame) => {
+            frame.attachments = attachments;
+            ServerMessage::MessageForwarded(frame)
+        }
+        other => other,
+    })
+}
+
 fn parse_uuid(value: &str) -> Option<Uuid> {
     Uuid::parse_str(value).ok()
 }
@@ -184,6 +244,9 @@ mod tests {
         });
 
         let parsed = payload_to_message(&payload).expect("payload should parse");
-        assert!(matches!(parsed, paw_proto::ServerMessage::MessageForwarded(_)));
+        assert!(matches!(
+            parsed,
+            paw_proto::ServerMessage::MessageForwarded(_)
+        ));
     }
 }

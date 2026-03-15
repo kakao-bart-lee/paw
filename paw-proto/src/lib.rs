@@ -512,6 +512,46 @@ mod tests {
     }
 
     #[test]
+    fn test_message_received_attachments_roundtrip() {
+        let attachment_id = Uuid::new_v4();
+        let message = ServerMessage::MessageReceived(MessageReceivedMsg {
+            v: PROTOCOL_VERSION,
+            id: Uuid::new_v4(),
+            conversation_id: Uuid::new_v4(),
+            thread_id: None,
+            sender_id: Uuid::new_v4(),
+            content: "look at this".to_owned(),
+            format: MessageFormat::Markdown,
+            seq: 2,
+            created_at: Utc::now(),
+            blocks: Vec::new(),
+            attachments: vec![MessageAttachment {
+                id: attachment_id,
+                file_type: "image".to_owned(),
+                file_url: "media/user/image.png".to_owned(),
+                file_size: 1234,
+                mime_type: "image/png".to_owned(),
+                thumbnail_url: Some("media/user/image-thumb.png".to_owned()),
+            }],
+        });
+
+        let json = serde_json::to_value(&message).unwrap();
+        assert_eq!(json["type"], "message_received");
+        assert_eq!(json["attachments"][0]["id"], attachment_id.to_string());
+        assert_eq!(json["attachments"][0]["mime_type"], "image/png");
+
+        let parsed: ServerMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ServerMessage::MessageReceived(frame) => {
+                assert_eq!(frame.attachments.len(), 1);
+                assert_eq!(frame.attachments[0].id, attachment_id);
+                assert_eq!(frame.attachments[0].file_type, "image");
+            }
+            _ => panic!("expected MessageReceived variant"),
+        }
+    }
+
+    #[test]
     fn test_server_message_version_required() {
         let json = r#"{"type": "hello_ok", "user_id": "550e8400-e29b-41d4-a716-446655440000", "server_time": "2026-01-01T00:00:00Z"}"#;
         // Without v field - should fail (v is required)

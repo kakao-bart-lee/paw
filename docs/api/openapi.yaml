@@ -57,7 +57,20 @@ components:
         sender_id: { type: string, format: uuid }
         content: { type: string }
         format: { type: string, enum: [plain, markdown] }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/MessageAttachment' }
         created_at: { type: string, format: date-time }
+
+    MessageAttachment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        file_type: { type: string }
+        file_url: { type: string }
+        file_size: { type: integer }
+        mime_type: { type: string }
+        thumbnail_url: { type: string, nullable: true }
 
     Agent:
       type: object
@@ -474,12 +487,36 @@ paths:
               properties:
                 content: { type: string }
                 format: { type: string, enum: [plain, markdown] }
+                attachment_ids:
+                  type: array
+                  items: { type: string, format: uuid }
       responses:
         '201':
           description: Message sent
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Message' }
+
+  /messages/{id}/attachments:
+    get:
+      summary: Get message attachments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Message attachments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attachments:
+                    type: array
+                    items: { $ref: '#/components/schemas/MessageAttachment' }
 
   /conversations/{conv_id}/messages/{message_id}:
     delete:

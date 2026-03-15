@@ -6,8 +6,8 @@ use axum::extract::ws::{close_code, CloseFrame, Message, WebSocket};
 use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{
-    ClientMessage, DeviceSyncResponse, ErrorMsg, HelloOkMsg, MessageFormat, MessageReceivedMsg,
-    ServerMessage, PROTOCOL_VERSION,
+    ClientMessage, DeviceSyncResponse, ErrorMsg, HelloOkMsg, MessageAttachment, MessageFormat,
+    MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION,
 };
 use sqlx::Row;
 use std::time::{Duration, Instant};
@@ -417,7 +417,7 @@ async fn fetch_messages_after_seq(
     last_seq: i64,
 ) -> anyhow::Result<Vec<MessageReceivedMsg>> {
     let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
-        "SELECT id, conversation_id, sender_id, content, format, seq, created_at, blocks \
+        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, blocks \
          FROM messages \
          WHERE conversation_id = $1 AND seq > $2 \
          ORDER BY seq ASC \
@@ -427,6 +427,13 @@ async fn fetch_messages_after_seq(
     .bind(last_seq)
     .fetch_all(state.db.as_ref())
     .await?;
+
+    let message_ids = rows
+        .iter()
+        .filter_map(|row| row.try_get::<Uuid, _>("id").ok())
+        .collect::<Vec<_>>();
+    let mut attachments_by_message =
+        service::get_message_attachments_for_messages(&state.db, &message_ids).await?;
 
     let mut messages = Vec::with_capacity(rows.len());
     for row in rows {
@@ -447,18 +454,33 @@ async fn fetch_messages_after_seq(
             _ => Vec::new(),
         };
 
+        let message_id: Uuid = row.try_get("id")?;
+        let attachments = attachments_by_message
+            .remove(&message_id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|record| MessageAttachment {
+                id: record.id,
+                file_type: record.file_type,
+                file_url: record.file_url,
+                file_size: record.file_size,
+                mime_type: record.mime_type,
+                thumbnail_url: record.thumbnail_url,
+            })
+            .collect();
+
         messages.push(MessageReceivedMsg {
             v: PROTOCOL_VERSION,
-            id: row.try_get("id")?,
+            id: message_id,
             conversation_id: row.try_get("conversation_id")?,
-            thread_id: None,
+            thread_id: row.try_get("thread_id")?,
             sender_id: row.try_get("sender_id")?,
             content: row.try_get("content")?,
             format,
             seq: row.try_get("seq")?,
             created_at: row.try_get("created_at")?,
             blocks,
-            attachments: Vec::new(),
+            attachments,
         });
     }
 
