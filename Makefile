@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap-local local-stack dev stop server test lint fmt clean docker-up docker-down migrate migrate-add bindings core-android core-ios verify e2e-core-phase3
+.PHONY: help bootstrap-local local-stack dev stop server test lint fmt clean docker-up docker-down migrate migrate-add bindings uniffi-bindings core-android core-ios verify e2e-core-phase3
 
 help:
 	@printf "%s\n" \
@@ -17,6 +17,7 @@ help:
 	"  make docker-down      # stop docker services" \
 	"  make migrate          # run SQLx migrations" \
 	"  make migrate-add name=example  # create a new migration" \
+	"  make uniffi-bindings  # generate UniFFI Kotlin/Swift bindings for paw-core" \
 	"  make bindings         # generate UniFFI Kotlin/Swift bindings for paw-core" \
 	"  make core-android     # build paw-core Android artifacts" \
 	"  make core-ios         # build paw-core iOS artifacts" \
@@ -79,6 +80,8 @@ migrate-add:
 
 bindings:
 	./scripts/gen-ffi-bindings.sh
+
+uniffi-bindings: bindings
 
 core-android:
 	./scripts/build-core-android.sh

@@ -76,12 +76,16 @@ pub struct SendMessageRequest {
     pub content: String,
     pub format: String,
     pub idempotency_key: Uuid,
+    #[serde(default)]
+    pub attachment_ids: Vec<Uuid>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SendMessageResponse {
     pub id: Uuid,
     pub seq: i64,
+    #[serde(default)]
+    pub thread_seq: Option<i64>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -89,11 +93,37 @@ pub struct SendMessageResponse {
 pub struct MessageRecord {
     pub id: Uuid,
     pub conversation_id: Uuid,
+    #[serde(default)]
+    pub thread_id: Option<Uuid>,
+    #[serde(default)]
+    pub thread_seq: Option<i64>,
     pub sender_id: Uuid,
     pub content: String,
     pub format: String,
     pub seq: i64,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThreadRecord {
+    pub id: Uuid,
+    pub conversation_id: Uuid,
+    pub root_message_id: Uuid,
+    pub title: Option<String>,
+    pub created_by: Uuid,
+    pub message_count: i32,
+    pub last_seq: Option<i64>,
+    pub last_message_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThreadStateSnapshot {
+    pub thread_id: Uuid,
+    pub message_count: i32,
+    pub last_seq: i64,
+    pub participants: Vec<Uuid>,
+    pub last_message_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -300,6 +330,63 @@ impl ApiClient {
         self.get_json(
             &format!("/conversations/{conversation_id}/messages"),
             Some(&query),
+        )
+        .await
+    }
+
+    pub async fn create_thread(
+        &self,
+        conversation_id: Uuid,
+        root_message_id: Uuid,
+        title: Option<String>,
+    ) -> Result<ThreadRecord, HttpClientError> {
+        self.post_json(
+            &format!("/conversations/{conversation_id}/threads"),
+            &serde_json::json!({
+                "root_message_id": root_message_id,
+                "title": title.filter(|value| !value.trim().is_empty()),
+            }),
+        )
+        .await
+    }
+
+    pub async fn get_thread(
+        &self,
+        conversation_id: Uuid,
+        thread_id: Uuid,
+    ) -> Result<ThreadRecord, HttpClientError> {
+        self.get_json(
+            &format!("/conversations/{conversation_id}/threads/{thread_id}"),
+            None,
+        )
+        .await
+    }
+
+    pub async fn get_thread_messages(
+        &self,
+        conversation_id: Uuid,
+        thread_id: Uuid,
+        since_seq: i64,
+        limit: i64,
+    ) -> Result<GetMessagesResponse, HttpClientError> {
+        let mut query = HashMap::new();
+        query.insert("since_seq".to_string(), since_seq.to_string());
+        query.insert("limit".to_string(), limit.to_string());
+        self.get_json(
+            &format!("/conversations/{conversation_id}/threads/{thread_id}/messages"),
+            Some(&query),
+        )
+        .await
+    }
+
+    pub async fn get_thread_state(
+        &self,
+        conversation_id: Uuid,
+        thread_id: Uuid,
+    ) -> Result<ThreadStateSnapshot, HttpClientError> {
+        self.get_json(
+            &format!("/conversations/{conversation_id}/threads/{thread_id}/state"),
+            None,
         )
         .await
     }
@@ -566,6 +653,16 @@ mod tests {
                 "/conversations/{id}/messages",
                 post(send_message).get(get_messages),
             )
+            .route("/conversations/{id}/threads", post(create_thread))
+            .route("/conversations/{id}/threads/{thread_id}", get(get_thread))
+            .route(
+                "/conversations/{id}/threads/{thread_id}/messages",
+                get(get_thread_messages),
+            )
+            .route(
+                "/conversations/{id}/threads/{thread_id}/state",
+                get(get_thread_state),
+            )
             .route("/users/me", get(get_me).patch(update_me))
             .route("/users/search", get(search_user))
             .route("/users/{user_id}", get(get_user))
@@ -668,6 +765,7 @@ mod tests {
         Json(json!({
             "id": Uuid::nil(),
             "seq": 7,
+            "thread_seq": null,
             "created_at": Utc::now(),
         }))
     }
@@ -681,6 +779,8 @@ mod tests {
             "messages": [{
                 "id": Uuid::nil(),
                 "conversation_id": Uuid::nil(),
+                "thread_id": null,
+                "thread_seq": null,
                 "sender_id": Uuid::nil(),
                 "content": "hello",
                 "format": "plain",
@@ -688,6 +788,76 @@ mod tests {
                 "created_at": Utc::now(),
             }],
             "has_more": false,
+        }))
+    }
+
+    async fn create_thread(
+        Path(conversation_id): Path<Uuid>,
+        request: Request<Body>,
+    ) -> impl IntoResponse {
+        let json = read_body(request).await;
+        (
+            StatusCode::CREATED,
+            Json(json!({
+                "id": Uuid::nil(),
+                "conversation_id": conversation_id,
+                "root_message_id": json["root_message_id"],
+                "title": json["title"],
+                "created_by": Uuid::nil(),
+                "message_count": 0,
+                "last_seq": null,
+                "last_message_at": null,
+                "created_at": Utc::now(),
+            })),
+        )
+    }
+
+    async fn get_thread(
+        Path((conversation_id, thread_id)): Path<(Uuid, Uuid)>,
+    ) -> impl IntoResponse {
+        Json(json!({
+            "id": thread_id,
+            "conversation_id": conversation_id,
+            "root_message_id": Uuid::nil(),
+            "title": "Replies",
+            "created_by": Uuid::nil(),
+            "message_count": 2,
+            "last_seq": 9,
+            "last_message_at": Utc::now(),
+            "created_at": Utc::now(),
+        }))
+    }
+
+    async fn get_thread_messages(
+        State(state): State<TestState>,
+        Query(query): Query<HashMap<String, String>>,
+    ) -> impl IntoResponse {
+        state.message_query.lock().await.replace(query);
+        Json(json!({
+            "messages": [{
+                "id": Uuid::nil(),
+                "conversation_id": Uuid::nil(),
+                "thread_id": Uuid::nil(),
+                "thread_seq": 4,
+                "sender_id": Uuid::nil(),
+                "content": "thread hello",
+                "format": "markdown",
+                "seq": 11,
+                "created_at": Utc::now(),
+            }],
+            "has_more": false,
+        }))
+    }
+
+    async fn get_thread_state(
+        Path((_conversation_id, thread_id)): Path<(Uuid, Uuid)>,
+    ) -> impl IntoResponse {
+        Json(json!({
+            "thread_id": thread_id,
+            "message_count": 2,
+            "last_seq": 9,
+            "participants": [Uuid::nil(), Uuid::max()],
+            "last_message_at": Utc::now(),
         }))
     }
 
@@ -862,14 +1032,17 @@ mod tests {
                     content: "hello".to_string(),
                     format: "plain".to_string(),
                     idempotency_key: Uuid::nil(),
+                    attachment_ids: Vec::new(),
                 },
             )
             .await
             .unwrap();
         assert_eq!(sent.seq, 7);
+        assert_eq!(sent.thread_seq, None);
 
         let history = client.get_messages(Uuid::nil(), 9, 20).await.unwrap();
         assert_eq!(history.messages.len(), 1);
+        assert_eq!(history.messages[0].thread_id, None);
         assert_eq!(
             server.state.message_query.lock().await.clone(),
             Some(HashMap::from([
@@ -877,6 +1050,48 @@ mod tests {
                 ("limit".to_string(), "20".to_string()),
             ]))
         );
+    }
+
+    #[tokio::test]
+    async fn thread_endpoints_return_typed_payloads() {
+        let server = TestServer::start().await;
+        let mut client = ApiClient::new(server.base_url()).unwrap();
+        client.set_access_token("token-123");
+
+        let created = client
+            .create_thread(Uuid::nil(), Uuid::max(), Some("Replies".to_string()))
+            .await
+            .unwrap();
+        assert_eq!(created.conversation_id, Uuid::nil());
+        assert_eq!(created.root_message_id, Uuid::max());
+        assert_eq!(created.title.as_deref(), Some("Replies"));
+
+        let thread = client.get_thread(Uuid::nil(), Uuid::max()).await.unwrap();
+        assert_eq!(thread.id, Uuid::max());
+        assert_eq!(thread.message_count, 2);
+
+        let history = client
+            .get_thread_messages(Uuid::nil(), Uuid::max(), 3, 25)
+            .await
+            .unwrap();
+        assert_eq!(history.messages.len(), 1);
+        assert_eq!(history.messages[0].thread_id, Some(Uuid::nil()));
+        assert_eq!(history.messages[0].thread_seq, Some(4));
+        assert_eq!(
+            server.state.message_query.lock().await.clone(),
+            Some(HashMap::from([
+                ("since_seq".to_string(), "3".to_string()),
+                ("limit".to_string(), "25".to_string()),
+            ]))
+        );
+
+        let state = client
+            .get_thread_state(Uuid::nil(), Uuid::max())
+            .await
+            .unwrap();
+        assert_eq!(state.thread_id, Uuid::max());
+        assert_eq!(state.message_count, 2);
+        assert_eq!(state.participants.len(), 2);
     }
 
     #[tokio::test]

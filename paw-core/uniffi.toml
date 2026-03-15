@@ -1,0 +1,7 @@
+[bindings.kotlin]
+package_name = "dev.paw.core"
+
+[bindings.swift]
+module_name = "PawCore"
+ffi_module_name = "paw_coreFFI"
+generate_module_map = true
