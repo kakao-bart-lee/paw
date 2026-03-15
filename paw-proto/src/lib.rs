@@ -51,7 +51,12 @@ pub enum ServerMessage {
     ThreadDeleted(ThreadDeletedMsg),
     // Phase 2 streaming (reserved, not implemented in Phase 1)
     StreamStart(StreamStartMsg),
+    AgentTypingStart(AgentTypingEventMsg),
+    AgentTypingEnd(AgentTypingEventMsg),
     ContentDelta(ContentDeltaMsg),
+    ToolCallStart(ToolCallStartMsg),
+    ToolCallResult(ToolCallResultMsg),
+    ToolCallEnd(ToolCallEndMsg),
     ToolStart(ToolStartMsg),
     ToolEnd(ToolEndMsg),
     StreamEnd(StreamEndMsg),
@@ -188,6 +193,17 @@ pub struct ErrorMsg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageAttachment {
+    pub id: Uuid,
+    pub file_type: String,
+    pub file_url: String,
+    pub file_size: i64,
+    pub mime_type: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub thumbnail_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageReceivedMsg {
     pub v: u8,
     pub id: Uuid,
@@ -201,6 +217,8 @@ pub struct MessageReceivedMsg {
     pub created_at: DateTime<Utc>,
     #[serde(default)]
     pub blocks: Vec<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<MessageAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,6 +294,40 @@ pub struct ContentDeltaMsg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentTypingEventMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub thread_id: Option<Uuid>,
+    pub agent_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallStartMsg {
+    pub v: u8,
+    pub stream_id: Uuid,
+    pub id: String,
+    pub name: String,
+    pub arguments_json: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallResultMsg {
+    pub v: u8,
+    pub stream_id: Uuid,
+    pub id: String,
+    pub result_json: serde_json::Value,
+    pub is_error: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallEndMsg {
+    pub v: u8,
+    pub stream_id: Uuid,
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolStartMsg {
     pub v: u8,
     pub stream_id: Uuid,
@@ -320,9 +372,97 @@ pub struct AgentResponseMsg {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+pub enum ContextEvent {
+    MessageCreated(ContextMessageCreatedMsg),
+    MessageEdited(ContextMessageEditedMsg),
+    MessageDeleted(ContextMessageDeletedMsg),
+    MemberJoined(ContextMemberJoinedMsg),
+    MemberLeft(ContextMemberLeftMsg),
+    ThreadCreated(ContextThreadCreatedMsg),
+    ConversationSettingsChanged(ContextConversationSettingsChangedMsg),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMessageCreatedMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub occurred_at: DateTime<Utc>,
+    pub message: MessageReceivedMsg,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMessageEditedMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub thread_id: Option<Uuid>,
+    pub message_id: Uuid,
+    pub edited_by: Uuid,
+    pub content: String,
+    pub format: MessageFormat,
+    pub occurred_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMessageDeletedMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub thread_id: Option<Uuid>,
+    pub message_id: Uuid,
+    pub deleted_by: Uuid,
+    pub occurred_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMemberJoinedMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub member_id: Uuid,
+    pub joined_by: Uuid,
+    pub occurred_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMemberLeftMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub member_id: Uuid,
+    pub left_by: Uuid,
+    pub occurred_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextThreadCreatedMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub thread_id: Uuid,
+    pub root_message_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub title: Option<String>,
+    pub created_by: Uuid,
+    pub occurred_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextConversationSettingsChangedMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub changed_by: Uuid,
+    pub occurred_at: DateTime<Utc>,
+    pub changes: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum AgentStreamMsg {
     StreamStart(StreamStartMsg),
+    AgentTypingStart(AgentTypingEventMsg),
+    AgentTypingEnd(AgentTypingEventMsg),
     ContentDelta(ContentDeltaMsg),
+    ToolCallStart(ToolCallStartMsg),
+    ToolCallResult(ToolCallResultMsg),
+    ToolCallEnd(ToolCallEndMsg),
     ToolStart(ToolStartMsg),
     ToolEnd(ToolEndMsg),
     StreamEnd(StreamEndMsg),
@@ -341,6 +481,7 @@ pub enum MessageFormat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn test_connect_msg_has_version() {
@@ -510,5 +651,118 @@ mod tests {
             r#"{"v":1,"conversation_id":"550e8400-e29b-41d4-a716-446655440000","last_seq":42}"#;
         let sync: SyncMsg = serde_json::from_str(sync_json).unwrap();
         assert!(sync.thread_id.is_none());
+    }
+
+    #[test]
+    fn test_context_event_message_created_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let message = MessageReceivedMsg {
+            v: PROTOCOL_VERSION,
+            id: Uuid::new_v4(),
+            conversation_id,
+            thread_id: None,
+            sender_id: Uuid::new_v4(),
+            content: "hello agent".into(),
+            format: MessageFormat::Markdown,
+            seq: 7,
+            created_at: "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+            blocks: Vec::new(),
+            attachments: Vec::new(),
+        };
+        let event = ContextEvent::MessageCreated(ContextMessageCreatedMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            occurred_at: message.created_at,
+            message: message.clone(),
+        });
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["type"], "message_created");
+        assert_eq!(json["conversation_id"], conversation_id.to_string());
+        assert_eq!(json["message"]["id"], message.id.to_string());
+
+        let parsed: ContextEvent = serde_json::from_value(json).unwrap();
+        match parsed {
+            ContextEvent::MessageCreated(created) => {
+                assert_eq!(created.v, PROTOCOL_VERSION);
+                assert_eq!(created.conversation_id, conversation_id);
+                assert_eq!(created.message.id, message.id);
+                assert_eq!(created.message.content, "hello agent");
+            }
+            _ => panic!("expected message_created variant"),
+        }
+    }
+
+    #[test]
+    fn test_context_event_settings_changed_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let changed_by = Uuid::new_v4();
+        let occurred_at = "2026-03-16T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
+        let event =
+            ContextEvent::ConversationSettingsChanged(ContextConversationSettingsChangedMsg {
+                v: PROTOCOL_VERSION,
+                conversation_id,
+                changed_by,
+                occurred_at,
+                changes: json!({ "title": "Design Sync" }),
+            });
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["type"], "conversation_settings_changed");
+        assert_eq!(json["changes"]["title"], "Design Sync");
+
+        let parsed: ContextEvent = serde_json::from_value(json).unwrap();
+        match parsed {
+            ContextEvent::ConversationSettingsChanged(changed) => {
+                assert_eq!(changed.v, PROTOCOL_VERSION);
+                assert_eq!(changed.conversation_id, conversation_id);
+                assert_eq!(changed.changed_by, changed_by);
+                assert_eq!(changed.changes["title"], "Design Sync");
+            }
+            _ => panic!("expected conversation_settings_changed variant"),
+        }
+    }
+
+    #[test]
+    fn test_agent_stream_structured_tool_call_roundtrip() {
+        let stream_id = Uuid::new_v4();
+        let frame = AgentStreamMsg::ToolCallStart(ToolCallStartMsg {
+            v: PROTOCOL_VERSION,
+            stream_id,
+            id: "call_1".to_owned(),
+            name: "web_search".to_owned(),
+            arguments_json: serde_json::json!({"q": "paw messenger"}),
+        });
+
+        let json = serde_json::to_value(&frame).unwrap();
+        assert_eq!(json["type"], "tool_call_start");
+        assert_eq!(json["id"], "call_1");
+
+        let parsed: AgentStreamMsg = serde_json::from_value(json).unwrap();
+        match parsed {
+            AgentStreamMsg::ToolCallStart(msg) => {
+                assert_eq!(msg.v, PROTOCOL_VERSION);
+                assert_eq!(msg.stream_id, stream_id);
+                assert_eq!(msg.id, "call_1");
+                assert_eq!(msg.name, "web_search");
+                assert_eq!(msg.arguments_json["q"], "paw messenger");
+            }
+            _ => panic!("expected ToolCallStart variant"),
+        }
+    }
+
+    #[test]
+    fn test_server_message_agent_typing_event_tags() {
+        let frame = ServerMessage::AgentTypingStart(AgentTypingEventMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id: Uuid::new_v4(),
+            thread_id: None,
+            agent_id: Uuid::new_v4(),
+        });
+
+        let json = serde_json::to_value(&frame).unwrap();
+        assert_eq!(json["type"], "agent_typing_start");
+        assert!(json["conversation_id"].is_string());
+        assert!(json["agent_id"].is_string());
     }
 }

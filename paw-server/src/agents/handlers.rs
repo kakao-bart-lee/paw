@@ -33,6 +33,7 @@ pub const MAX_DELTA_SIZE: usize = 4096;
 #[derive(Clone, Copy)]
 struct StreamRelayState {
     conversation_id: Uuid,
+    thread_id: Option<Uuid>,
     started_at: Instant,
     bytes_sent: usize,
 }
@@ -185,6 +186,27 @@ pub async fn invite_agent_handler(
         }
     }
 
+    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
+        .await
+        .map_err(|err| {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for inviting agent");
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                &locale,
+                "Failed to invite agent",
+            )
+        })?;
+
+    if !can_manage {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            &locale,
+            "Only conversation admins can invite agents",
+        ));
+    }
+
     match service::invite_agent_to_conversation(
         &state.db,
         conversation_id,
@@ -234,11 +256,11 @@ pub async fn remove_agent_handler(
             &locale,
             "Agent is not in this conversation",
         )),
-        Err(err) if err.to_string() == "not_owner" => Err(error(
+        Err(err) if err.to_string() == "not_admin" => Err(error(
             StatusCode::FORBIDDEN,
             "forbidden",
             &locale,
-            "Only conversation owners can remove agents",
+            "Only conversation admins can remove agents",
         )),
         Err(err) => {
             tracing::error!(%err, conversation_id = %conversation_id, agent_id = %agent_id, user_id = %user_id, "failed to remove agent");
@@ -513,6 +535,14 @@ async fn handle_agent_socket(
     use axum::extract::ws::Message;
 
     let (mut ws_tx, mut ws_rx) = socket.split();
+    let (outbound_tx, mut outbound_rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
+    let writer = tokio::spawn(async move {
+        while let Some(msg) = outbound_rx.recv().await {
+            if ws_tx.send(msg).await.is_err() {
+                break;
+            }
+        }
+    });
 
     let subject = format!("agent.inbound.{agent_id}");
     let mut nats_sub = match nats.subscribe(subject.clone()).await {
@@ -524,20 +554,23 @@ async fn handle_agent_socket(
                 &locale,
                 "Failed to subscribe agent session",
             );
-            let _ = ws_tx.send(Message::Text(err.to_string().into())).await;
+            let _ = outbound_tx.send(Message::Text(err.to_string().into()));
+            drop(outbound_tx);
+            let _ = writer.await;
             return;
         }
     };
 
+    state.hub.register(agent_id, outbound_tx.clone()).await;
     tracing::info!("agent {agent_id} connected, subscribed to {subject}");
     crate::metrics::ws_connection_opened();
 
+    let outbound_tx_nats = outbound_tx.clone();
     let nats_to_ws = async {
         while let Some(msg) = nats_sub.next().await {
             let payload = String::from_utf8_lossy(&msg.payload);
-            if ws_tx
+            if outbound_tx_nats
                 .send(Message::Text(payload.into_owned().into()))
-                .await
                 .is_err()
             {
                 break;
@@ -600,6 +633,9 @@ async fn handle_agent_socket(
         _ = ws_to_server => {}
     }
 
+    state.hub.unregister(agent_id, &outbound_tx).await;
+    drop(outbound_tx);
+    let _ = writer.await;
     crate::metrics::ws_connection_closed();
     tracing::info!("agent {agent_id} disconnected");
 }
@@ -632,6 +668,7 @@ async fn relay_agent_stream_message(
                 msg.stream_id,
                 StreamRelayState {
                     conversation_id: msg.conversation_id,
+                    thread_id: msg.thread_id,
                     started_at: Instant::now(),
                     bytes_sent: bytes,
                 },
@@ -642,6 +679,43 @@ async fn relay_agent_stream_message(
                 .hub
                 .send_to_conversation(msg.conversation_id, user_ids, &payload)
                 .await;
+
+            broadcast_agent_typing(
+                state,
+                msg.conversation_id,
+                msg.thread_id,
+                msg.agent_id,
+                true,
+            )
+            .await?;
+        }
+        AgentStreamMsg::AgentTypingStart(msg) => {
+            require_v(msg.v)?;
+            if msg.agent_id != agent_id {
+                anyhow::bail!("agent_id mismatch for typing_start in conversation {}", msg.conversation_id);
+            }
+            broadcast_agent_typing(
+                state,
+                msg.conversation_id,
+                msg.thread_id,
+                msg.agent_id,
+                true,
+            )
+            .await?;
+        }
+        AgentStreamMsg::AgentTypingEnd(msg) => {
+            require_v(msg.v)?;
+            if msg.agent_id != agent_id {
+                anyhow::bail!("agent_id mismatch for typing_end in conversation {}", msg.conversation_id);
+            }
+            broadcast_agent_typing(
+                state,
+                msg.conversation_id,
+                msg.thread_id,
+                msg.agent_id,
+                false,
+            )
+            .await?;
         }
         AgentStreamMsg::ContentDelta(msg) => {
             require_v(msg.v)?;
@@ -655,6 +729,46 @@ async fn relay_agent_stream_message(
                 msg.stream_id,
                 ServerMessage::ContentDelta(msg),
                 false,
+                agent_id,
+            )
+            .await?;
+        }
+        AgentStreamMsg::ToolCallStart(msg) => {
+            require_v(msg.v)?;
+            persist_tool_call_start(state, agent_id, &msg).await?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::ToolCallStart(msg),
+                false,
+                agent_id,
+            )
+            .await?;
+        }
+        AgentStreamMsg::ToolCallResult(msg) => {
+            require_v(msg.v)?;
+            persist_tool_call_result(state, &msg).await?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::ToolCallResult(msg),
+                false,
+                agent_id,
+            )
+            .await?;
+        }
+        AgentStreamMsg::ToolCallEnd(msg) => {
+            require_v(msg.v)?;
+            persist_tool_call_end(state, &msg).await?;
+            relay_stream_frame(
+                state,
+                stream_states,
+                msg.stream_id,
+                ServerMessage::ToolCallEnd(msg),
+                false,
+                agent_id,
             )
             .await?;
         }
@@ -666,6 +780,7 @@ async fn relay_agent_stream_message(
                 msg.stream_id,
                 ServerMessage::ToolStart(msg),
                 false,
+                agent_id,
             )
             .await?;
         }
@@ -677,19 +792,27 @@ async fn relay_agent_stream_message(
                 msg.stream_id,
                 ServerMessage::ToolEnd(msg),
                 false,
+                agent_id,
             )
             .await?;
         }
         AgentStreamMsg::StreamEnd(msg) => {
             require_v(msg.v)?;
+            let typing_context = stream_states
+                .get(&msg.stream_id)
+                .map(|state| (state.conversation_id, state.thread_id));
             relay_stream_frame(
                 state,
                 stream_states,
                 msg.stream_id,
                 ServerMessage::StreamEnd(msg),
                 true,
+                agent_id,
             )
             .await?;
+            if let Some((conversation_id, thread_id)) = typing_context {
+                broadcast_agent_typing(state, conversation_id, thread_id, agent_id, false).await?;
+            }
         }
     }
 
@@ -725,6 +848,7 @@ async fn relay_stream_frame(
     stream_id: Uuid,
     frame: ServerMessage,
     finalize: bool,
+    agent_id: Uuid,
 ) -> anyhow::Result<()> {
     let payload = serde_json::to_string(&frame)?;
     let payload_len = payload.len();
@@ -752,6 +876,14 @@ async fn relay_stream_frame(
             .hub
             .send_to_conversation(current.conversation_id, user_ids, &end_payload)
             .await;
+        broadcast_agent_typing(
+            state,
+            current.conversation_id,
+            current.thread_id,
+            agent_id,
+            false,
+        )
+        .await?;
         return Ok(());
     }
 
@@ -769,6 +901,95 @@ async fn relay_stream_frame(
         stream_states.remove(&stream_id);
     }
 
+    Ok(())
+}
+
+async fn broadcast_agent_typing(
+    state: &AppState,
+    conversation_id: Uuid,
+    thread_id: Option<Uuid>,
+    agent_id: Uuid,
+    is_start: bool,
+) -> anyhow::Result<()> {
+    let frame = if is_start {
+        ServerMessage::AgentTypingStart(paw_proto::AgentTypingEventMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            thread_id,
+            agent_id,
+        })
+    } else {
+        ServerMessage::AgentTypingEnd(paw_proto::AgentTypingEventMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            thread_id,
+            agent_id,
+        })
+    };
+
+    let payload = serde_json::to_string(&frame)?;
+    let user_ids = conversation_members(state, conversation_id).await?;
+    state
+        .hub
+        .send_to_conversation(conversation_id, user_ids, &payload)
+        .await;
+    Ok(())
+}
+
+async fn persist_tool_call_start(
+    state: &AppState,
+    agent_id: Uuid,
+    msg: &paw_proto::ToolCallStartMsg,
+) -> anyhow::Result<()> {
+    sqlx::query(
+        "INSERT INTO agent_tool_calls (id, message_id, agent_id, tool_name, arguments, result, status, started_at, completed_at)
+         VALUES ($1, NULL, $2, $3, $4, NULL, 'started', NOW(), NULL)
+         ON CONFLICT (id) DO UPDATE
+         SET agent_id = EXCLUDED.agent_id,
+             tool_name = EXCLUDED.tool_name,
+             arguments = EXCLUDED.arguments,
+             status = 'started',
+             started_at = NOW(),
+             completed_at = NULL",
+    )
+    .bind(&msg.id)
+    .bind(agent_id)
+    .bind(&msg.name)
+    .bind(&msg.arguments_json)
+    .execute(state.db.as_ref())
+    .await?;
+    Ok(())
+}
+
+async fn persist_tool_call_result(
+    state: &AppState,
+    msg: &paw_proto::ToolCallResultMsg,
+) -> anyhow::Result<()> {
+    let status = if msg.is_error { "error" } else { "running" };
+    sqlx::query(
+        "UPDATE agent_tool_calls
+         SET result = $2,
+             status = $3
+         WHERE id = $1",
+    )
+    .bind(&msg.id)
+    .bind(&msg.result_json)
+    .bind(status)
+    .execute(state.db.as_ref())
+    .await?;
+    Ok(())
+}
+
+async fn persist_tool_call_end(state: &AppState, msg: &paw_proto::ToolCallEndMsg) -> anyhow::Result<()> {
+    sqlx::query(
+        "UPDATE agent_tool_calls
+         SET status = CASE WHEN status = 'error' THEN 'error' ELSE 'completed' END,
+             completed_at = NOW()
+         WHERE id = $1",
+    )
+    .bind(&msg.id)
+    .execute(state.db.as_ref())
+    .await?;
     Ok(())
 }
 
