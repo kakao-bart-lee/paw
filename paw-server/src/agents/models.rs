@@ -32,6 +32,14 @@ pub struct RevokeAgentResponse {
     pub revoked: bool,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Serialize)]
+pub struct RotateAgentKeyResponse {
+    pub agent_id: Uuid,
+    pub rotated: bool,
+    pub api_key: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InviteAgentRequest {
     pub agent_id: Uuid,

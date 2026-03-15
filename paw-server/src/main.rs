@@ -1,3 +1,4 @@
+mod admin;
 mod agents;
 mod auth;
 mod backup;
@@ -69,13 +70,18 @@ async fn main() -> anyhow::Result<()> {
 
     let prometheus_handle = metrics::init_metrics();
 
+    let agent_limiter = rate_limit::agent_limiter_from_env();
+    let otp_attempt_guard = auth::otp_attempts::OtpAttemptGuard::default();
+
     let state = AppState {
         db: db.clone(),
         jwt_secret,
         default_locale,
         hub: hub.clone(),
+        agent_limiter,
         media_service,
         nats: nats_client,
+        otp_attempt_guard,
     };
 
     tokio::spawn(ws::pg_listener::start_pg_listener(db.clone(), hub));
@@ -266,6 +272,52 @@ async fn main() -> anyhow::Result<()> {
         .route(
             "/api/v1/admin/reports",
             get(moderation::handlers::list_pending_reports),
+        )
+        // --- Admin RBAC API ---
+        .route(
+            "/api/v1/admin/users",
+            get(admin::handlers::list_users),
+        )
+        .route(
+            "/api/v1/admin/users/{id}",
+            get(admin::handlers::get_user_detail),
+        )
+        .route(
+            "/api/v1/admin/agents/pending",
+            get(admin::handlers::list_pending_agents),
+        )
+        .route(
+            "/api/v1/admin/agents/{id}/approve",
+            post(admin::handlers::approve_agent),
+        )
+        .route(
+            "/api/v1/admin/agents/{id}/reject",
+            post(admin::handlers::reject_agent),
+        )
+        .route(
+            "/api/v1/admin/agents/{id}",
+            delete(admin::handlers::deactivate_agent),
+        )
+        .route(
+            "/api/v1/admin/reports/{id}/resolve",
+            post(admin::handlers::resolve_report),
+        )
+        .route(
+            "/api/v1/admin/spam-patterns",
+            get(admin::handlers::list_spam_patterns)
+                .post(admin::handlers::create_spam_pattern),
+        )
+        .route(
+            "/api/v1/admin/spam-patterns/{id}",
+            delete(admin::handlers::delete_spam_pattern),
+        )
+        .route(
+            "/api/v1/admin/metrics/dashboard",
+            get(admin::handlers::dashboard_metrics),
+        )
+        .route(
+            "/api/v1/admin/audit-logs",
+            get(admin::handlers::list_audit_logs),
         )
         .route(
             "/api/v1/push/register",

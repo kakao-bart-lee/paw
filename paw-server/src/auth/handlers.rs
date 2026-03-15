@@ -1,11 +1,12 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, http::HeaderMap, Extension, Json};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::Row;
 use uuid::Uuid;
 
-use super::{device, jwt, otp, AppState};
+use super::middleware::UserId;
+use super::{device, jwt, otp, otp_attempts, AppState};
 use crate::i18n::{error_response, error_response_with_details, RequestLocale};
 
 #[derive(Debug, Deserialize)]
@@ -33,6 +34,43 @@ pub struct RefreshTokenRequest {
 
 fn valid_phone(phone: &str) -> bool {
     phone.starts_with('+') && phone.len() >= 8
+}
+
+fn extract_client_ip(headers: &HeaderMap) -> String {
+    if let Some(forwarded) = headers
+        .get("x-forwarded-for")
+        .and_then(|value| value.to_str().ok())
+    {
+        if let Some(first) = forwarded.split(',').next() {
+            let ip = first.trim();
+            if !ip.is_empty() {
+                return ip.to_owned();
+            }
+        }
+    }
+
+    if let Some(real_ip) = headers
+        .get("x-real-ip")
+        .and_then(|value| value.to_str().ok())
+    {
+        let ip = real_ip.trim();
+        if !ip.is_empty() {
+            return ip.to_owned();
+        }
+    }
+
+    "unknown".to_owned()
+}
+
+fn otp_locked_response(retry_after: u64) -> (axum::http::StatusCode, Json<Value>) {
+    (
+        axum::http::StatusCode::TOO_MANY_REQUESTS,
+        Json(json!({
+            "code": "otp_locked",
+            "message": "Too many attempts",
+            "retry_after": retry_after,
+        })),
+    )
 }
 
 pub async fn request_otp(
@@ -96,8 +134,11 @@ pub async fn request_otp(
 pub async fn verify_otp(
     State(state): State<AppState>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    headers: HeaderMap,
     Json(payload): Json<VerifyOtpRequest>,
 ) -> (axum::http::StatusCode, Json<Value>) {
+    let attempt_guard = otp_attempts::otp_attempt_guard();
+
     if !valid_phone(&payload.phone) {
         return error_response(
             axum::http::StatusCode::BAD_REQUEST,
@@ -115,6 +156,12 @@ pub async fn verify_otp(
             "OTP must be a 6-digit code",
         );
     }
+
+    if let Some(retry_after) = attempt_guard.retry_after_seconds(&payload.phone) {
+        return otp_locked_response(retry_after);
+    }
+
+    let client_ip = extract_client_ip(&headers);
 
     let mut tx = match state.db.begin().await {
         Ok(tx) => tx,
@@ -151,6 +198,10 @@ pub async fn verify_otp(
             )
         }
     }) else {
+        if let Some(retry_after) = attempt_guard.record_failure(&payload.phone, &client_ip) {
+            return otp_locked_response(retry_after);
+        }
+
         return error_response(
             axum::http::StatusCode::BAD_REQUEST,
             "invalid_otp",
@@ -164,6 +215,10 @@ pub async fn verify_otp(
     let used_at = otp_row.get::<Option<chrono::DateTime<Utc>>, _>("used_at");
 
     if used_at.is_some() || expires_at <= Utc::now() {
+        if let Some(retry_after) = attempt_guard.record_failure(&payload.phone, &client_ip) {
+            return otp_locked_response(retry_after);
+        }
+
         return error_response(
             axum::http::StatusCode::BAD_REQUEST,
             "invalid_otp",
@@ -181,12 +236,16 @@ pub async fn verify_otp(
     match mark_used {
         Ok(result) if result.rows_affected() == 1 => {}
         _ => {
+            if let Some(retry_after) = attempt_guard.record_failure(&payload.phone, &client_ip) {
+                return otp_locked_response(retry_after);
+            }
+
             return error_response(
                 axum::http::StatusCode::BAD_REQUEST,
                 "otp_already_used",
                 &locale,
                 "OTP has already been used",
-            )
+            );
         }
     }
 
@@ -223,6 +282,8 @@ pub async fn verify_otp(
         );
     }
 
+    attempt_guard.reset_phone(&payload.phone);
+
     let session_token = match jwt::issue_session_token(user_id, &state.jwt_secret) {
         Ok(token) => token,
         Err(_) => {
@@ -258,11 +319,14 @@ pub async fn register_device(
         );
     }
 
-    let claims = match jwt::verify_token(
+    let claims = match jwt::verify_token_with_revocation(
         &payload.session_token,
         &state.jwt_secret,
         Some(jwt::TOKEN_TYPE_SESSION),
-    ) {
+        &state.db,
+    )
+    .await
+    {
         Ok(claims) => claims,
         Err(_) => {
             return error_response(
@@ -350,11 +414,14 @@ pub async fn refresh_token(
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Json(payload): Json<RefreshTokenRequest>,
 ) -> (axum::http::StatusCode, Json<Value>) {
-    let claims = match jwt::verify_token(
+    let claims = match jwt::verify_token_with_revocation(
         &payload.refresh_token,
         &state.jwt_secret,
         Some(jwt::TOKEN_TYPE_REFRESH),
-    ) {
+        &state.db,
+    )
+    .await
+    {
         Ok(claims) => claims,
         Err(_) => {
             return error_response(
@@ -383,6 +450,40 @@ pub async fn refresh_token(
         axum::http::StatusCode::OK,
         Json(json!({
             "access_token": access_token,
+        })),
+    )
+}
+
+#[allow(dead_code)]
+pub async fn revoke_all_sessions(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(user_id): Extension<UserId>,
+) -> (axum::http::StatusCode, Json<Value>) {
+    let token_revoked_at = sqlx::query_scalar::<_, chrono::DateTime<Utc>>(
+        "UPDATE users SET token_revoked_at = NOW() WHERE id = $1 RETURNING token_revoked_at",
+    )
+    .bind(user_id.0)
+    .fetch_one(state.db.as_ref())
+    .await;
+
+    let token_revoked_at = match token_revoked_at {
+        Ok(value) => value,
+        Err(_) => {
+            return error_response(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "session_revoke_failed",
+                &locale,
+                "Failed to revoke sessions",
+            )
+        }
+    };
+
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "revoked": true,
+            "token_revoked_at": token_revoked_at,
         })),
     )
 }
