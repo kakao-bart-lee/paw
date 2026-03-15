@@ -32,6 +32,13 @@ pub struct RevokeAgentResponse {
     pub revoked: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct RotateAgentKeyResponse {
+    pub agent_id: Uuid,
+    pub rotated: bool,
+    pub api_key: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InviteAgentRequest {
     pub agent_id: Uuid,
@@ -245,6 +252,16 @@ mod tests {
         let json2 = serde_json::to_string(&uninstall).unwrap();
         let parsed2: serde_json::Value = serde_json::from_str(&json2).unwrap();
         assert_eq!(parsed2["uninstalled"], true);
+
+        let rotated = RotateAgentKeyResponse {
+            agent_id: Uuid::nil(),
+            rotated: true,
+            api_key: "paw_agent_test_key".to_string(),
+        };
+        let json3 = serde_json::to_string(&rotated).unwrap();
+        let parsed3: serde_json::Value = serde_json::from_str(&json3).unwrap();
+        assert_eq!(parsed3["rotated"], true);
+        assert_eq!(parsed3["api_key"], "paw_agent_test_key");
     }
 
     #[test]
