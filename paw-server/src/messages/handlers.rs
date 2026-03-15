@@ -1,9 +1,10 @@
 use crate::auth::{middleware::UserId, AppState};
 use crate::i18n::{error_response, RequestLocale};
+use crate::link_preview;
 use crate::messages::{
     models::{
         AddMemberRequest, ConversationListItem, Message, RemoveMemberResponse,
-        UpdateGroupNameRequest,
+        UpdateGroupNameRequest, UpdateMemberRoleRequest, UpdateMemberRoleResponse,
     },
     service::{self, GroupManagementError, Membership},
 };
@@ -31,6 +32,12 @@ pub struct SendMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ForwardMessageRequest {
+    pub original_message_id: Uuid,
+    pub source_conversation_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct GetMessagesQuery {
     pub after_seq: Option<i64>,
     pub limit: Option<i64>,
@@ -51,6 +58,16 @@ pub struct GetMessagesResponse {
 #[derive(Debug, Serialize)]
 pub struct DeleteMessageResponse {
     pub deleted: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TriggerMessagePreviewResponse {
+    pub queued: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GetMessagePreviewResponse {
+    pub previews: Vec<link_preview::LinkPreviewRecord>,
 }
 
 #[derive(Debug, Serialize)]
@@ -177,6 +194,24 @@ pub async fn send_message(
                 }
             });
 
+            let preview_state = state.clone();
+            let preview_content = payload.content.trim().to_owned();
+            let preview_message_id = created.id;
+
+            tokio::spawn(async move {
+                if let Err(err) = preview_state
+                    .link_preview_service
+                    .generate_and_store_for_message(
+                        &preview_state.db,
+                        preview_message_id,
+                        &preview_content,
+                    )
+                    .await
+                {
+                    tracing::warn!(%err, message_id = %preview_message_id, "async link preview generation failed");
+                }
+            });
+
             Json(created).into_response()
         }
         Err(err) => {
@@ -198,6 +233,153 @@ pub async fn send_message(
                 )
                 .into_response(),
             }
+        }
+    }
+}
+
+pub async fn trigger_message_preview(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(message_id): Path<Uuid>,
+) -> Response {
+    let message = match link_preview::find_message_for_user(&state.db, message_id, user_id).await {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "not_found",
+                &locale,
+                "Message not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, user_id = %user_id, "failed to load message for link preview trigger");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "preview_trigger_failed",
+                &locale,
+                "Could not queue message preview",
+            )
+            .into_response();
+        }
+    };
+
+    let preview_state = state.clone();
+    tokio::spawn(async move {
+        if let Err(err) = preview_state
+            .link_preview_service
+            .generate_and_store_for_message(&preview_state.db, message.message_id, &message.content)
+            .await
+        {
+            tracing::warn!(%err, message_id = %message.message_id, "manual link preview generation failed");
+        }
+    });
+
+    (
+        StatusCode::ACCEPTED,
+        Json(TriggerMessagePreviewResponse { queued: true }),
+    )
+        .into_response()
+}
+
+pub async fn get_message_preview(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(message_id): Path<Uuid>,
+) -> Response {
+    match link_preview::find_message_for_user(&state.db, message_id, user_id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "not_found",
+                &locale,
+                "Message not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, user_id = %user_id, "failed to load message for link preview read");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "preview_fetch_failed",
+                &locale,
+                "Could not load message preview",
+            )
+            .into_response();
+        }
+    }
+
+    let previews = match link_preview::list_cached_previews(&state.db, message_id).await {
+        Ok(rows) => rows,
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, "failed to query link previews");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "preview_fetch_failed",
+                &locale,
+                "Could not load message preview",
+            )
+            .into_response();
+        }
+    };
+
+    Json(GetMessagePreviewResponse { previews }).into_response()
+}
+
+pub async fn forward_message(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(target_conv_id): Path<Uuid>,
+    Json(payload): Json<ForwardMessageRequest>,
+) -> Response {
+    match ensure_membership(&state, target_conv_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match ensure_membership(&state, payload.source_conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    match service::forward_message(
+        &state.db,
+        target_conv_id,
+        payload.source_conversation_id,
+        user_id,
+        payload.original_message_id,
+    )
+    .await
+    {
+        Ok(Some(created)) => Json(created).into_response(),
+        Ok(None) => error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            &locale,
+            "Original message not found",
+        )
+        .into_response(),
+        Err(err) => {
+            tracing::error!(
+                %err,
+                target_conversation_id = %target_conv_id,
+                source_conversation_id = %payload.source_conversation_id,
+                original_message_id = %payload.original_message_id,
+                sender_id = %user_id,
+                "message forward failed"
+            );
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "message_forward_failed",
+                &locale,
+                "Could not forward message",
+            )
+            .into_response()
         }
     }
 }
@@ -552,6 +734,27 @@ pub async fn update_group_name_handler(
     }
 }
 
+pub async fn update_member_role_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, target_user_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<UpdateMemberRoleRequest>,
+) -> Response {
+    match service::update_member_role(
+        &state.db,
+        conversation_id,
+        user_id,
+        target_user_id,
+        &payload.role,
+    )
+    .await
+    {
+        Ok(updated) => Json(UpdateMemberRoleResponse { updated }).into_response(),
+        Err(err) => group_management_error_to_response(err, &locale).into_response(),
+    }
+}
+
 async fn ensure_membership(
     state: &AppState,
     conv_id: Uuid,
@@ -602,6 +805,12 @@ fn group_management_error_to_response(
             locale,
             "Conversation not found",
         ),
+        GroupManagementError::NotGroupConversation => error(
+            StatusCode::BAD_REQUEST,
+            "not_group_conversation",
+            locale,
+            "This operation is only allowed for group conversations",
+        ),
         GroupManagementError::NotAuthorized => error(
             StatusCode::FORBIDDEN,
             "forbidden",
@@ -626,17 +835,29 @@ fn group_management_error_to_response(
             locale,
             "Conversation member not found",
         ),
-        GroupManagementError::CannotRemoveLastOwner => error(
+        GroupManagementError::CannotRemoveLastAdmin => error(
             StatusCode::FORBIDDEN,
-            "cannot_remove_last_owner",
+            "cannot_remove_last_admin",
             locale,
-            "Cannot remove the last owner from conversation",
+            "Cannot remove the last admin from conversation",
+        ),
+        GroupManagementError::CannotDemoteLastAdmin => error(
+            StatusCode::FORBIDDEN,
+            "cannot_demote_last_admin",
+            locale,
+            "Cannot demote the last admin in conversation",
         ),
         GroupManagementError::InvalidGroupName => error(
             StatusCode::BAD_REQUEST,
             "invalid_group_name",
             locale,
             "Group name is required",
+        ),
+        GroupManagementError::InvalidRole => error(
+            StatusCode::BAD_REQUEST,
+            "invalid_role",
+            locale,
+            "role must be either admin or member",
         ),
     }
 }

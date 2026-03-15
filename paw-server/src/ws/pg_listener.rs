@@ -1,6 +1,9 @@
 use crate::db::DbPool;
 use crate::ws::hub::Hub;
-use paw_proto::{MessageFormat, MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION};
+use paw_proto::{
+    ForwardedFromMsg, MessageFormat, MessageForwardedMsg, MessageReceivedMsg, ServerMessage,
+    PROTOCOL_VERSION,
+};
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -36,26 +39,51 @@ pub async fn start_pg_listener(pool: DbPool, hub: Arc<Hub>) {
             }
         };
 
-        let Some(message) = payload_to_message(&payload) else {
-            tracing::warn!(
-                payload = notification.payload(),
-                "pg_notify payload missing fields"
-            );
-            continue;
+        let frame = if let Some(message) = payload_to_forwarded_message(&payload) {
+            match serde_json::to_string(&ServerMessage::MessageForwarded(message)) {
+                Ok(frame) => frame,
+                Err(err) => {
+                    tracing::error!(%err, "failed to serialize message_forwarded frame");
+                    continue;
+                }
+            }
+        } else {
+            let Some(message) = payload_to_message(&payload) else {
+                tracing::warn!(
+                    payload = notification.payload(),
+                    "pg_notify payload missing fields"
+                );
+                continue;
+            };
+
+            match serde_json::to_string(&ServerMessage::MessageReceived(message)) {
+                Ok(frame) => frame,
+                Err(err) => {
+                    tracing::error!(%err, "failed to serialize message_received frame");
+                    continue;
+                }
+            }
         };
 
-        let members = match conversation_members(pool.as_ref(), message.conversation_id).await {
-            Ok(members) => members,
-            Err(err) => {
-                tracing::error!(%err, conversation_id = %message.conversation_id, "failed to load conversation members");
+        let conversation_id = match payload
+            .get("conversation_id")
+            .and_then(|value| value.as_str())
+            .and_then(parse_uuid)
+        {
+            Some(conversation_id) => conversation_id,
+            None => {
+                tracing::warn!(
+                    payload = notification.payload(),
+                    "pg_notify payload missing conversation_id"
+                );
                 continue;
             }
         };
 
-        let frame = match serde_json::to_string(&ServerMessage::MessageReceived(message)) {
-            Ok(frame) => frame,
+        let members = match conversation_members(pool.as_ref(), conversation_id).await {
+            Ok(members) => members,
             Err(err) => {
-                tracing::error!(%err, "failed to serialize message_received frame");
+                tracing::error!(%err, conversation_id = %conversation_id, "failed to load conversation members");
                 continue;
             }
         };
@@ -123,6 +151,37 @@ fn payload_to_message(payload: &serde_json::Value) -> Option<MessageReceivedMsg>
         seq,
         created_at,
         blocks,
+    })
+}
+
+fn payload_to_forwarded_message(payload: &serde_json::Value) -> Option<MessageForwardedMsg> {
+    let forwarded_from_value = payload.get("forwarded_from")?;
+    let forwarded_from = parse_forwarded_from(forwarded_from_value)?;
+    let base = payload_to_message(payload)?;
+
+    Some(MessageForwardedMsg {
+        v: base.v,
+        id: base.id,
+        conversation_id: base.conversation_id,
+        thread_id: base.thread_id,
+        sender_id: base.sender_id,
+        content: base.content,
+        format: base.format,
+        seq: base.seq,
+        created_at: base.created_at,
+        blocks: base.blocks,
+        forwarded_from,
+    })
+}
+
+fn parse_forwarded_from(value: &serde_json::Value) -> Option<ForwardedFromMsg> {
+    Some(ForwardedFromMsg {
+        message_id: value.get("message_id")?.as_str().and_then(parse_uuid)?,
+        conversation_id: value
+            .get("conversation_id")?
+            .as_str()
+            .and_then(parse_uuid)?,
+        sender_id: value.get("sender_id")?.as_str().and_then(parse_uuid)?,
     })
 }
 

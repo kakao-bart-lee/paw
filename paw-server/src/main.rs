@@ -5,6 +5,7 @@ mod channels;
 mod db;
 mod i18n;
 mod keys;
+mod link_preview;
 mod media;
 mod messages;
 mod metrics;
@@ -69,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
     let db = db::create_pool(&database_url).await?;
     let hub = Arc::new(ws::hub::Hub::new());
     let media_service = Arc::new(media::service::MediaService::new_from_env().await);
+    let link_preview_service = Arc::new(link_preview::LinkPreviewService::new()?);
 
     let nats_url =
         std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:34223".to_string());
@@ -94,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
         hub: hub.clone(),
         agent_limiter: agent_limiter.clone(),
         media_service,
+        link_preview_service,
         nats: nats_client,
     };
 
@@ -133,7 +136,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .route(
             "/conversations/{id}/members/{user_id}",
-            delete(messages::handlers::remove_member_handler),
+            delete(messages::handlers::remove_member_handler)
+                .patch(messages::handlers::update_member_role_handler),
         )
         .route(
             "/conversations/{id}/agents",
@@ -168,25 +172,21 @@ async fn main() -> anyhow::Result<()> {
             delete(messages::handlers::delete_message),
         )
         .route(
-            "/conversations/{conv_id}/threads",
+            "/messages/{id}/preview",
+            get(messages::handlers::get_message_preview)
+                .post(messages::handlers::trigger_message_preview),
+        )
+        .route(
+            "/conversations/{id}/threads",
             get(threads::handlers::list_threads).post(threads::handlers::create_thread),
         )
         .route(
-            "/conversations/{conv_id}/threads/{thread_id}",
-            get(threads::handlers::get_thread).delete(threads::handlers::delete_thread),
+            "/conversations/{id}/threads/{thread_id}",
+            get(threads::handlers::get_thread).patch(threads::handlers::update_thread_title),
         )
         .route(
-            "/conversations/{conv_id}/threads/{thread_id}/messages",
-            get(threads::handlers::list_thread_messages)
-                .post(threads::handlers::send_thread_message),
-        )
-        .route(
-            "/conversations/{conv_id}/threads/{thread_id}/agents",
-            get(threads::handlers::list_thread_agents).post(threads::handlers::bind_agent),
-        )
-        .route(
-            "/conversations/{conv_id}/threads/{thread_id}/agents/{agent_id}",
-            delete(threads::handlers::unbind_agent),
+            "/conversations/{id}/threads/{thread_id}/archive",
+            post(threads::handlers::archive_thread),
         )
         .route("/api/v1/channels", post(channels::handlers::create_channel))
         .route("/api/v1/channels", get(channels::handlers::list_channels))
