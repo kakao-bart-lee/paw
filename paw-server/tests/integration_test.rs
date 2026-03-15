@@ -388,6 +388,62 @@ async fn auth_full_flow_request_verify_register() {
     assert_eq!(resp.status(), 200);
 }
 
+#[tokio::test]
+#[ignore = "requires running paw-server with a valid account-deletion token"]
+async fn users_delete_me_success() {
+    let client = reqwest::Client::new();
+    let token = std::env::var("PAW_TEST_DELETE_TOKEN").unwrap_or_else(|_| "test_token".into());
+
+    let resp = client
+        .delete("http://localhost:38173/users/me")
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("server must be reachable");
+
+    assert_eq!(resp.status(), 204);
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server"]
+async fn users_delete_me_unauthorized_without_token() {
+    let client = reqwest::Client::new();
+
+    let resp = client
+        .delete("http://localhost:38173/users/me")
+        .send()
+        .await
+        .expect("server must be reachable");
+
+    assert_eq!(resp.status(), 401);
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server with dedicated deletion tokens for one account"]
+async fn users_delete_me_is_idempotent() {
+    let client = reqwest::Client::new();
+    let first_token =
+        std::env::var("PAW_TEST_DELETE_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let second_token =
+        std::env::var("PAW_TEST_DELETE_TOKEN_SECOND").unwrap_or_else(|_| first_token.clone());
+
+    let first = client
+        .delete("http://localhost:38173/users/me")
+        .bearer_auth(&first_token)
+        .send()
+        .await
+        .expect("server must be reachable");
+    assert_eq!(first.status(), 204);
+
+    let second = client
+        .delete("http://localhost:38173/users/me")
+        .bearer_auth(&second_token)
+        .send()
+        .await
+        .expect("server must be reachable");
+    assert_eq!(second.status(), 204);
+}
+
 // ── Integration: Message relay via HTTP (requires running server) ───────
 
 #[tokio::test]
