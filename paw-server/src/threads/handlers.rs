@@ -12,8 +12,8 @@ use super::{
     service::{self, CreateThreadError},
 };
 use crate::auth::{middleware::UserId, AppState};
-use crate::context_engine::LifecycleHooks;
 use crate::context_engine::models::ThreadCreatedHook;
+use crate::context_engine::LifecycleHooks;
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::service::{self as message_service, Membership};
 use chrono::Utc;

@@ -1,17 +1,18 @@
-use crate::auth::{middleware::UserId, AppState};
 use crate::agents::permissions::{check_agent_permission, AgentPermission};
-use crate::context_engine::LifecycleHooks;
+use crate::auth::{middleware::UserId, AppState};
 use crate::context_engine::models::{
-    ConversationSettingsChangedHook, MemberJoinedHook, MemberLeftHook, MessageDeletedHook,
-    MessageCreatedHook,
+    ConversationSettingsChangedHook, MemberJoinedHook, MemberLeftHook, MessageCreatedHook,
+    MessageDeletedHook,
 };
+use crate::context_engine::LifecycleHooks;
 use crate::i18n::{error_response, RequestLocale};
 use crate::messages::{
     models::{
-        AddMemberRequest, ConversationListItem, ForwardedFromMetadata, Message, RemoveMemberResponse,
-        UpdateGroupNameRequest, UpdateMemberRoleRequest, UpdateMemberRoleResponse,
+        AddMemberRequest, ConversationListItem, ForwardedFromMetadata, Message,
+        MessageAttachmentRecord, RemoveMemberResponse, UpdateGroupNameRequest,
+        UpdateMemberRoleRequest, UpdateMemberRoleResponse,
     },
-    service::{self, GroupManagementError, Membership},
+    service::{self, GroupManagementError, Membership, NewMessageAttachment},
 };
 use crate::moderation;
 use crate::push;
@@ -22,10 +23,14 @@ use axum::{
     Json,
 };
 use chrono::Utc;
-use paw_proto::{InboundContext, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION};
+use paw_proto::{
+    InboundContext, MessageAttachment, MessageFormat, MessageReceivedMsg, PROTOCOL_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::collections::HashSet;
+use std::sync::OnceLock;
 use uuid::Uuid;
 
 type ApiResult<T> = Result<Json<T>, (StatusCode, Json<Value>)>;
@@ -35,6 +40,8 @@ pub struct SendMessageRequest {
     pub content: String,
     pub format: String,
     pub idempotency_key: Uuid,
+    #[serde(default)]
+    pub attachment_ids: Vec<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,6 +74,11 @@ pub struct DeleteMessageResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct MessageAttachmentsResponse {
+    pub attachments: Vec<MessageAttachment>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ListConversationsResponse {
     pub conversations: Vec<ConversationListItem>,
 }
@@ -87,6 +99,67 @@ pub struct UpdateGroupNameResponse {
     pub updated: bool,
 }
 
+const DEFAULT_TEXT_ATTACHMENT_MAX_BYTES: usize = 256 * 1024;
+const DEFAULT_IMAGE_ATTACHMENT_MAX_BYTES: i64 = 512 * 1024;
+
+static TEXT_ATTACHMENT_MAX_BYTES: OnceLock<usize> = OnceLock::new();
+static IMAGE_ATTACHMENT_MAX_BYTES: OnceLock<i64> = OnceLock::new();
+
+fn text_attachment_max_bytes() -> usize {
+    *TEXT_ATTACHMENT_MAX_BYTES.get_or_init(|| {
+        std::env::var("PAW_TEXT_ATTACHMENT_MAX_BYTES")
+            .ok()
+            .and_then(|raw| raw.parse::<usize>().ok())
+            .filter(|&value| value > 0)
+            .unwrap_or(DEFAULT_TEXT_ATTACHMENT_MAX_BYTES)
+    })
+}
+
+fn image_attachment_max_bytes() -> i64 {
+    *IMAGE_ATTACHMENT_MAX_BYTES.get_or_init(|| {
+        std::env::var("PAW_IMAGE_ATTACHMENT_MAX_BYTES")
+            .ok()
+            .and_then(|raw| raw.parse::<i64>().ok())
+            .filter(|&value| value > 0)
+            .unwrap_or(DEFAULT_IMAGE_ATTACHMENT_MAX_BYTES)
+    })
+}
+
+fn infer_message_file_type(media_type: &str, mime_type: &str) -> String {
+    if media_type.eq_ignore_ascii_case("image") || mime_type.starts_with("image/") {
+        return "image".to_owned();
+    }
+
+    if media_type.eq_ignore_ascii_case("video") || mime_type.starts_with("video/") {
+        return "video".to_owned();
+    }
+
+    if media_type.eq_ignore_ascii_case("audio") || mime_type.starts_with("audio/") {
+        return "audio".to_owned();
+    }
+
+    if mime_type.starts_with("text/") {
+        return "text".to_owned();
+    }
+
+    "file".to_owned()
+}
+
+fn is_text_attachment(file_type: &str, mime_type: &str) -> bool {
+    file_type.eq_ignore_ascii_case("text") || mime_type.starts_with("text/")
+}
+
+fn to_protocol_attachment(record: MessageAttachmentRecord) -> MessageAttachment {
+    MessageAttachment {
+        id: record.id,
+        file_type: record.file_type,
+        file_url: record.file_url,
+        file_size: record.file_size,
+        mime_type: record.mime_type,
+        thumbnail_url: record.thumbnail_url,
+    }
+}
+
 pub async fn send_message(
     State(state): State<AppState>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
@@ -94,12 +167,23 @@ pub async fn send_message(
     Path(conv_id): Path<Uuid>,
     Json(payload): Json<SendMessageRequest>,
 ) -> Response {
-    if payload.content.trim().is_empty() {
+    let trimmed_content = payload.content.trim();
+    if trimmed_content.is_empty() && payload.attachment_ids.is_empty() {
         return error(
             StatusCode::BAD_REQUEST,
             "invalid_content",
             &locale,
-            "Message content is required",
+            "Message content or attachments are required",
+        )
+        .into_response();
+    }
+
+    if trimmed_content.len() > text_attachment_max_bytes() {
+        return error(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "content_too_large",
+            &locale,
+            "Message content exceeds configured text size limit",
         )
         .into_response();
     }
@@ -130,6 +214,108 @@ pub async fn send_message(
         .into_response();
     }
 
+    let mut attachments_for_insert = Vec::new();
+    let mut attachment_frames = Vec::new();
+    if !payload.attachment_ids.is_empty() {
+        let mut unique_ids = Vec::with_capacity(payload.attachment_ids.len());
+        let mut seen = HashSet::with_capacity(payload.attachment_ids.len());
+        for id in &payload.attachment_ids {
+            if seen.insert(*id) {
+                unique_ids.push(*id);
+            }
+        }
+
+        let media_rows = match sqlx::query(
+            "SELECT id, media_type, mime_type, file_size, s3_key, thumbnail_s3_key
+             FROM media_attachments
+             WHERE id = ANY($1) AND uploader_id = $2",
+        )
+        .bind(&unique_ids)
+        .bind(user_id)
+        .fetch_all(state.db.as_ref())
+        .await
+        {
+            Ok(rows) => rows,
+            Err(err) => {
+                tracing::error!(%err, sender_id = %user_id, "failed to resolve attachment ids");
+                return error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "attachment_lookup_failed",
+                    &locale,
+                    "Could not resolve attachments",
+                )
+                .into_response();
+            }
+        };
+
+        if media_rows.len() != unique_ids.len() {
+            return error(
+                StatusCode::BAD_REQUEST,
+                "invalid_attachment_ids",
+                &locale,
+                "One or more attachment ids are invalid",
+            )
+            .into_response();
+        }
+
+        for row in media_rows {
+            let media_type = row
+                .try_get::<String, _>("media_type")
+                .unwrap_or_else(|_| "file".to_owned());
+            let mime_type = row
+                .try_get::<String, _>("mime_type")
+                .unwrap_or_else(|_| "application/octet-stream".to_owned());
+            let file_size = row.try_get::<i64, _>("file_size").unwrap_or(0);
+            let file_url = row
+                .try_get::<String, _>("s3_key")
+                .unwrap_or_else(|_| String::new());
+            let thumbnail_url = row
+                .try_get::<Option<String>, _>("thumbnail_s3_key")
+                .ok()
+                .flatten();
+            let file_type = infer_message_file_type(&media_type, &mime_type);
+
+            if file_type.eq_ignore_ascii_case("image") && file_size > image_attachment_max_bytes() {
+                return error(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "attachment_too_large",
+                    &locale,
+                    "Image attachment exceeds configured size limit",
+                )
+                .into_response();
+            }
+
+            if is_text_attachment(&file_type, &mime_type)
+                && file_size > text_attachment_max_bytes() as i64
+            {
+                return error(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "attachment_too_large",
+                    &locale,
+                    "Text attachment exceeds configured size limit",
+                )
+                .into_response();
+            }
+
+            attachments_for_insert.push(NewMessageAttachment {
+                file_type: file_type.clone(),
+                file_url: file_url.clone(),
+                file_size,
+                mime_type: mime_type.clone(),
+                thumbnail_url: thumbnail_url.clone(),
+            });
+
+            attachment_frames.push(MessageAttachment {
+                id: row.try_get("id").unwrap_or_else(|_| Uuid::new_v4()),
+                file_type,
+                file_url,
+                file_size,
+                mime_type,
+                thumbnail_url,
+            });
+        }
+    }
+
     match service::get_idempotent_message(&state.db, conv_id, user_id, payload.idempotency_key)
         .await
     {
@@ -147,19 +333,41 @@ pub async fn send_message(
         }
     }
 
-    match service::send_message(
+    match service::send_message_with_attachments(
         &state.db,
         conv_id,
         user_id,
         None,
-        payload.content.trim(),
+        trimmed_content,
         &format,
         payload.idempotency_key,
+        &attachments_for_insert,
     )
     .await
     {
         Ok(created) => {
             crate::metrics::record_message_sent();
+            let saved_attachments = service::get_message_attachments(&state.db, created.id)
+                .await
+                .unwrap_or_else(|_| {
+                    attachment_frames
+                        .into_iter()
+                        .map(|attachment| MessageAttachmentRecord {
+                            id: attachment.id,
+                            message_id: created.id,
+                            file_type: attachment.file_type,
+                            file_url: attachment.file_url,
+                            file_size: attachment.file_size,
+                            mime_type: attachment.mime_type,
+                            thumbnail_url: attachment.thumbnail_url,
+                            created_at: created.created_at,
+                        })
+                        .collect()
+                });
+            let created_attachments = saved_attachments
+                .into_iter()
+                .map(to_protocol_attachment)
+                .collect::<Vec<_>>();
             let db = state.db.clone();
             let hub = state.hub.clone();
             let notify_state = state.clone();
@@ -170,12 +378,12 @@ pub async fn send_message(
                 conversation_id: conv_id,
                 thread_id: None,
                 sender_id: user_id,
-                content: payload.content.trim().to_owned(),
+                content: trimmed_content.to_owned(),
                 format: to_message_format(&format),
                 seq: created.seq,
                 created_at: created.created_at,
                 blocks: Vec::new(),
-                attachments: Vec::new(),
+                attachments: created_attachments,
             };
 
             tokio::spawn(async move {
@@ -198,7 +406,7 @@ pub async fn send_message(
                     message_id: created.id,
                     thread_id: None,
                     sender_id: user_id,
-                    content: payload.content.trim().to_owned(),
+                    content: trimmed_content.to_owned(),
                     format,
                     seq: created.seq,
                     timestamp: created.created_at,
@@ -260,9 +468,23 @@ async fn notify_agents_of_message(
     .fetch_all(state.db.as_ref())
     .await?;
 
+    let message_ids = rows
+        .iter()
+        .filter_map(|row| row.try_get::<Uuid, _>("id").ok())
+        .collect::<Vec<_>>();
+    let mut attachments_by_message =
+        service::get_message_attachments_for_messages(&state.db, &message_ids).await?;
+
     let mut recent_messages = Vec::with_capacity(rows.len());
     for row in rows {
-        recent_messages.push(message_received_from_row(&row)?);
+        let message_id = row.try_get::<Uuid, _>("id")?;
+        let attachments = attachments_by_message
+            .remove(&message_id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(to_protocol_attachment)
+            .collect::<Vec<_>>();
+        recent_messages.push(message_received_from_row(&row, attachments)?);
     }
     recent_messages.reverse();
 
@@ -316,6 +538,7 @@ async fn notify_agents_of_message(
 
 fn message_received_from_row(
     row: &sqlx::postgres::PgRow,
+    attachments: Vec<MessageAttachment>,
 ) -> Result<MessageReceivedMsg, sqlx::Error> {
     let format_raw: Option<String> = row.try_get::<Option<String>, _>("format")?;
     let blocks_raw: Option<serde_json::Value> =
@@ -336,7 +559,7 @@ fn message_received_from_row(
         seq: row.try_get("seq")?,
         created_at: row.try_get("created_at")?,
         blocks,
-        attachments: Vec::new(),
+        attachments,
     })
 }
 
@@ -382,6 +605,68 @@ pub async fn get_messages(
     }
 
     Json(GetMessagesResponse { messages, has_more }).into_response()
+}
+
+pub async fn get_message_attachments(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path(message_id): Path<Uuid>,
+) -> Response {
+    let conversation_id = match sqlx::query_scalar::<_, Uuid>(
+        "SELECT conversation_id
+         FROM messages
+         WHERE id = $1",
+    )
+    .bind(message_id)
+    .fetch_optional(state.db.as_ref())
+    .await
+    {
+        Ok(Some(value)) => value,
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "message_not_found",
+                &locale,
+                "Message not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, "failed to load message conversation");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "attachment_lookup_failed",
+                &locale,
+                "Could not load message attachments",
+            )
+            .into_response();
+        }
+    };
+
+    match ensure_membership(&state, conversation_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    let attachments = match service::get_message_attachments(&state.db, message_id).await {
+        Ok(rows) => rows
+            .into_iter()
+            .map(to_protocol_attachment)
+            .collect::<Vec<_>>(),
+        Err(err) => {
+            tracing::error!(%err, message_id = %message_id, "failed to load message attachments");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "attachment_lookup_failed",
+                &locale,
+                "Could not load message attachments",
+            )
+            .into_response();
+        }
+    };
+
+    Json(MessageAttachmentsResponse { attachments }).into_response()
 }
 
 pub async fn forward_message(
@@ -925,5 +1210,28 @@ fn group_management_error_to_response(
             locale,
             "Conversation role is invalid",
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{infer_message_file_type, is_text_attachment};
+
+    #[test]
+    fn infer_message_file_type_detects_images() {
+        assert_eq!(infer_message_file_type("image", "image/png"), "image");
+        assert_eq!(infer_message_file_type("file", "image/jpeg"), "image");
+    }
+
+    #[test]
+    fn infer_message_file_type_detects_text() {
+        assert_eq!(infer_message_file_type("file", "text/plain"), "text");
+    }
+
+    #[test]
+    fn text_attachment_detection_uses_file_type_or_mime() {
+        assert!(is_text_attachment("text", "application/octet-stream"));
+        assert!(is_text_attachment("file", "text/markdown"));
+        assert!(!is_text_attachment("image", "image/png"));
     }
 }

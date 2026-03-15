@@ -46,7 +46,10 @@ impl Hub {
     #[cfg(test)]
     pub async fn connection_count(&self, user_id: Uuid) -> usize {
         let guard = self.connections.read().await;
-        guard.get(&user_id).map(|senders| senders.len()).unwrap_or(0)
+        guard
+            .get(&user_id)
+            .map(|senders| senders.len())
+            .unwrap_or(0)
     }
 
     pub async fn send_to_user(&self, user_id: Uuid, msg: &str) {
@@ -116,12 +119,8 @@ mod tests {
         let (tx1, mut rx1) = mpsc::unbounded_channel::<Message>();
         let (tx2, mut rx2) = mpsc::unbounded_channel::<Message>();
 
-        assert!(hub
-            .try_register_with_limit(user_id, tx1, usize::MAX)
-            .await);
-        assert!(hub
-            .try_register_with_limit(user_id, tx2, usize::MAX)
-            .await);
+        assert!(hub.try_register_with_limit(user_id, tx1, usize::MAX).await);
+        assert!(hub.try_register_with_limit(user_id, tx2, usize::MAX).await);
 
         hub.send_to_user(user_id, "{\"v\":1,\"type\":\"ping\"}")
             .await;
@@ -147,13 +146,12 @@ mod tests {
         let (tx2, _rx2) = mpsc::unbounded_channel::<Message>();
 
         assert_eq!(hub.connection_count(user_id).await, 0);
-        assert!(hub
-            .try_register_with_limit(user_id, tx1.clone(), usize::MAX)
-            .await);
+        assert!(
+            hub.try_register_with_limit(user_id, tx1.clone(), usize::MAX)
+                .await
+        );
         assert_eq!(hub.connection_count(user_id).await, 1);
-        assert!(hub
-            .try_register_with_limit(user_id, tx2, usize::MAX)
-            .await);
+        assert!(hub.try_register_with_limit(user_id, tx2, usize::MAX).await);
         assert_eq!(hub.connection_count(user_id).await, 2);
 
         hub.unregister(user_id, &tx1).await;
@@ -169,14 +167,17 @@ mod tests {
         let (tx2, _rx2) = mpsc::unbounded_channel::<Message>();
         let (tx3, _rx3) = mpsc::unbounded_channel::<Message>();
 
-        assert!(hub
-            .try_register_with_limit(user_id, tx1, max_connections)
-            .await);
-        assert!(hub
-            .try_register_with_limit(user_id, tx2, max_connections)
-            .await);
-        assert!(!hub
-            .try_register_with_limit(user_id, tx3, max_connections)
-            .await);
+        assert!(
+            hub.try_register_with_limit(user_id, tx1, max_connections)
+                .await
+        );
+        assert!(
+            hub.try_register_with_limit(user_id, tx2, max_connections)
+                .await
+        );
+        assert!(
+            !hub.try_register_with_limit(user_id, tx3, max_connections)
+                .await
+        );
     }
 }

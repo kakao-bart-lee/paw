@@ -1,13 +1,23 @@
 use crate::db::DbPool;
 use crate::messages::models::{
-    ConversationCreateResult, ConversationListItem, Message, MessageSendResult,
+    ConversationCreateResult, ConversationListItem, Message, MessageAttachmentRecord,
+    MessageSendResult,
 };
 use anyhow::{anyhow, Context};
 use sqlx::{Postgres, Transaction};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 pub const MAX_GROUP_MEMBERS: usize = 100;
+
+#[derive(Debug, Clone)]
+pub struct NewMessageAttachment {
+    pub file_type: String,
+    pub file_url: String,
+    pub file_size: i64,
+    pub mime_type: String,
+    pub thumbnail_url: Option<String>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConversationRole {
@@ -130,6 +140,66 @@ pub async fn send_message(
     .context("insert message")
 }
 
+pub async fn send_message_with_attachments(
+    pool: &DbPool,
+    conversation_id: Uuid,
+    sender_id: Uuid,
+    thread_id: Option<Uuid>,
+    content: &str,
+    format: &str,
+    idempotency_key: Uuid,
+    attachments: &[NewMessageAttachment],
+) -> anyhow::Result<MessageSendResult> {
+    if attachments.is_empty() {
+        return send_message(
+            pool,
+            conversation_id,
+            sender_id,
+            thread_id,
+            content,
+            format,
+            idempotency_key,
+        )
+        .await;
+    }
+
+    let mut tx = pool.begin().await.context("begin message transaction")?;
+
+    let created = sqlx::query_as::<_, MessageSendResult>(
+        "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key)
+         VALUES ($1, $2, $3, next_message_seq($1), $4, $5, $6)
+         RETURNING id, seq, created_at",
+    )
+    .bind(conversation_id)
+    .bind(sender_id)
+    .bind(thread_id)
+    .bind(content)
+    .bind(format)
+    .bind(idempotency_key)
+    .fetch_one(&mut *tx)
+    .await
+    .context("insert message with attachments")?;
+
+    for attachment in attachments {
+        sqlx::query(
+            "INSERT INTO message_attachments (message_id, file_type, file_url, file_size, mime_type, thumbnail_url)
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(created.id)
+        .bind(&attachment.file_type)
+        .bind(&attachment.file_url)
+        .bind(attachment.file_size)
+        .bind(&attachment.mime_type)
+        .bind(&attachment.thumbnail_url)
+        .execute(&mut *tx)
+        .await
+        .context("insert message attachment")?;
+    }
+
+    tx.commit().await.context("commit message transaction")?;
+    Ok(created)
+}
+
 pub async fn send_forwarded_message(
     pool: &DbPool,
     conversation_id: Uuid,
@@ -176,6 +246,49 @@ pub async fn get_messages(
     .fetch_all(pool.as_ref())
     .await
     .context("fetch conversation messages")
+}
+
+pub async fn get_message_attachments(
+    pool: &DbPool,
+    message_id: Uuid,
+) -> anyhow::Result<Vec<MessageAttachmentRecord>> {
+    sqlx::query_as::<_, MessageAttachmentRecord>(
+        "SELECT id, message_id, file_type, file_url, file_size, mime_type, thumbnail_url, created_at
+         FROM message_attachments
+         WHERE message_id = $1
+         ORDER BY created_at ASC, id ASC",
+    )
+    .bind(message_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .context("fetch message attachments")
+}
+
+pub async fn get_message_attachments_for_messages(
+    pool: &DbPool,
+    message_ids: &[Uuid],
+) -> anyhow::Result<HashMap<Uuid, Vec<MessageAttachmentRecord>>> {
+    if message_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let rows = sqlx::query_as::<_, MessageAttachmentRecord>(
+        "SELECT id, message_id, file_type, file_url, file_size, mime_type, thumbnail_url, created_at
+         FROM message_attachments
+         WHERE message_id = ANY($1)
+         ORDER BY created_at ASC, id ASC",
+    )
+    .bind(message_ids)
+    .fetch_all(pool.as_ref())
+    .await
+    .context("fetch message attachments for messages")?;
+
+    let mut by_message_id: HashMap<Uuid, Vec<MessageAttachmentRecord>> = HashMap::new();
+    for row in rows {
+        by_message_id.entry(row.message_id).or_default().push(row);
+    }
+
+    Ok(by_message_id)
 }
 
 pub async fn list_conversations(
@@ -516,11 +629,12 @@ async fn ensure_group_conversation(
     pool: &DbPool,
     conversation_id: Uuid,
 ) -> Result<(), GroupManagementError> {
-    let conversation_type = sqlx::query_scalar::<_, String>("SELECT type FROM conversations WHERE id = $1")
-        .bind(conversation_id)
-        .fetch_optional(pool.as_ref())
-        .await
-        .map_err(|_| GroupManagementError::ConversationNotFound)?;
+    let conversation_type =
+        sqlx::query_scalar::<_, String>("SELECT type FROM conversations WHERE id = $1")
+            .bind(conversation_id)
+            .fetch_optional(pool.as_ref())
+            .await
+            .map_err(|_| GroupManagementError::ConversationNotFound)?;
 
     match conversation_type.as_deref() {
         Some("group") => Ok(()),
@@ -572,8 +686,14 @@ mod tests {
 
     #[test]
     fn role_parser_accepts_only_admin_and_member() {
-        assert_eq!(ConversationRole::from_db("admin"), Some(ConversationRole::Admin));
-        assert_eq!(ConversationRole::from_db("member"), Some(ConversationRole::Member));
+        assert_eq!(
+            ConversationRole::from_db("admin"),
+            Some(ConversationRole::Admin)
+        );
+        assert_eq!(
+            ConversationRole::from_db("member"),
+            Some(ConversationRole::Member)
+        );
         assert_eq!(ConversationRole::from_db("owner"), None);
     }
 }

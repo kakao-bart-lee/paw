@@ -15,6 +15,18 @@ pub struct Message {
     pub forwarded_from: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct MessageAttachmentRecord {
+    pub id: Uuid,
+    pub message_id: Uuid,
+    pub file_type: String,
+    pub file_url: String,
+    pub file_size: i64,
+    pub mime_type: String,
+    pub thumbnail_url: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ForwardedFromMetadata {
     pub original_message_id: Uuid,

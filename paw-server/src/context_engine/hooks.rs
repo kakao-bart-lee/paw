@@ -1,8 +1,7 @@
 use super::models::{
     ContextEventType, ConversationSettingsChangedHook, MemberJoinedData, MemberJoinedHook,
     MemberLeftData, MemberLeftHook, MessageCreatedData, MessageCreatedHook, MessageDeletedData,
-    MessageDeletedHook, MessageEditedData, MessageEditedHook, ThreadCreatedData,
-    ThreadCreatedHook,
+    MessageDeletedHook, MessageEditedData, MessageEditedHook, ThreadCreatedData, ThreadCreatedHook,
 };
 use crate::db::DbPool;
 use crate::ws::hub::Hub;
@@ -227,9 +226,7 @@ mod tests {
         let hub = Arc::new(Hub::new());
         let agent_id = Uuid::new_v4();
         let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
-        assert!(hub
-            .try_register_with_limit(agent_id, tx, usize::MAX)
-            .await);
+        assert!(hub.try_register_with_limit(agent_id, tx, usize::MAX).await);
 
         let conversation_id = Uuid::new_v4();
         let event = ContextEvent {
@@ -262,12 +259,14 @@ mod tests {
         let (tx1, mut rx1) = mpsc::unbounded_channel::<Message>();
         let (tx2, mut rx2) = mpsc::unbounded_channel::<Message>();
 
-        assert!(hub
-            .try_register_with_limit(first_agent, tx1, usize::MAX)
-            .await);
-        assert!(hub
-            .try_register_with_limit(second_agent, tx2, usize::MAX)
-            .await);
+        assert!(
+            hub.try_register_with_limit(first_agent, tx1, usize::MAX)
+                .await
+        );
+        assert!(
+            hub.try_register_with_limit(second_agent, tx2, usize::MAX)
+                .await
+        );
 
         let event = ContextEvent {
             event_type: ContextEventType::ThreadCreated.as_str().to_owned(),

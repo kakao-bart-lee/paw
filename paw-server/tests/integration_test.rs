@@ -169,6 +169,20 @@ fn protocol_message_send_includes_v_field() {
 }
 
 #[test]
+fn http_send_message_payload_supports_attachment_ids() {
+    let attachment_id = Uuid::new_v4();
+    let payload = serde_json::json!({
+        "content": "image attached",
+        "format": "plain",
+        "idempotency_key": Uuid::new_v4(),
+        "attachment_ids": [attachment_id]
+    });
+
+    assert_eq!(payload["attachment_ids"][0], attachment_id.to_string());
+    assert_eq!(payload["format"], "plain");
+}
+
+#[test]
 fn protocol_client_message_tagged_serialization() {
     let msg = paw_proto::ClientMessage::MessageSend(paw_proto::MessageSendMsg {
         v: 1,
@@ -251,7 +265,10 @@ fn protocol_message_forwarded_roundtrip() {
 
     let json = serde_json::to_value(&msg).unwrap();
     assert_eq!(json["type"], "message_forwarded");
-    assert_eq!(json["forwarded_from"]["original_message_id"], original_message_id.to_string());
+    assert_eq!(
+        json["forwarded_from"]["original_message_id"],
+        original_message_id.to_string()
+    );
     assert_eq!(
         json["forwarded_from"]["source_conversation_id"],
         source_conversation_id.to_string()
