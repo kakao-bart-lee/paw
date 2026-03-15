@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use paw_proto::ContextEvent;
 use serde_json::Value;
+use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -34,8 +35,18 @@ impl ContextEngine {
         let hub = self.hub.clone();
 
         tokio::spawn(async move {
-            let agent_ids = match sqlx::query_scalar::<_, Uuid>(
-                "SELECT agent_id FROM conversation_agents AS agent_conversations WHERE conversation_id = $1",
+            let agent_rows = match sqlx::query(
+                "SELECT
+                    ca.agent_id,
+                    at.name AS agent_name,
+                    COALESCE(cm.attention_mode::text, 'all') AS attention_mode
+                 FROM conversation_agents ca
+                 JOIN agent_tokens at ON at.id = ca.agent_id
+                 LEFT JOIN conversation_members cm
+                   ON cm.conversation_id = ca.conversation_id
+                  AND cm.user_id = ca.invited_by
+                 WHERE ca.conversation_id = $1
+                   AND at.revoked_at IS NULL",
             )
             .bind(conversation_id)
             .fetch_all(db.as_ref())
@@ -48,7 +59,29 @@ impl ContextEngine {
                 }
             };
 
-            if agent_ids.is_empty() {
+            if agent_rows.is_empty() {
+                return;
+            }
+
+            let mut recipients = Vec::new();
+            for row in agent_rows {
+                let Ok(agent_id) = row.try_get::<Uuid, _>("agent_id") else {
+                    continue;
+                };
+                let agent_name = row
+                    .try_get::<String, _>("agent_name")
+                    .unwrap_or_else(|_| String::new());
+                let raw_attention_mode = row
+                    .try_get::<String, _>("attention_mode")
+                    .unwrap_or_else(|_| "all".to_owned());
+                let attention_mode = AttentionMode::from_db(&raw_attention_mode);
+
+                if allows_context_event(attention_mode, event_type, &data, agent_id, &agent_name) {
+                    recipients.push(agent_id);
+                }
+            }
+
+            if recipients.is_empty() {
                 return;
             }
 
@@ -59,11 +92,75 @@ impl ContextEngine {
                 timestamp,
             };
 
-            if let Err(err) = deliver_context_event(hub, agent_ids, event).await {
+            if let Err(err) = deliver_context_event(hub, recipients, event).await {
                 tracing::warn!(%err, %conversation_id, "context engine event delivery failed");
             }
         });
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AttentionMode {
+    All,
+    Mentions,
+    None,
+}
+
+impl AttentionMode {
+    fn from_db(raw: &str) -> Self {
+        match raw {
+            "mentions" => Self::Mentions,
+            "none" => Self::None,
+            _ => Self::All,
+        }
+    }
+}
+
+fn allows_context_event(
+    attention_mode: AttentionMode,
+    event_type: ContextEventType,
+    data: &Value,
+    agent_id: Uuid,
+    agent_name: &str,
+) -> bool {
+    match attention_mode {
+        AttentionMode::All => true,
+        AttentionMode::None => false,
+        AttentionMode::Mentions => event_mentions_agent(event_type, data, agent_id, agent_name),
+    }
+}
+
+fn event_mentions_agent(
+    event_type: ContextEventType,
+    data: &Value,
+    agent_id: Uuid,
+    agent_name: &str,
+) -> bool {
+    if !matches!(event_type, ContextEventType::MessageCreated) {
+        return false;
+    }
+
+    let content = data
+        .get("content")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if content.is_empty() {
+        return false;
+    }
+
+    let agent_id_mention = format!("@{}", agent_id.to_string().to_ascii_lowercase());
+    if content.contains(&agent_id_mention) {
+        return true;
+    }
+
+    let normalized_name = agent_name.trim().to_ascii_lowercase();
+    if normalized_name.is_empty() {
+        return false;
+    }
+
+    let name_mention = format!("@{normalized_name}");
+    content.contains(&name_mention)
 }
 
 #[async_trait]
@@ -281,5 +378,51 @@ mod tests {
 
         assert!(matches!(rx1.recv().await, Some(Message::Text(_))));
         assert!(matches!(rx2.recv().await, Some(Message::Text(_))));
+    }
+
+    #[test]
+    fn attention_mode_mentions_requires_message_mention() {
+        let agent_id = Uuid::new_v4();
+        let mention_payload = serde_json::json!({
+            "content": format!("please check this @{}", agent_id),
+        });
+        let non_mention_payload = serde_json::json!({
+            "content": "generic conversation update",
+        });
+
+        assert!(allows_context_event(
+            AttentionMode::Mentions,
+            ContextEventType::MessageCreated,
+            &mention_payload,
+            agent_id,
+            "planner",
+        ));
+        assert!(!allows_context_event(
+            AttentionMode::Mentions,
+            ContextEventType::MessageCreated,
+            &non_mention_payload,
+            agent_id,
+            "planner",
+        ));
+    }
+
+    #[test]
+    fn attention_mode_none_blocks_all_context_events() {
+        let payload = serde_json::json!({"content": "@planner ping"});
+
+        assert!(!allows_context_event(
+            AttentionMode::None,
+            ContextEventType::MessageCreated,
+            &payload,
+            Uuid::new_v4(),
+            "planner",
+        ));
+        assert!(!allows_context_event(
+            AttentionMode::None,
+            ContextEventType::ThreadCreated,
+            &payload,
+            Uuid::new_v4(),
+            "planner",
+        ));
     }
 }

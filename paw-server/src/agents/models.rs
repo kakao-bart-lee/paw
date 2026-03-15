@@ -49,6 +49,22 @@ pub struct InviteAgentResponse {
     pub invited: bool,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DelegateAgentRequest {
+    pub target_agent_id: Uuid,
+    pub task_description: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DelegateAgentResponse {
+    pub delegated: bool,
+    pub delegation_id: Uuid,
+    pub conversation_id: Uuid,
+    pub from_agent_id: Uuid,
+    pub target_agent_id: Uuid,
+    pub delegated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AgentManifest {
     pub name: String,
@@ -262,6 +278,38 @@ mod tests {
         let parsed3: serde_json::Value = serde_json::from_str(&json3).unwrap();
         assert_eq!(parsed3["rotated"], true);
         assert_eq!(parsed3["api_key"], "paw_agent_test_key");
+    }
+
+    #[test]
+    fn delegation_request_response_serde_roundtrip() {
+        let req = DelegateAgentRequest {
+            target_agent_id: Uuid::new_v4(),
+            task_description: "Summarize unresolved blockers from latest thread".to_string(),
+        };
+        let req_json = serde_json::to_value(&req).expect("serialize delegation request");
+        assert_eq!(req_json["target_agent_id"], req.target_agent_id.to_string());
+        assert_eq!(
+            req_json["task_description"],
+            "Summarize unresolved blockers from latest thread"
+        );
+        let req_parsed: DelegateAgentRequest =
+            serde_json::from_value(req_json).expect("deserialize delegation request");
+        assert_eq!(req_parsed.target_agent_id, req.target_agent_id);
+
+        let response = DelegateAgentResponse {
+            delegated: true,
+            delegation_id: Uuid::new_v4(),
+            conversation_id: Uuid::new_v4(),
+            from_agent_id: Uuid::new_v4(),
+            target_agent_id: req.target_agent_id,
+            delegated_at: Utc::now(),
+        };
+        let response_json = serde_json::to_value(&response).expect("serialize delegation response");
+        assert_eq!(response_json["delegated"], true);
+        assert_eq!(
+            response_json["target_agent_id"],
+            response.target_agent_id.to_string()
+        );
     }
 
     #[test]

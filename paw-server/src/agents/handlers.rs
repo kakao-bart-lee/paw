@@ -14,10 +14,10 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use super::models::{
-    AgentProfile, InstallAgentResponse, InstalledAgentsResponse, InviteAgentRequest,
-    InviteAgentResponse, MarketplaceSearchQuery, MarketplaceSearchResponse, PublishAgentRequest,
-    PublishAgentResponse, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
-    RotateAgentKeyResponse, UninstallAgentResponse,
+    AgentProfile, DelegateAgentRequest, DelegateAgentResponse, InstallAgentResponse,
+    InstalledAgentsResponse, InviteAgentRequest, InviteAgentResponse, MarketplaceSearchQuery,
+    MarketplaceSearchResponse, PublishAgentRequest, PublishAgentResponse, RegisterAgentRequest,
+    RegisterAgentResponse, RevokeAgentResponse, RotateAgentKeyResponse, UninstallAgentResponse,
 };
 use super::permissions::{
     check_agent_permission, list_agent_permissions, replace_agent_permissions, AgentPermission,
@@ -27,7 +27,6 @@ use super::service;
 use crate::auth::middleware::UserId;
 use crate::auth::AppState;
 use crate::i18n::{error_response, error_response_with_details, localized_message, RequestLocale};
-use crate::messages::service::{check_member, Membership};
 
 const MAX_STREAM_DURATION: Duration = Duration::from_secs(300);
 const MAX_STREAM_BYTES: usize = 1_048_576;
@@ -161,55 +160,7 @@ pub async fn invite_agent_handler(
     Path(conversation_id): Path<Uuid>,
     Json(payload): Json<InviteAgentRequest>,
 ) -> Result<Json<InviteAgentResponse>, (StatusCode, Json<Value>)> {
-    match check_member(&state.db, conversation_id, user_id).await {
-        Ok(Membership::Member) => {}
-        Ok(Membership::NotMember) => {
-            return Err(error(
-                StatusCode::FORBIDDEN,
-                "forbidden",
-                &locale,
-                "User is not a member of this conversation",
-            ));
-        }
-        Ok(Membership::ConversationNotFound) => {
-            return Err(error(
-                StatusCode::NOT_FOUND,
-                "conversation_not_found",
-                &locale,
-                "Conversation not found",
-            ));
-        }
-        Err(err) => {
-            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed membership check");
-            return Err(error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "membership_check_failed",
-                &locale,
-                "Could not validate conversation membership",
-            ));
-        }
-    }
-
-    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
-        .await
-        .map_err(|err| {
-            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for inviting agent");
-            error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "internal_error",
-                &locale,
-                "Failed to invite agent",
-            )
-        })?;
-
-    if !can_manage {
-        return Err(error(
-            StatusCode::FORBIDDEN,
-            "forbidden",
-            &locale,
-            "Only conversation admins can invite agents",
-        ));
-    }
+    ensure_conversation_agent_management_access(&state, conversation_id, user_id, &locale).await?;
 
     match service::invite_agent_to_conversation(
         &state.db,
@@ -278,32 +229,125 @@ pub async fn remove_agent_handler(
     }
 }
 
+pub async fn delegate_agent_handler(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<DelegateAgentRequest>,
+) -> Result<Json<DelegateAgentResponse>, (StatusCode, Json<Value>)> {
+    ensure_conversation_agent_management_access(&state, conversation_id, user_id, &locale).await?;
+
+    let task_description = payload.task_description.trim();
+    if task_description.is_empty() {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "invalid_task_description",
+            &locale,
+            "Task description is required",
+        ));
+    }
+
+    if agent_id == payload.target_agent_id {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "same_agent",
+            &locale,
+            "Delegation target must be different from source agent",
+        ));
+    }
+
+    let delegation = service::delegate_agent_task(
+        &state.db,
+        conversation_id,
+        agent_id,
+        payload.target_agent_id,
+        user_id,
+        task_description,
+    )
+    .await
+    .map_err(|err| match err.to_string().as_str() {
+        "conversation_not_found" => error(
+            StatusCode::NOT_FOUND,
+            "conversation_not_found",
+            &locale,
+            "Conversation not found",
+        ),
+        "source_agent_not_in_conversation" => error(
+            StatusCode::NOT_FOUND,
+            "agent_not_found",
+            &locale,
+            "Source agent is not in this conversation",
+        ),
+        "target_agent_not_in_conversation" => error(
+            StatusCode::NOT_FOUND,
+            "target_agent_not_found",
+            &locale,
+            "Target agent is not in this conversation",
+        ),
+        "same_agent" => error(
+            StatusCode::BAD_REQUEST,
+            "same_agent",
+            &locale,
+            "Delegation target must be different from source agent",
+        ),
+        "invalid_task_description" => error(
+            StatusCode::BAD_REQUEST,
+            "invalid_task_description",
+            &locale,
+            "Task description is required",
+        ),
+        _ => {
+            tracing::error!(
+                %err,
+                conversation_id = %conversation_id,
+                source_agent_id = %agent_id,
+                target_agent_id = %payload.target_agent_id,
+                "failed to delegate agent task"
+            );
+            error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "delegate_failed",
+                &locale,
+                "Failed to delegate task to target agent",
+            )
+        }
+    })?;
+
+    if let Err(err) = publish_agent_delegation_event(
+        &state,
+        &delegation,
+        user_id,
+        task_description.to_owned(),
+    )
+    .await
+    {
+        tracing::warn!(
+            %err,
+            conversation_id = %conversation_id,
+            source_agent_id = %agent_id,
+            target_agent_id = %payload.target_agent_id,
+            "delegation persisted but event broadcast failed"
+        );
+    }
+
+    Ok(Json(DelegateAgentResponse {
+        delegated: true,
+        delegation_id: delegation.id,
+        conversation_id: delegation.conversation_id,
+        from_agent_id: delegation.from_agent_id,
+        target_agent_id: delegation.target_agent_id,
+        delegated_at: delegation.delegated_at,
+    }))
+}
+
 pub async fn get_agent_permissions_handler(
     State(state): State<AppState>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
     Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<AgentPermissionsResponse>, (StatusCode, Json<Value>)> {
-    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
-        .await
-        .map_err(|err| {
-            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for reading permissions");
-            error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "internal_error",
-                &locale,
-                "Failed to read agent permissions",
-            )
-        })?;
-
-    if !can_manage {
-        return Err(error(
-            StatusCode::FORBIDDEN,
-            "forbidden",
-            &locale,
-            "Only conversation admins can view agent permissions",
-        ));
-    }
+    ensure_conversation_agent_management_access(&state, conversation_id, user_id, &locale).await?;
 
     let permissions = list_agent_permissions(&state.db, conversation_id, agent_id)
         .await
@@ -339,26 +383,7 @@ pub async fn put_agent_permissions_handler(
     Path((conversation_id, agent_id)): Path<(Uuid, Uuid)>,
     Json(payload): Json<UpdateAgentPermissionsRequest>,
 ) -> Result<Json<AgentPermissionsResponse>, (StatusCode, Json<Value>)> {
-    let can_manage = service::can_manage_conversation_agents(&state.db, conversation_id, user_id)
-        .await
-        .map_err(|err| {
-            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed role check for updating permissions");
-            error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "internal_error",
-                &locale,
-                "Failed to update agent permissions",
-            )
-        })?;
-
-    if !can_manage {
-        return Err(error(
-            StatusCode::FORBIDDEN,
-            "forbidden",
-            &locale,
-            "Only conversation admins can update agent permissions",
-        ));
-    }
+    ensure_conversation_agent_management_access(&state, conversation_id, user_id, &locale).await?;
 
     let permissions = replace_agent_permissions(
         &state.db,
@@ -1125,6 +1150,37 @@ async fn relay_agent_stream_message(
     Ok(())
 }
 
+async fn publish_agent_delegation_event(
+    state: &AppState,
+    delegation: &service::AgentDelegationRecord,
+    delegated_by: Uuid,
+    task_description: String,
+) -> anyhow::Result<()> {
+    let payload = serde_json::to_string(&serde_json::json!({
+        "type": "agent_delegated",
+        "v": PROTOCOL_VERSION,
+        "conversation_id": delegation.conversation_id,
+        "from_agent_id": delegation.from_agent_id,
+        "target_agent_id": delegation.target_agent_id,
+        "task_description": task_description,
+        "delegated_by": delegated_by,
+        "delegated_at": delegation.delegated_at,
+    }))?;
+
+    let agent_ids = sqlx::query_scalar::<_, Uuid>(
+        "SELECT agent_id FROM conversation_agents WHERE conversation_id = $1",
+    )
+    .bind(delegation.conversation_id)
+    .fetch_all(state.db.as_ref())
+    .await?;
+
+    for agent_id in agent_ids {
+        state.hub.send_to_user_nonblocking(agent_id, &payload).await;
+    }
+
+    Ok(())
+}
+
 async fn stream_has_permission(
     state: &AppState,
     stream_states: &HashMap<Uuid, StreamRelayState>,
@@ -1327,6 +1383,38 @@ fn require_v(v: u8) -> anyhow::Result<()> {
         Ok(())
     } else {
         anyhow::bail!("unsupported protocol version: {v}")
+    }
+}
+
+async fn ensure_conversation_agent_management_access(
+    state: &AppState,
+    conversation_id: Uuid,
+    user_id: Uuid,
+    locale: &str,
+) -> Result<(), (StatusCode, Json<Value>)> {
+    match service::conversation_agent_manage_access(&state.db, conversation_id, user_id).await {
+        Ok(service::ConversationAgentManageAccess::Allowed) => Ok(()),
+        Ok(service::ConversationAgentManageAccess::ConversationNotFound) => Err(error(
+            StatusCode::NOT_FOUND,
+            "conversation_not_found",
+            locale,
+            "Conversation not found",
+        )),
+        Ok(service::ConversationAgentManageAccess::Forbidden) => Err(error(
+            StatusCode::FORBIDDEN,
+            "forbidden",
+            locale,
+            "Only conversation admins can manage agents",
+        )),
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conversation_id, user_id = %user_id, "failed agent-management access check");
+            Err(error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_error",
+                locale,
+                "Failed to validate permissions",
+            ))
+        }
     }
 }
 

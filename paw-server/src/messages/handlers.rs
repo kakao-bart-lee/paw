@@ -60,6 +60,8 @@ pub struct ForwardMessageRequest {
 pub struct CreateConversationRequest {
     pub member_ids: Vec<Uuid>,
     pub name: Option<String>,
+    #[serde(default)]
+    pub is_agent_only: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -961,9 +963,25 @@ pub async fn create_conversation(
         .into_response();
     }
 
+    if payload.is_agent_only && !payload.member_ids.is_empty() {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_agent_only_members",
+            &locale,
+            "agent-only conversation cannot include human members",
+        )
+        .into_response();
+    }
+
     let created =
-        match service::create_conversation(&state.db, user_id, payload.member_ids, payload.name)
-            .await
+        match service::create_conversation(
+            &state.db,
+            user_id,
+            payload.member_ids,
+            payload.name,
+            payload.is_agent_only,
+        )
+        .await
         {
             Ok(conversation) => conversation,
             Err(err) => {

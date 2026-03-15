@@ -140,7 +140,6 @@ pub async fn send_message(
     Ok(created)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn send_message_with_attachments(
     pool: &DbPool,
     conversation_id: Uuid,
@@ -207,10 +206,7 @@ pub async fn send_forwarded_message(
     idempotency_key: Uuid,
     forwarded_from: serde_json::Value,
 ) -> anyhow::Result<MessageSendResult> {
-    let mut tx = pool
-        .begin()
-        .await
-        .context("begin forwarded message transaction")?;
+    let mut tx = pool.begin().await.context("begin forwarded message transaction")?;
     let created = insert_message(
         &mut tx,
         conversation_id,
@@ -228,7 +224,6 @@ pub async fn send_forwarded_message(
     Ok(created)
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn insert_message(
     tx: &mut Transaction<'_, Postgres>,
     conversation_id: Uuid,
@@ -389,6 +384,7 @@ pub async fn create_conversation(
     creator_id: Uuid,
     member_ids: Vec<Uuid>,
     name: Option<String>,
+    is_agent_only: bool,
 ) -> anyhow::Result<ConversationCreateResult> {
     let mut tx = pool.begin().await.context("begin transaction")?;
 
@@ -396,7 +392,9 @@ pub async fn create_conversation(
     all_members.insert(creator_id);
     let total_members = all_members.len();
 
-    let conv_type = if total_members == 2 && name.as_deref().unwrap_or_default().is_empty() {
+    let conv_type = if is_agent_only {
+        "group"
+    } else if total_members == 2 && name.as_deref().unwrap_or_default().is_empty() {
         "direct"
     } else {
         "group"
@@ -412,22 +410,25 @@ pub async fn create_conversation(
     });
 
     let created = sqlx::query_as::<_, ConversationCreateResult>(
-        "INSERT INTO conversations (type, title, created_by)
-         VALUES ($1, $2, $3)
+        "INSERT INTO conversations (type, title, created_by, is_agent_only)
+         VALUES ($1, $2, $3, $4)
          RETURNING id, created_at",
     )
     .bind(conv_type)
     .bind(normalized_name)
     .bind(creator_id)
+    .bind(is_agent_only)
     .fetch_one(&mut *tx)
     .await
     .context("insert conversation")?;
 
-    if all_members.len() > MAX_GROUP_MEMBERS {
+    if !is_agent_only && all_members.len() > MAX_GROUP_MEMBERS {
         return Err(anyhow!("too_many_members"));
     }
 
-    insert_members(&mut tx, created.id, creator_id, &all_members, conv_type).await?;
+    if !is_agent_only {
+        insert_members(&mut tx, created.id, creator_id, &all_members, conv_type).await?;
+    }
 
     tx.commit()
         .await

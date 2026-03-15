@@ -1316,6 +1316,19 @@ struct InviteAgentResponse {
     invited: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct CreateConversationRequest {
+    member_ids: Vec<Uuid>,
+    name: Option<String>,
+    is_agent_only: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct DelegateAgentRequest {
+    target_agent_id: Uuid,
+    task_description: String,
+}
+
 #[test]
 fn group_name_update_request_serialization() {
     let request = GroupNameUpdateRequest {
@@ -1348,6 +1361,40 @@ fn invite_agent_response_serialization() {
     let parsed: InviteAgentResponse = serde_json::from_str(&json).unwrap();
 
     assert_eq!(parsed, response);
+}
+
+#[test]
+fn create_conversation_agent_only_request_serialization() {
+    let request = CreateConversationRequest {
+        member_ids: Vec::new(),
+        name: Some("agent swarm room".to_string()),
+        is_agent_only: true,
+    };
+
+    let json = serde_json::to_value(&request).unwrap();
+    assert_eq!(json["is_agent_only"], true);
+    assert!(json["member_ids"].as_array().unwrap().is_empty());
+
+    let parsed: CreateConversationRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, request);
+}
+
+#[test]
+fn delegate_agent_request_serialization() {
+    let request = DelegateAgentRequest {
+        target_agent_id: Uuid::new_v4(),
+        task_description: "prepare proposal options and send concise summary".to_string(),
+    };
+
+    let json = serde_json::to_value(&request).unwrap();
+    assert_eq!(json["target_agent_id"], request.target_agent_id.to_string());
+    assert_eq!(
+        json["task_description"],
+        "prepare proposal options and send concise summary"
+    );
+
+    let parsed: DelegateAgentRequest = serde_json::from_value(json).unwrap();
+    assert_eq!(parsed, request);
 }
 
 #[test]
