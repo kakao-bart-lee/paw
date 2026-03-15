@@ -363,18 +363,27 @@ impl CoreRuntime {
                 let mut effects = vec![RuntimeEffect::ConnectionStateChanged(
                     ConnectionSnapshot::from(&self.ws_service),
                 )];
-                effects.extend(self.sync_engine.sync_all_scopes().into_iter().filter_map(
-                    |message| match message {
-                        paw_proto::ClientMessage::Sync(sync) => {
-                            Some(RuntimeEffect::SyncRequested(SyncRequest {
-                                conversation_id: sync.conversation_id.to_string(),
-                                thread_id: sync.thread_id.map(|thread_id| thread_id.to_string()),
-                                last_seq: sync.last_seq,
-                            }))
-                        }
-                        _ => None,
-                    },
-                ));
+                let sync_messages = if self.ws_service.threads_enabled() {
+                    self.sync_engine.sync_all_scopes()
+                } else {
+                    self.sync_engine.sync_all_conversations()
+                };
+                effects.extend(
+                    sync_messages
+                        .into_iter()
+                        .filter_map(|message| match message {
+                            paw_proto::ClientMessage::Sync(sync) => {
+                                Some(RuntimeEffect::SyncRequested(SyncRequest {
+                                    conversation_id: sync.conversation_id.to_string(),
+                                    thread_id: sync
+                                        .thread_id
+                                        .map(|thread_id| thread_id.to_string()),
+                                    last_seq: sync.last_seq,
+                                }))
+                            }
+                            _ => None,
+                        }),
+                );
                 Ok(effects)
             }
             ServerMessage::MessageReceived(message) => self.handle_message_received(message),
@@ -532,13 +541,6 @@ impl CoreRuntime {
         &mut self,
         response: &DeviceSyncResponse,
     ) -> Result<Vec<RuntimeEffect>, CoreRuntimeError> {
-        self.sync_engine
-            .clear_recoveries(response.conversations.iter().map(|conversation| {
-                ConversationSyncCursor {
-                    conversation_id: conversation.conversation_id,
-                    last_seq: conversation.last_seq,
-                }
-            }));
         self.sync_engine
             .clear_scope_recoveries(response.conversations.iter().flat_map(|conversation| {
                 std::iter::once(ScopedSyncCursor {

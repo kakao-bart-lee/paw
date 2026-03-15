@@ -154,6 +154,22 @@ impl AppDatabase {
             END;
             "#,
         ))?;
+        let has_thread_id = {
+            let mut stmt = conn.prepare("PRAGMA table_info(messages_table)")?;
+            let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+            rows.collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .any(|column| column == "thread_id")
+        };
+
+        if !has_thread_id {
+            conn.execute("ALTER TABLE messages_table ADD COLUMN thread_id TEXT", [])?;
+        }
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS messages_conv_thread_seq ON messages_table (conversation_id, thread_id, seq)",
+            [],
+        )?;
         Ok(())
     }
 

@@ -294,7 +294,7 @@ impl CoreEvent {
             Self::ThreadCreated(_)
             | Self::ThreadDeleted(_)
             | Self::ThreadAgentBound(_)
-            | Self::ThreadAgentUnbound(_) => CoreEventDomain::Lifecycle,
+            | Self::ThreadAgentUnbound(_) => CoreEventDomain::Sync,
             Self::StreamUpdated(_) | Self::StreamFinalized(_) => CoreEventDomain::Streaming,
         }
     }
