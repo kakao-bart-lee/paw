@@ -140,6 +140,7 @@ pub async fn send_message(
     Ok(created)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn send_message_with_attachments(
     pool: &DbPool,
     conversation_id: Uuid,
@@ -227,6 +228,7 @@ pub async fn send_forwarded_message(
     Ok(created)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn insert_message(
     tx: &mut Transaction<'_, Postgres>,
     conversation_id: Uuid,
