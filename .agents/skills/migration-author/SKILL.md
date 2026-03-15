@@ -18,9 +18,16 @@ YYYYMMDDHHMMSS_description.sql
 Examples from the codebase:
 - `20260101000005_create_messages.sql`
 - `20260307223000_add_message_idempotency_key.sql`
-- `20260314103000_add_preferred_locale.sql`
+- `20260314212332_create_threads.sql`
+- `20260315180000_add_messages_thread_id.sql`
 
-Generate the file with:
+Preferred command from repo root:
+
+```bash
+make migrate-add name=<description>
+```
+
+Direct SQLx command (equivalent):
 
 ```bash
 cd paw-server && cargo sqlx migrate add <description>
@@ -46,6 +53,8 @@ This creates a timestamped file automatically.
 7. **Down migration comment**: Include a `-- DOWN:` comment at the bottom
    describing the reverse operation, even though SQLx does not run it
    automatically.
+8. **Extension guard**: If using `gen_random_uuid()`, include
+   `CREATE EXTENSION IF NOT EXISTS pgcrypto;` in that migration.
 
 ## Monotonic Sequences
 
@@ -67,6 +76,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 ```
+
+Current project usage:
+- `conversation_seq` table + `next_message_seq(conv_id UUID)`
+- uniqueness guard `UNIQUE (conversation_id, seq)` on `messages`
 
 ## pg_notify Triggers
 
@@ -90,12 +103,28 @@ CREATE TRIGGER trigger_notify_new_<entity>
     EXECUTE FUNCTION notify_new_<entity>();
 ```
 
+Current project usage:
+- `notify_new_message()` on `messages`
+- channel: `new_message`
+- payload includes `id`, `conversation_id`, `sender_id`, `seq`, `content`,
+  `format`, `blocks`, `created_at`
+
+## Paw-Specific Patterns
+
+- Message dedupe: `messages` has `idempotency_key UUID` and unique index on
+  `(conversation_id, sender_id, idempotency_key)`.
+- Thread model: `threads` and `thread_agents` enforce conversation-scoped
+  integrity with composite FK `(thread_id, conversation_id)`.
+- Thread message queries: partial indexes are used for thread lookups:
+  `idx_messages_thread_id` and `idx_messages_conversation_thread` with
+  `WHERE thread_id IS NOT NULL`.
+
 ## Verification
 
 After writing a migration:
 
 ```bash
-cd paw-server && cargo sqlx migrate run
-cargo sqlx prepare --workspace   # regenerate offline query metadata
-cargo test -p paw-server          # ensure nothing breaks
+make migrate
+cargo test -p paw-server --test architecture_test
+cargo test -p paw-server
 ```

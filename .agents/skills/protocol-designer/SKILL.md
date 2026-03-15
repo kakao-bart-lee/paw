@@ -33,6 +33,10 @@ pub enum ServerMessage { ... }
 | `MessageAck` | `MessageAckMsg` | Acknowledge receipt up to seq |
 | `Sync` | `SyncMsg` | Request missed messages after seq |
 | `DeviceSync` | `DeviceSyncRequest` | Sync device-specific state |
+| `ThreadCreate` | `ThreadCreateMsg` | Create thread from root message |
+| `ThreadBindAgent` | `ThreadBindAgentMsg` | Bind agent to a thread |
+| `ThreadUnbindAgent` | `ThreadUnbindAgentMsg` | Unbind agent from a thread |
+| `ThreadDelete` | `ThreadDeleteMsg` | Delete thread |
 
 ### Server -> Client Messages
 
@@ -40,10 +44,16 @@ pub enum ServerMessage { ... }
 |---------|--------|---------|
 | `HelloOk` | `HelloOkMsg` | Auth success |
 | `HelloError` | `HelloErrorMsg` | Auth failure |
+| `Error` | `ErrorMsg` | Protocol/application error frame |
 | `MessageReceived` | `MessageReceivedMsg` | New message delivery |
+| `DeviceSyncResponse` | `DeviceSyncResponse` | Multi-conversation sync payload |
 | `TypingStart` | `TypingMsg` | Typing indicator fan-out |
 | `TypingStop` | `TypingMsg` | Typing indicator fan-out |
 | `PresenceUpdate` | `PresenceUpdateMsg` | Online/offline status |
+| `ThreadCreated` | `ThreadCreatedMsg` | Thread created event |
+| `ThreadAgentBound` | `ThreadAgentBoundMsg` | Agent bound event |
+| `ThreadAgentUnbound` | `ThreadAgentUnboundMsg` | Agent unbound event |
+| `ThreadDeleted` | `ThreadDeletedMsg` | Thread deleted event |
 | `StreamStart` | `StreamStartMsg` | Agent stream begins (Phase 2) |
 | `ContentDelta` | `ContentDeltaMsg` | Streaming text chunk (Phase 2) |
 | `ToolStart` | `ToolStartMsg` | Agent tool invocation (Phase 2) |
@@ -53,12 +63,8 @@ pub enum ServerMessage { ... }
 ## Version Field
 
 Every struct MUST have `pub v: u8`. The constant `PROTOCOL_VERSION` (currently
-`1`) is defined at crate root. Clients that send a mismatched version receive
-`HelloError`.
-
-```rust
-pub const PROTOCOL_VERSION: u8 = 1;
-```
+`1`) is defined at crate root. Mismatched versions are rejected in server
+handlers (`require_v(...)` in WS/agent paths).
 
 ## Backward Compatibility Rules
 
@@ -111,13 +117,14 @@ pub field_name: Option<Type>,
        // assert fields match
    }
    ```
-5. **Handle in server**: add a match arm in the WebSocket dispatch
-   (`ws/session.rs` or equivalent).
+5. **Handle in server**: add a match arm in WebSocket dispatch
+   (`paw-server/src/ws/connection.rs`) and/or agent relay path
+   (`paw-server/src/agents/handlers.rs`).
 6. **Handle in client**: add parsing in the Swift/Kotlin WebSocket layer.
 
 ## InboundContext and MessageFormat
 
-Shared types used across both enums:
+Shared types used across protocol paths:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,13 +139,12 @@ These are re-exported from the crate root and used by `paw-server` handlers.
 
 ## Testing
 
-Run protocol tests with:
-
 ```bash
 cargo test -p paw-proto
 ```
-
 Every new message type requires at minimum:
 - Serialization round-trip test (struct -> JSON -> struct).
 - Deserialization from a known JSON string (contract snapshot).
 - Verify `"type"` discriminator value matches `rename_all = "snake_case"`.
+- Verify `"v"` is present and equals `PROTOCOL_VERSION`.
+- If optional fields are omitted on wire, assert deserialization via `#[serde(default)]`.

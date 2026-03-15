@@ -11,62 +11,39 @@ PostgreSQL (via SQLx) and an optional NATS sidecar for agent communication.
 
 ## Axum Handler Pattern
 
-Every handler follows the same signature shape:
+Most handlers follow this signature family:
 
 ```rust
 pub async fn handler_name(
     State(state): State<AppState>,
     Extension(RequestLocale(locale)): Extension<RequestLocale>,
     Extension(UserId(user_id)): Extension<UserId>,
-    Path(resource_id): Path<Uuid>,       // optional, from URL
-    Json(payload): Json<RequestType>,     // optional, from body
+    Path(resource_id): Path<Uuid>,      // optional
+    Json(payload): Json<RequestType>,   // optional
 ) -> Response {
-    // 1. Validate input
-    if payload.field.trim().is_empty() {
-        return error(StatusCode::BAD_REQUEST, "invalid_field", &locale, "...")
-            .into_response();
-    }
-
-    // 2. Enforce authorization / membership
-    match ensure_membership(&state, resource_id, user_id, &locale).await {
-        Ok(()) => {}
-        Err(resp) => return resp,
-    }
-
-    // 3. Query database
-    let row = sqlx::query_as!(
-        Model,
-        r#"SELECT id, name FROM table WHERE id = $1"#,
-        resource_id,
-    )
-    .fetch_one(&state.db)
-    .await;
-
-    // 4. Return JSON
-    match row {
-        Ok(model) => Json(model).into_response(),
-        Err(err) => {
-            tracing::error!(%err, "query failed");
-            error(StatusCode::INTERNAL_SERVER_ERROR, "query_failed", &locale, "...")
-                .into_response()
-        }
-    }
+    // validate -> membership/auth check -> sqlx query -> localized response
 }
 ```
 
-Key conventions:
-- Return type is always `Response` (via `.into_response()`).
-- Use `ApiResult<T>` (`Result<Json<T>, (StatusCode, Json<Value>)>`) for simple cases.
-- Extract `RequestLocale` and `UserId` from middleware extensions.
-- Log with `tracing::error!` / `tracing::info!`, include structured fields.
+Key conventions in this repo:
+- Return types vary by module: `Response`, `(StatusCode, Json<Value>)`, or
+  `Result<Json<T>, (StatusCode, Json<Value>)>`.
+- `RequestLocale` and `UserId` are extracted via `Extension(...)` on protected
+  routes.
+- Membership checks are centralized (`service::check_member` /
+  `ensure_membership`) before data mutation.
+- Logs use structured fields (`conversation_id`, `user_id`, `agent_id`) with
+  `tracing::error!`, `warn!`, `info!`.
 
 ## SQLx Query Rules
 
-- **Always** use `sqlx::query!` or `sqlx::query_as!` compile-checked macros.
+- Prefer `sqlx::query!` / `query_as!` where schema-checked macros are practical.
+- Existing code also uses `sqlx::query_as::<_, Model>`, `query_scalar`, and
+  `query` for dynamic/partial-row workflows.
 - **Never** build SQL by string interpolation or `format!`.
 - Bind parameters with `$1`, `$2`, etc.
 - Use `fetch_one`, `fetch_optional`, or `fetch_all` -- pick the tightest fit.
-- For inserts that return a row, use `RETURNING *` with `fetch_one`.
+- For inserts with returned IDs, use `RETURNING ...` + `fetch_one` / `query_scalar`.
 
 ## Error Handling
 
@@ -80,19 +57,23 @@ Key conventions:
   used by the i18n layer (`crate::i18n::error_response`) to look up localized text.
 - Never expose internal details (SQL errors, stack traces) in HTTP responses.
 
+## Router Composition
+
+Route registration is centralized in `paw-server/src/main.rs`:
+
+- Public routes: `/auth/request-otp`, `/auth/verify-otp`, `/auth/register-device`, `/auth/refresh`
+- Protected routes: conversations/messages/threads/channels/media/agents/backup/moderation/push
+- Protected chain: rate-limit layer + `auth_middleware`
+- Global chain: locale middleware -> request-id middleware -> CORS -> metrics middleware
+
 ## Response Format
 
-All JSON responses use a flat envelope:
-
-```json
-{ "messages": [...], "has_more": true }
-```
-
-Error responses:
-
-```json
-{ "error": { "code": "not_member", "message": "Localized human text" } }
-```
+Common shapes in handlers:
+- Paginated/list APIs: `{ "messages": [...], "has_more": bool }`,
+  `{ "conversations": [...] }`, `{ "agents": [...] }`
+- Boolean action responses: `{ "deleted": bool }`, `{ "invited": bool }`
+- Errors are localized via `error_response(...)` and usually include
+  code/message (plus optional details)
 
 ## Authentication & Authorization
 
@@ -125,26 +106,27 @@ Client ── WS ──▸ paw-server ──▸ Hub (in-memory fan-out)
 
 ## Agent Gateway (NATS)
 
-- Publish: `nats.publish("paw.agent.<agent_id>", payload)`.
+- Publish inbound context: `nats.publish("agent.inbound.<agent_id>", payload)`.
 - Subscribe: agent workers consume and reply.
 - If NATS is unreachable, log a warning and continue -- never block the
   user-facing request path.
 
 ## Testing
 
-Integration tests live in `paw-server/tests/`:
+Server test entry points:
 
 ```
-tests/
-  integration_test.rs   -- main test harness
-  helpers/              -- shared fixtures, test DB setup
+paw-server/tests/architecture_test.rs
+paw-server/tests/integration_test.rs
+paw-server/src/**/handlers.rs (unit tests under #[cfg(test)])
 ```
 
 Pattern:
-1. Spin up a test database with `sqlx::PgPool` from `DATABASE_URL`.
-2. Run migrations via `sqlx::migrate!().run(&pool)`.
-3. Build `AppState` with the test pool.
-4. Use `axum::test::TestClient` or direct handler calls.
-5. Assert HTTP status + JSON body.
+1. Fast tests are mostly serde/protocol/domain invariant checks.
+2. Real HTTP/WS flows are `#[tokio::test]` + `#[ignore]`, hitting
+   `http://localhost:38173` / `ws://localhost:38173` with env-backed tokens.
+3. Architecture guard test validates Cargo dependency direction across crates.
+4. Handler-local unit tests focus on pure helper functions (e.g. username/locale normalization).
 
 Always run: `cargo test -p paw-server`
+Optional full gate: `./scripts/verify.sh`
