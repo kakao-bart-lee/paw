@@ -430,8 +430,7 @@ async fn handle_client_message(
             }
 
             conversations.sort_by_key(|conversation| conversation.conversation_id);
-            messages
-                .sort_by_key(|message| (message.conversation_id, message.thread_id, message.seq));
+            messages.sort_by_key(|message| (message.conversation_id, message.thread_id, message.seq));
 
             let payload =
                 serde_json::to_string(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
@@ -443,8 +442,15 @@ async fn handle_client_message(
         }
         ClientMessage::ThreadSubscribe(thread_subscribe) => {
             require_v(thread_subscribe.v)?;
-            handle_thread_subscription(state, user_id, outbound_tx, locale, thread_subscribe, true)
-                .await?;
+            handle_thread_subscription(
+                state,
+                user_id,
+                outbound_tx,
+                locale,
+                thread_subscribe,
+                true,
+            )
+            .await?;
         }
         ClientMessage::ThreadUnsubscribe(thread_unsubscribe) => {
             require_v(thread_unsubscribe.v)?;
