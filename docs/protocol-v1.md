@@ -44,6 +44,35 @@ Send a message to a conversation.
 {"v":1,"type":"typing_stop","conversation_id":"<UUID>"}
 ```
 
+### thread_subscribe / thread_unsubscribe
+Subscribe or unsubscribe the current socket from a specific thread feed.
+```json
+{"v":1,"type":"thread_subscribe","conversation_id":"<UUID>","thread_id":"<UUID>"}
+{"v":1,"type":"thread_unsubscribe","conversation_id":"<UUID>","thread_id":"<UUID>"}
+```
+
+### send_thread_message
+Send a message into a thread-scoped feed.
+```json
+{
+  "v": 1,
+  "type": "send_thread_message",
+  "conversation_id": "<UUID>",
+  "thread_id": "<UUID>",
+  "content": "Reply inside the thread",
+  "format": "markdown",
+  "blocks": [],
+  "idempotency_key": "<UUID>"
+}
+```
+
+### typing_thread_start / typing_thread_end
+Thread-scoped typing indicators are only delivered to sockets subscribed to that thread.
+```json
+{"v":1,"type":"typing_thread_start","conversation_id":"<UUID>","thread_id":"<UUID>"}
+{"v":1,"type":"typing_thread_end","conversation_id":"<UUID>","thread_id":"<UUID>"}
+```
+
 ### message_ack
 Acknowledge messages read up to seq.
 ```json
@@ -96,6 +125,32 @@ Request messages after last_seq (gap-fill on reconnect).
   "blocks": [],
   "attachments": []
 }
+```
+
+### thread_message_received
+Delivered only to sockets subscribed to the target thread.
+```json
+{
+  "v": 1,
+  "type": "thread_message_received",
+  "id": "<UUID>",
+  "conversation_id": "<UUID>",
+  "thread_id": "<UUID>",
+  "sender_id": "<UUID>",
+  "content": "Reply inside the thread",
+  "format": "markdown",
+  "seq": 3,
+  "conversation_seq": 17,
+  "created_at": "<ISO8601>",
+  "blocks": [],
+  "attachments": []
+}
+```
+
+### typing_thread_start / typing_thread_end
+```json
+{"v":1,"type":"typing_thread_start","conversation_id":"<UUID>","thread_id":"<UUID>","user_id":"<UUID>"}
+{"v":1,"type":"typing_thread_end","conversation_id":"<UUID>","thread_id":"<UUID>","user_id":"<UUID>"}
 ```
 
 ### typing_start / typing_stop

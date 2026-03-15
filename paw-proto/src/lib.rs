@@ -23,11 +23,16 @@ pub trait PawMessage {
 pub enum ClientMessage {
     Connect(ConnectMsg),
     MessageSend(MessageSendMsg),
+    SendThreadMessage(ThreadMessageSendMsg),
     TypingStart(TypingMsg),
     TypingStop(TypingMsg),
+    TypingThreadStart(ThreadTypingMsg),
+    TypingThreadEnd(ThreadTypingMsg),
     MessageAck(MessageAckMsg),
     Sync(SyncMsg),
     DeviceSync(DeviceSyncRequest),
+    ThreadSubscribe(ThreadSubscriptionMsg),
+    ThreadUnsubscribe(ThreadSubscriptionMsg),
     ThreadCreate(ThreadCreateMsg),
     ThreadBindAgent(ThreadBindAgentMsg),
     ThreadUnbindAgent(ThreadUnbindAgentMsg),
@@ -41,10 +46,13 @@ pub enum ServerMessage {
     HelloError(HelloErrorMsg),
     Error(ErrorMsg),
     MessageReceived(MessageReceivedMsg),
+    ThreadMessageReceived(ThreadMessageReceivedMsg),
     MessageForwarded(MessageForwardedMsg),
     DeviceSyncResponse(DeviceSyncResponse),
     TypingStart(TypingMsg),
     TypingStop(TypingMsg),
+    TypingThreadStart(ThreadTypingMsg),
+    TypingThreadEnd(ThreadTypingMsg),
     PresenceUpdate(PresenceUpdateMsg),
     ThreadCreated(ThreadCreatedMsg),
     ThreadAgentBound(ThreadAgentBoundMsg),
@@ -86,6 +94,18 @@ pub struct MessageSendMsg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreadMessageSendMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub thread_id: Uuid,
+    pub content: String,
+    pub format: MessageFormat,
+    #[serde(default)]
+    pub blocks: Vec<serde_json::Value>,
+    pub idempotency_key: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypingMsg {
     pub v: u8,
     pub conversation_id: Uuid,
@@ -94,6 +114,23 @@ pub struct TypingMsg {
     /// Injected by server before fan-out; absent in client→server direction.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub user_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreadTypingMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub thread_id: Uuid,
+    /// Injected by server before fan-out; absent in client→server direction.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub user_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreadSubscriptionMsg {
+    pub v: u8,
+    pub conversation_id: Uuid,
+    pub thread_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -215,6 +252,24 @@ pub struct MessageReceivedMsg {
     pub content: String,
     pub format: MessageFormat,
     pub seq: i64,
+    pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub blocks: Vec<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<MessageAttachment>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreadMessageReceivedMsg {
+    pub v: u8,
+    pub id: Uuid,
+    pub conversation_id: Uuid,
+    pub thread_id: Uuid,
+    pub sender_id: Uuid,
+    pub content: String,
+    pub format: MessageFormat,
+    pub seq: i64,
+    pub conversation_seq: i64,
     pub created_at: DateTime<Utc>,
     #[serde(default)]
     pub blocks: Vec<serde_json::Value>,
@@ -548,6 +603,164 @@ mod tests {
                 assert_eq!(frame.attachments[0].file_type, "image");
             }
             _ => panic!("expected MessageReceived variant"),
+        }
+    }
+
+    #[test]
+    fn test_send_thread_message_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let msg = ClientMessage::SendThreadMessage(ThreadMessageSendMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            thread_id,
+            content: "Hello thread".to_owned(),
+            format: MessageFormat::Markdown,
+            blocks: Vec::new(),
+            idempotency_key: Uuid::new_v4(),
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "send_thread_message");
+        assert_eq!(json["conversation_id"], conversation_id.to_string());
+        assert_eq!(json["thread_id"], thread_id.to_string());
+
+        let parsed: ClientMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ClientMessage::SendThreadMessage(frame) => {
+                assert_eq!(frame.v, PROTOCOL_VERSION);
+                assert_eq!(frame.conversation_id, conversation_id);
+                assert_eq!(frame.thread_id, thread_id);
+                assert_eq!(frame.content, "Hello thread");
+            }
+            _ => panic!("expected SendThreadMessage variant"),
+        }
+    }
+
+    #[test]
+    fn test_thread_typing_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let msg = ClientMessage::TypingThreadStart(ThreadTypingMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            thread_id,
+            user_id: None,
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "typing_thread_start");
+        assert_eq!(json["thread_id"], thread_id.to_string());
+
+        let parsed: ClientMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ClientMessage::TypingThreadStart(frame) => {
+                assert_eq!(frame.v, PROTOCOL_VERSION);
+                assert_eq!(frame.conversation_id, conversation_id);
+                assert_eq!(frame.thread_id, thread_id);
+                assert!(frame.user_id.is_none());
+            }
+            _ => panic!("expected TypingThreadStart variant"),
+        }
+    }
+
+    #[test]
+    fn test_thread_typing_server_event_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let msg = ServerMessage::TypingThreadEnd(ThreadTypingMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            thread_id,
+            user_id: Some(user_id),
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "typing_thread_end");
+        assert_eq!(json["thread_id"], thread_id.to_string());
+        assert_eq!(json["user_id"], user_id.to_string());
+
+        let parsed: ServerMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ServerMessage::TypingThreadEnd(frame) => {
+                assert_eq!(frame.conversation_id, conversation_id);
+                assert_eq!(frame.thread_id, thread_id);
+                assert_eq!(frame.user_id, Some(user_id));
+            }
+            _ => panic!("expected TypingThreadEnd variant"),
+        }
+    }
+
+    #[test]
+    fn test_thread_subscribe_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let msg = ClientMessage::ThreadSubscribe(ThreadSubscriptionMsg {
+            v: PROTOCOL_VERSION,
+            conversation_id,
+            thread_id,
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "thread_subscribe");
+        assert_eq!(json["thread_id"], thread_id.to_string());
+
+        let parsed: ClientMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ClientMessage::ThreadSubscribe(frame) => {
+                assert_eq!(frame.v, PROTOCOL_VERSION);
+                assert_eq!(frame.conversation_id, conversation_id);
+                assert_eq!(frame.thread_id, thread_id);
+            }
+            _ => panic!("expected ThreadSubscribe variant"),
+        }
+    }
+
+    #[test]
+    fn test_thread_message_received_roundtrip() {
+        let conversation_id = Uuid::new_v4();
+        let thread_id = Uuid::new_v4();
+        let attachment_id = Uuid::new_v4();
+        let msg = ServerMessage::ThreadMessageReceived(ThreadMessageReceivedMsg {
+            v: PROTOCOL_VERSION,
+            id: Uuid::new_v4(),
+            conversation_id,
+            thread_id,
+            sender_id: Uuid::new_v4(),
+            content: "thread update".to_owned(),
+            format: MessageFormat::Plain,
+            seq: 4,
+            conversation_seq: 19,
+            created_at: Utc::now(),
+            blocks: Vec::new(),
+            attachments: vec![MessageAttachment {
+                id: attachment_id,
+                file_type: "image".to_owned(),
+                file_url: "media/thread/image.png".to_owned(),
+                file_size: 88,
+                mime_type: "image/png".to_owned(),
+                thumbnail_url: None,
+            }],
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        assert_eq!(json["type"], "thread_message_received");
+        assert_eq!(json["thread_id"], thread_id.to_string());
+        assert_eq!(json["seq"], 4);
+        assert_eq!(json["conversation_seq"], 19);
+
+        let parsed: ServerMessage = serde_json::from_value(json).unwrap();
+        match parsed {
+            ServerMessage::ThreadMessageReceived(frame) => {
+                assert_eq!(frame.conversation_id, conversation_id);
+                assert_eq!(frame.thread_id, thread_id);
+                assert_eq!(frame.seq, 4);
+                assert_eq!(frame.conversation_seq, 19);
+                assert_eq!(frame.attachments.len(), 1);
+                assert_eq!(frame.attachments[0].id, attachment_id);
+            }
+            _ => panic!("expected ThreadMessageReceived variant"),
         }
     }
 

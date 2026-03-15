@@ -204,7 +204,7 @@ impl LinkPreviewService {
 pub fn normalize_url(raw: &str) -> Option<String> {
     let trimmed = raw.trim();
     let stripped = trimmed
-        .trim_start_matches(|ch: char| matches!(ch, '(' | '[' | '{' | '"' | '\''))
+        .trim_start_matches(['(', '[', '{', '"', '\''])
         .trim_end_matches(|ch: char| {
             matches!(
                 ch,

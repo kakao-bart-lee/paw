@@ -7,7 +7,8 @@ use chrono::{DateTime, Utc};
 use futures_util::{SinkExt, StreamExt};
 use paw_proto::{
     ClientMessage, DeviceSyncResponse, ErrorMsg, HelloOkMsg, MessageAttachment, MessageFormat,
-    MessageReceivedMsg, ServerMessage, PROTOCOL_VERSION,
+    MessageReceivedMsg, ServerMessage, ThreadMessageSendMsg, ThreadSubscriptionMsg,
+    ThreadTypingMsg, PROTOCOL_VERSION,
 };
 use sqlx::Row;
 use std::time::{Duration, Instant};
@@ -240,33 +241,69 @@ async fn handle_client_message(
         }
         ClientMessage::MessageSend(message_send) => {
             require_v(message_send.v)?;
-            tracing::debug!(
-                user_id = %user_id,
-                conversation_id = %message_send.conversation_id,
-                "message_send received; persistence is handled by HTTP flow"
-            );
+            if let Some(thread_id) = message_send.thread_id {
+                handle_thread_message_send(
+                    state,
+                    user_id,
+                    outbound_tx,
+                    locale,
+                    ThreadMessageSendMsg {
+                        v: message_send.v,
+                        conversation_id: message_send.conversation_id,
+                        thread_id,
+                        content: message_send.content,
+                        format: message_send.format,
+                        blocks: message_send.blocks,
+                        idempotency_key: message_send.idempotency_key,
+                    },
+                )
+                .await?;
+            } else {
+                tracing::debug!(
+                    user_id = %user_id,
+                    conversation_id = %message_send.conversation_id,
+                    "message_send received; persistence is handled by HTTP flow"
+                );
+            }
+        }
+        ClientMessage::SendThreadMessage(thread_message_send) => {
+            require_v(thread_message_send.v)?;
+            handle_thread_message_send(state, user_id, outbound_tx, locale, thread_message_send)
+                .await?;
         }
         ClientMessage::TypingStart(mut typing) => {
             require_v(typing.v)?;
             typing.user_id = Some(user_id);
-            let others: Vec<Uuid> = conversation_members(state, typing.conversation_id)
-                .await?
-                .into_iter()
-                .filter(|&m| m != user_id)
-                .collect();
-            let payload = serde_json::to_string(&ServerMessage::TypingStart(typing))?;
-            state.hub.broadcast_to_conversation(others, &payload).await;
+            handle_typing_message(state, user_id, outbound_tx, locale, typing, true).await?;
         }
         ClientMessage::TypingStop(mut typing) => {
             require_v(typing.v)?;
             typing.user_id = Some(user_id);
-            let others: Vec<Uuid> = conversation_members(state, typing.conversation_id)
-                .await?
-                .into_iter()
-                .filter(|&m| m != user_id)
-                .collect();
-            let payload = serde_json::to_string(&ServerMessage::TypingStop(typing))?;
-            state.hub.broadcast_to_conversation(others, &payload).await;
+            handle_typing_message(state, user_id, outbound_tx, locale, typing, false).await?;
+        }
+        ClientMessage::TypingThreadStart(typing_thread_start) => {
+            require_v(typing_thread_start.v)?;
+            handle_thread_typing_message(
+                state,
+                user_id,
+                outbound_tx,
+                locale,
+                typing_thread_start,
+                true,
+            )
+            .await?;
+        }
+        ClientMessage::TypingThreadEnd(typing_thread_end) => {
+            require_v(typing_thread_end.v)?;
+            handle_thread_typing_message(
+                state,
+                user_id,
+                outbound_tx,
+                locale,
+                typing_thread_end,
+                false,
+            )
+            .await?;
         }
         ClientMessage::MessageAck(ack) => {
             require_v(ack.v)?;
@@ -281,36 +318,57 @@ async fn handle_client_message(
         }
         ClientMessage::Sync(sync) => {
             require_v(sync.v)?;
-            match service::check_member(&state.db, sync.conversation_id, user_id).await? {
-                Membership::Member => {}
-                Membership::NotMember => {
-                    let _ = send_protocol_error(
-                        outbound_tx,
-                        "forbidden",
-                        "sync",
-                        locale,
-                        None,
-                        "User is not a member of this conversation",
-                    )
-                    .await;
+            if let Some(thread_id) = sync.thread_id {
+                if !ensure_thread_scope(
+                    state,
+                    user_id,
+                    outbound_tx,
+                    locale,
+                    sync.conversation_id,
+                    thread_id,
+                    "sync",
+                )
+                .await?
+                {
                     return Ok(());
                 }
-                Membership::ConversationNotFound => {
-                    let _ = send_protocol_error(
-                        outbound_tx,
-                        "not_found",
-                        "sync",
-                        locale,
-                        None,
-                        "Conversation not found",
-                    )
-                    .await;
-                    return Ok(());
+            } else {
+                match service::check_member(&state.db, sync.conversation_id, user_id).await? {
+                    Membership::Member => {}
+                    Membership::NotMember => {
+                        let _ = send_protocol_error(
+                            outbound_tx,
+                            "forbidden",
+                            "sync",
+                            locale,
+                            None,
+                            "User is not a member of this conversation",
+                        )
+                        .await;
+                        return Ok(());
+                    }
+                    Membership::ConversationNotFound => {
+                        let _ = send_protocol_error(
+                            outbound_tx,
+                            "not_found",
+                            "sync",
+                            locale,
+                            None,
+                            "Conversation not found",
+                        )
+                        .await;
+                        return Ok(());
+                    }
                 }
             }
 
-            let messages =
-                fetch_messages_after_seq(state, sync.conversation_id, sync.last_seq).await?;
+            let messages = fetch_messages_after_seq(
+                state,
+                sync.conversation_id,
+                sync.thread_id,
+                sync.last_seq,
+            )
+            .await?;
             for message in messages {
                 let payload = serde_json::to_string(&ServerMessage::MessageReceived(message))?;
                 if outbound_tx.send(Message::Text(payload.into())).is_err() {
@@ -332,10 +390,34 @@ async fn handle_client_message(
                         let mut missing = fetch_messages_after_seq(
                             state,
                             conversation.conversation_id,
+                            None,
                             conversation.last_seq,
                         )
                         .await?;
                         messages.append(&mut missing);
+
+                        for thread in &conversation.threads {
+                            if !thread_exists(state, conversation.conversation_id, thread.thread_id)
+                                .await?
+                            {
+                                tracing::warn!(
+                                    user_id = %user_id,
+                                    conversation_id = %conversation.conversation_id,
+                                    thread_id = %thread.thread_id,
+                                    "skipping unknown thread in device_sync"
+                                );
+                                continue;
+                            }
+
+                            let mut thread_missing = fetch_messages_after_seq(
+                                state,
+                                conversation.conversation_id,
+                                Some(thread.thread_id),
+                                thread.last_seq,
+                            )
+                            .await?;
+                            messages.append(&mut thread_missing);
+                        }
                     }
                     Membership::NotMember | Membership::ConversationNotFound => {
                         tracing::warn!(
@@ -348,7 +430,8 @@ async fn handle_client_message(
             }
 
             conversations.sort_by_key(|conversation| conversation.conversation_id);
-            messages.sort_by_key(|message| (message.conversation_id, message.seq));
+            messages
+                .sort_by_key(|message| (message.conversation_id, message.thread_id, message.seq));
 
             let payload =
                 serde_json::to_string(&ServerMessage::DeviceSyncResponse(DeviceSyncResponse {
@@ -357,6 +440,23 @@ async fn handle_client_message(
                     messages,
                 }))?;
             let _ = outbound_tx.send(Message::Text(payload.into()));
+        }
+        ClientMessage::ThreadSubscribe(thread_subscribe) => {
+            require_v(thread_subscribe.v)?;
+            handle_thread_subscription(state, user_id, outbound_tx, locale, thread_subscribe, true)
+                .await?;
+        }
+        ClientMessage::ThreadUnsubscribe(thread_unsubscribe) => {
+            require_v(thread_unsubscribe.v)?;
+            handle_thread_subscription(
+                state,
+                user_id,
+                outbound_tx,
+                locale,
+                thread_unsubscribe,
+                false,
+            )
+            .await?;
         }
         ClientMessage::ThreadCreate(thread_create) => {
             require_v(thread_create.v)?;
@@ -411,22 +511,353 @@ async fn handle_client_message(
     Ok(())
 }
 
+async fn handle_thread_subscription(
+    state: &AppState,
+    user_id: Uuid,
+    outbound_tx: &WsSender,
+    locale: &str,
+    subscription: ThreadSubscriptionMsg,
+    subscribe: bool,
+) -> anyhow::Result<()> {
+    if !ensure_thread_scope(
+        state,
+        user_id,
+        outbound_tx,
+        locale,
+        subscription.conversation_id,
+        subscription.thread_id,
+        if subscribe {
+            "thread_subscribe"
+        } else {
+            "thread_unsubscribe"
+        },
+    )
+    .await?
+    {
+        return Ok(());
+    }
+
+    if subscribe {
+        state
+            .hub
+            .subscribe_thread(
+                user_id,
+                outbound_tx,
+                subscription.conversation_id,
+                subscription.thread_id,
+            )
+            .await;
+    } else {
+        state
+            .hub
+            .unsubscribe_thread(
+                user_id,
+                outbound_tx,
+                subscription.conversation_id,
+                subscription.thread_id,
+            )
+            .await;
+    }
+
+    Ok(())
+}
+
+async fn handle_thread_message_send(
+    state: &AppState,
+    user_id: Uuid,
+    outbound_tx: &WsSender,
+    locale: &str,
+    message: ThreadMessageSendMsg,
+) -> anyhow::Result<()> {
+    if !ensure_thread_scope(
+        state,
+        user_id,
+        outbound_tx,
+        locale,
+        message.conversation_id,
+        message.thread_id,
+        "send_thread_message",
+    )
+    .await?
+    {
+        return Ok(());
+    }
+
+    let trimmed_content = message.content.trim();
+    if trimmed_content.is_empty() {
+        let _ = send_protocol_error(
+            outbound_tx,
+            "invalid_content",
+            "send_thread_message",
+            locale,
+            None,
+            "Message content is required",
+        )
+        .await;
+        return Ok(());
+    }
+
+    let format = match message.format {
+        MessageFormat::Plain => "plain",
+        MessageFormat::Markdown => "markdown",
+    };
+
+    match service::get_idempotent_message(
+        &state.db,
+        message.conversation_id,
+        user_id,
+        message.idempotency_key,
+    )
+    .await
+    {
+        Ok(Some(_)) => return Ok(()),
+        Ok(None) => {}
+        Err(err) => {
+            tracing::error!(
+                %err,
+                user_id = %user_id,
+                conversation_id = %message.conversation_id,
+                thread_id = %message.thread_id,
+                "failed idempotency lookup for thread message"
+            );
+            let _ = send_protocol_error(
+                outbound_tx,
+                "message_lookup_failed",
+                "send_thread_message",
+                locale,
+                None,
+                "Could not send thread message",
+            )
+            .await;
+            return Ok(());
+        }
+    }
+
+    if let Err(err) = service::send_message(
+        &state.db,
+        message.conversation_id,
+        user_id,
+        Some(message.thread_id),
+        trimmed_content,
+        format,
+        message.idempotency_key,
+    )
+    .await
+    {
+        tracing::error!(
+            %err,
+            user_id = %user_id,
+            conversation_id = %message.conversation_id,
+            thread_id = %message.thread_id,
+            "failed to persist thread websocket message"
+        );
+        let _ = send_protocol_error(
+            outbound_tx,
+            "message_send_failed",
+            "send_thread_message",
+            locale,
+            None,
+            "Could not send thread message",
+        )
+        .await;
+    }
+
+    Ok(())
+}
+
+async fn handle_typing_message(
+    state: &AppState,
+    user_id: Uuid,
+    outbound_tx: &WsSender,
+    locale: &str,
+    typing: paw_proto::TypingMsg,
+    is_start: bool,
+) -> anyhow::Result<()> {
+    if let Some(thread_id) = typing.thread_id {
+        handle_thread_typing_message(
+            state,
+            user_id,
+            outbound_tx,
+            locale,
+            ThreadTypingMsg {
+                v: typing.v,
+                conversation_id: typing.conversation_id,
+                thread_id,
+                user_id: typing.user_id,
+            },
+            is_start,
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let others: Vec<Uuid> = conversation_members(state, typing.conversation_id)
+        .await?
+        .into_iter()
+        .filter(|&member_id| member_id != user_id)
+        .collect();
+    let payload = if is_start {
+        serde_json::to_string(&ServerMessage::TypingStart(typing))?
+    } else {
+        serde_json::to_string(&ServerMessage::TypingStop(typing))?
+    };
+    state.hub.broadcast_to_conversation(others, &payload).await;
+    Ok(())
+}
+
+async fn handle_thread_typing_message(
+    state: &AppState,
+    user_id: Uuid,
+    outbound_tx: &WsSender,
+    locale: &str,
+    mut typing: ThreadTypingMsg,
+    is_start: bool,
+) -> anyhow::Result<()> {
+    if !ensure_thread_scope(
+        state,
+        user_id,
+        outbound_tx,
+        locale,
+        typing.conversation_id,
+        typing.thread_id,
+        if is_start {
+            "typing_thread_start"
+        } else {
+            "typing_thread_end"
+        },
+    )
+    .await?
+    {
+        return Ok(());
+    }
+
+    typing.user_id = Some(user_id);
+    let conversation_id = typing.conversation_id;
+    let thread_id = typing.thread_id;
+    let others: Vec<Uuid> = conversation_members(state, typing.conversation_id)
+        .await?
+        .into_iter()
+        .filter(|&member_id| member_id != user_id)
+        .collect();
+    let payload = if is_start {
+        serde_json::to_string(&ServerMessage::TypingThreadStart(typing))?
+    } else {
+        serde_json::to_string(&ServerMessage::TypingThreadEnd(typing))?
+    };
+    state
+        .hub
+        .send_to_thread(conversation_id, thread_id, others, &payload)
+        .await;
+    Ok(())
+}
+
+async fn ensure_thread_scope(
+    state: &AppState,
+    user_id: Uuid,
+    outbound_tx: &WsSender,
+    locale: &str,
+    conversation_id: Uuid,
+    thread_id: Uuid,
+    ref_type: &str,
+) -> anyhow::Result<bool> {
+    match service::check_member(&state.db, conversation_id, user_id).await? {
+        Membership::Member => {}
+        Membership::NotMember => {
+            let _ = send_protocol_error(
+                outbound_tx,
+                "forbidden",
+                ref_type,
+                locale,
+                None,
+                "User is not a member of this conversation",
+            )
+            .await;
+            return Ok(false);
+        }
+        Membership::ConversationNotFound => {
+            let _ = send_protocol_error(
+                outbound_tx,
+                "conversation_not_found",
+                ref_type,
+                locale,
+                None,
+                "Conversation not found",
+            )
+            .await;
+            return Ok(false);
+        }
+    }
+
+    if !thread_exists(state, conversation_id, thread_id).await? {
+        let _ = send_protocol_error(
+            outbound_tx,
+            "thread_not_found",
+            ref_type,
+            locale,
+            None,
+            "Thread not found",
+        )
+        .await;
+        return Ok(false);
+    }
+
+    Ok(true)
+}
+
+async fn thread_exists(
+    state: &AppState,
+    conversation_id: Uuid,
+    thread_id: Uuid,
+) -> anyhow::Result<bool> {
+    sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+             SELECT 1
+             FROM threads
+             WHERE id = $1 AND conversation_id = $2 AND archived_at IS NULL
+         )",
+    )
+    .bind(thread_id)
+    .bind(conversation_id)
+    .fetch_one(state.db.as_ref())
+    .await
+    .map_err(Into::into)
+}
+
 async fn fetch_messages_after_seq(
     state: &AppState,
     conversation_id: Uuid,
+    thread_id: Option<Uuid>,
     last_seq: i64,
 ) -> anyhow::Result<Vec<MessageReceivedMsg>> {
-    let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
-        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, blocks \
-         FROM messages \
-         WHERE conversation_id = $1 AND seq > $2 \
-         ORDER BY seq ASC \
-         LIMIT 100",
-    )
-    .bind(conversation_id)
-    .bind(last_seq)
-    .fetch_all(state.db.as_ref())
-    .await?;
+    let rows: Vec<sqlx::postgres::PgRow> = match thread_id {
+        Some(thread_id) => {
+            sqlx::query(
+                "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, blocks \
+                 FROM messages \
+                 WHERE conversation_id = $1 AND thread_id = $2 AND seq > $3 AND is_deleted = FALSE \
+                 ORDER BY seq ASC \
+                 LIMIT 100",
+            )
+            .bind(conversation_id)
+            .bind(thread_id)
+            .bind(last_seq)
+            .fetch_all(state.db.as_ref())
+            .await?
+        }
+        None => {
+            sqlx::query(
+                "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, blocks \
+                 FROM messages \
+                 WHERE conversation_id = $1 AND thread_id IS NULL AND seq > $2 AND is_deleted = FALSE \
+                 ORDER BY seq ASC \
+                 LIMIT 100",
+            )
+            .bind(conversation_id)
+            .bind(last_seq)
+            .fetch_all(state.db.as_ref())
+            .await?
+        }
+    };
 
     let message_ids = rows
         .iter()

@@ -102,7 +102,7 @@ pub async fn get_idempotent_message(
     idempotency_key: Uuid,
 ) -> anyhow::Result<Option<MessageSendResult>> {
     sqlx::query_as::<_, MessageSendResult>(
-        "SELECT id, seq, created_at
+        "SELECT id, seq, thread_seq, created_at
          FROM messages
          WHERE conversation_id = $1 AND sender_id = $2 AND idempotency_key = $3
          LIMIT 1",
@@ -124,22 +124,23 @@ pub async fn send_message(
     format: &str,
     idempotency_key: Uuid,
 ) -> anyhow::Result<MessageSendResult> {
-    sqlx::query_as::<_, MessageSendResult>(
-        "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key)
-         VALUES ($1, $2, $3, next_message_seq($1), $4, $5, $6)
-         RETURNING id, seq, created_at",
+    let mut tx = pool.begin().await.context("begin message transaction")?;
+    let created = insert_message(
+        &mut tx,
+        conversation_id,
+        sender_id,
+        thread_id,
+        content,
+        format,
+        idempotency_key,
+        None,
     )
-    .bind(conversation_id)
-    .bind(sender_id)
-    .bind(thread_id)
-    .bind(content)
-    .bind(format)
-    .bind(idempotency_key)
-    .fetch_one(pool.as_ref())
-    .await
-    .context("insert message")
+    .await?;
+    tx.commit().await.context("commit message transaction")?;
+    Ok(created)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn send_message_with_attachments(
     pool: &DbPool,
     conversation_id: Uuid,
@@ -165,20 +166,17 @@ pub async fn send_message_with_attachments(
 
     let mut tx = pool.begin().await.context("begin message transaction")?;
 
-    let created = sqlx::query_as::<_, MessageSendResult>(
-        "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key)
-         VALUES ($1, $2, $3, next_message_seq($1), $4, $5, $6)
-         RETURNING id, seq, created_at",
+    let created = insert_message(
+        &mut tx,
+        conversation_id,
+        sender_id,
+        thread_id,
+        content,
+        format,
+        idempotency_key,
+        None,
     )
-    .bind(conversation_id)
-    .bind(sender_id)
-    .bind(thread_id)
-    .bind(content)
-    .bind(format)
-    .bind(idempotency_key)
-    .fetch_one(&mut *tx)
-    .await
-    .context("insert message with attachments")?;
+    .await?;
 
     for attachment in attachments {
         sqlx::query(
@@ -209,20 +207,82 @@ pub async fn send_forwarded_message(
     idempotency_key: Uuid,
     forwarded_from: serde_json::Value,
 ) -> anyhow::Result<MessageSendResult> {
+    let mut tx = pool
+        .begin()
+        .await
+        .context("begin forwarded message transaction")?;
+    let created = insert_message(
+        &mut tx,
+        conversation_id,
+        sender_id,
+        None,
+        content,
+        format,
+        idempotency_key,
+        Some(forwarded_from),
+    )
+    .await?;
+    tx.commit()
+        .await
+        .context("commit forwarded message transaction")?;
+    Ok(created)
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn insert_message(
+    tx: &mut Transaction<'_, Postgres>,
+    conversation_id: Uuid,
+    sender_id: Uuid,
+    thread_id: Option<Uuid>,
+    content: &str,
+    format: &str,
+    idempotency_key: Uuid,
+    forwarded_from: Option<serde_json::Value>,
+) -> anyhow::Result<MessageSendResult> {
+    let thread_seq = match thread_id {
+        Some(thread_id) => sqlx::query_scalar::<_, i64>(
+            "UPDATE threads
+             SET message_count = message_count + 1,
+                 last_message_at = NOW(),
+                 last_seq = COALESCE(last_seq, 0) + 1
+             WHERE id = $1 AND conversation_id = $2 AND archived_at IS NULL
+             RETURNING last_seq",
+        )
+        .bind(thread_id)
+        .bind(conversation_id)
+        .fetch_optional(&mut **tx)
+        .await?
+        .ok_or_else(|| anyhow!("thread not found"))
+        .map(Some)?,
+        None => None,
+    };
+
     sqlx::query_as::<_, MessageSendResult>(
-        "INSERT INTO messages (conversation_id, sender_id, thread_id, seq, content, format, idempotency_key, forwarded_from)
-         VALUES ($1, $2, NULL, next_message_seq($1), $3, $4, $5, $6)
-         RETURNING id, seq, created_at",
+        "INSERT INTO messages (
+             conversation_id,
+             sender_id,
+             thread_id,
+             seq,
+             content,
+             format,
+             idempotency_key,
+             thread_seq,
+             forwarded_from
+         )
+         VALUES ($1, $2, $3, next_message_seq($1), $4, $5, $6, $7, $8)
+         RETURNING id, seq, thread_seq, created_at",
     )
     .bind(conversation_id)
     .bind(sender_id)
+    .bind(thread_id)
     .bind(content)
     .bind(format)
     .bind(idempotency_key)
+    .bind(thread_seq)
     .bind(forwarded_from)
-    .fetch_one(pool.as_ref())
+    .fetch_one(&mut **tx)
     .await
-    .context("insert forwarded message")
+    .context("insert message")
 }
 
 pub async fn get_messages(
