@@ -17,8 +17,7 @@ use super::models::{
     AgentProfile, InstallAgentResponse, InstalledAgentsResponse, InviteAgentRequest,
     InviteAgentResponse, MarketplaceSearchQuery, MarketplaceSearchResponse, PublishAgentRequest,
     PublishAgentResponse, RegisterAgentRequest, RegisterAgentResponse, RevokeAgentResponse,
-    RotateAgentKeyResponse,
-    UninstallAgentResponse,
+    RotateAgentKeyResponse, UninstallAgentResponse,
 };
 use super::service;
 use crate::auth::middleware::UserId;
@@ -576,18 +575,20 @@ async fn handle_agent_socket(
                                 tracing::warn!("failed to relay stream frame from {agent_id}: {e}");
                             }
                         }
-                        Err(_) => match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
-                            Ok(agent_msg) => {
-                                tracing::info!(
-                                    "agent {agent_id} response for conv {}: {} bytes",
-                                    agent_msg.conversation_id,
-                                    agent_msg.content.len()
-                                );
+                        Err(_) => {
+                            match serde_json::from_str::<paw_proto::AgentResponseMsg>(&text) {
+                                Ok(agent_msg) => {
+                                    tracing::info!(
+                                        "agent {agent_id} response for conv {}: {} bytes",
+                                        agent_msg.conversation_id,
+                                        agent_msg.content.len()
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::warn!("invalid agent message from {agent_id}: {e}");
+                                }
                             }
-                            Err(e) => {
-                                tracing::warn!("invalid agent message from {agent_id}: {e}");
-                            }
-                        },
+                        }
                     }
                 }
                 Message::Close(_) => break,
