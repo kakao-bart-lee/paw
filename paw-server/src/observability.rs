@@ -5,6 +5,7 @@ use axum::{
     response::Response,
 };
 use std::time::Instant;
+use tracing::Instrument;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -24,8 +25,15 @@ pub async fn request_id_middleware(mut request: Request<Body>, next: Next) -> Re
         .extensions_mut()
         .insert(RequestId(request_id.clone()));
 
+    let request_span = tracing::info_span!(
+        "http_request",
+        request_id = %request_id,
+        method = %method,
+        path = %path,
+    );
+
     let started_at = Instant::now();
-    let mut response = next.run(request).await;
+    let mut response = next.run(request).instrument(request_span.clone()).await;
     let elapsed_ms = started_at.elapsed().as_millis() as u64;
     let status = response.status().as_u16();
 
@@ -34,6 +42,7 @@ pub async fn request_id_middleware(mut request: Request<Body>, next: Next) -> Re
     }
 
     tracing::info!(
+        parent: &request_span,
         request_id = %request_id,
         method = %method,
         path = %path,

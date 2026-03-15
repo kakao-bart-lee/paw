@@ -20,6 +20,11 @@ pub struct WsConnection {
     pub connected_at: DateTime<Utc>,
 }
 
+#[tracing::instrument(
+    name = "ws_connection",
+    skip(socket, locale, state),
+    fields(user_id = %user_id, device_id = %device_id)
+)]
 pub async fn handle_socket(
     socket: WebSocket,
     user_id: Uuid,

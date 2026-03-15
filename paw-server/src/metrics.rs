@@ -27,8 +27,8 @@ pub async fn metrics_handler(State(handle): State<PrometheusHandle>) -> impl Int
 /// Middleware that records per-request HTTP metrics.
 ///
 /// Tracked metrics:
-/// - `paw_http_requests_total` (counter) with labels: method, path_pattern, status_code
-/// - `paw_http_request_duration_seconds` (histogram) with labels: method, path_pattern
+/// - `http_requests_total` (counter) with labels: method, path_pattern, status_code
+/// - `http_request_duration_seconds` (histogram) with labels: method, path_pattern
 pub async fn metrics_middleware(request: Request<Body>, next: Next) -> Response {
     let method = request.method().to_string();
     let raw_path = request.uri().path().to_string();
@@ -44,22 +44,22 @@ pub async fn metrics_middleware(request: Request<Body>, next: Next) -> Response 
         ("path_pattern", path_pattern.clone()),
         ("status_code", status_code),
     ];
-    counter!("paw_http_requests_total", &labels).increment(1);
+    counter!("http_requests_total", &labels).increment(1);
 
     let duration_labels = [("method", method), ("path_pattern", path_pattern)];
-    histogram!("paw_http_request_duration_seconds", &duration_labels).record(elapsed);
+    histogram!("http_request_duration_seconds", &duration_labels).record(elapsed);
 
     response
 }
 
 /// Records a WebSocket connection being established.
 pub fn ws_connection_opened() {
-    gauge!("paw_ws_connections_active").increment(1.0);
+    gauge!("active_ws_connections").increment(1.0);
 }
 
 /// Records a WebSocket connection being closed.
 pub fn ws_connection_closed() {
-    gauge!("paw_ws_connections_active").decrement(1.0);
+    gauge!("active_ws_connections").decrement(1.0);
 }
 
 /// Records an agent gateway call outcome.
@@ -198,7 +198,7 @@ mod tests {
         // Record a metric directly via the handle's internal state
         // by using the metrics macros after installing the recorder
         metrics::with_local_recorder(&recorder, || {
-            counter!("paw_http_requests_total", "method" => "GET", "path_pattern" => "/health", "status_code" => "200").increment(1);
+            counter!("http_requests_total", "method" => "GET", "path_pattern" => "/health", "status_code" => "200").increment(1);
         });
 
         let app = Router::new()
@@ -221,8 +221,8 @@ mod tests {
         let text = String::from_utf8(body.to_vec()).expect("utf8");
 
         assert!(
-            text.contains("paw_http_requests_total"),
-            "expected prometheus output to contain paw_http_requests_total, got: {text}"
+            text.contains("http_requests_total"),
+            "expected prometheus output to contain http_requests_total, got: {text}"
         );
     }
 }

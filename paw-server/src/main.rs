@@ -25,7 +25,7 @@ use axum::{
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use rate_limit::{ProtectedLimiter, PublicLimiter};
@@ -34,12 +34,30 @@ use rate_limit::{ProtectedLimiter, PublicLimiter};
 async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
 
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::new(
-            std::env::var("RUST_LOG").unwrap_or_else(|_| "paw_server=debug".into()),
-        ))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    let env_filter = tracing_subscriber::EnvFilter::new(
+        std::env::var("RUST_LOG").unwrap_or_else(|_| "paw_server=debug".into()),
+    );
+    let is_production = std::env::var("PAW_ENV")
+        .ok()
+        .map(|value| value.eq_ignore_ascii_case("production"))
+        .unwrap_or(false);
+
+    if is_production {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .json()
+                    .flatten_event(true)
+                    .with_current_span(true),
+            )
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer().compact())
+            .init();
+    }
 
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:35432/paw".to_string());
@@ -315,6 +333,7 @@ async fn main() -> anyhow::Result<()> {
             i18n::locale_middleware,
         ))
         .layer(middleware::from_fn(observability::request_id_middleware))
+        .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state)
         .merge(metrics_route)
