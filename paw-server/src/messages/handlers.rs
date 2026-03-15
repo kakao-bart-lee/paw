@@ -49,6 +49,11 @@ pub struct GetMessagesResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct DeleteMessageResponse {
+    pub deleted: bool,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ListConversationsResponse {
     pub conversations: Vec<ConversationListItem>,
 }
@@ -133,6 +138,7 @@ pub async fn send_message(
         &state.db,
         conv_id,
         user_id,
+        None,
         payload.content.trim(),
         &format,
         payload.idempotency_key,
@@ -216,9 +222,9 @@ async fn notify_agents_of_message(
     }
 
     let rows: Vec<sqlx::postgres::PgRow> = sqlx::query(
-        "SELECT id, conversation_id, sender_id, content, format, seq, created_at, blocks\
+        "SELECT id, conversation_id, thread_id, sender_id, content, format, seq, created_at, blocks\
          FROM messages\
-         WHERE conversation_id = $1\
+         WHERE conversation_id = $1 AND is_deleted = FALSE\
          ORDER BY seq DESC\
          LIMIT 10",
     )
@@ -270,7 +276,7 @@ fn message_received_from_row(
         v: PROTOCOL_VERSION,
         id: row.try_get("id")?,
         conversation_id: row.try_get("conversation_id")?,
-        thread_id: None,
+        thread_id: row.try_get("thread_id")?,
         sender_id: row.try_get("sender_id")?,
         content: row.try_get("content")?,
         format: to_message_format(&format_raw.unwrap_or_else(|| "markdown".to_owned())),
@@ -322,6 +328,129 @@ pub async fn get_messages(
     }
 
     Json(GetMessagesResponse { messages, has_more }).into_response()
+}
+
+pub async fn delete_message(
+    State(state): State<AppState>,
+    Extension(RequestLocale(locale)): Extension<RequestLocale>,
+    Extension(UserId(user_id)): Extension<UserId>,
+    Path((conv_id, message_id)): Path<(Uuid, Uuid)>,
+) -> Response {
+    match ensure_membership(&state, conv_id, user_id, &locale).await {
+        Ok(()) => {}
+        Err(resp) => return resp,
+    }
+
+    let message_row = match sqlx::query(
+        "SELECT thread_id
+         FROM messages
+         WHERE id = $1 AND conversation_id = $2",
+    )
+    .bind(message_id)
+    .bind(conv_id)
+    .fetch_optional(state.db.as_ref())
+    .await
+    {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "not_found",
+                &locale,
+                "Message not found",
+            )
+            .into_response();
+        }
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conv_id, message_id = %message_id, "failed to load message for delete");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "delete_failed",
+                &locale,
+                "Could not delete message",
+            )
+            .into_response();
+        }
+    };
+
+    let protected_root = match sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1 FROM threads
+            WHERE conversation_id = $1 AND root_message_id = $2
+         )",
+    )
+    .bind(conv_id)
+    .bind(message_id)
+    .fetch_one(state.db.as_ref())
+    .await
+    {
+        Ok(value) => value,
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conv_id, message_id = %message_id, "failed to check root protection");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "delete_failed",
+                &locale,
+                "Could not delete message",
+            )
+            .into_response();
+        }
+    };
+
+    if protected_root {
+        return error(
+            StatusCode::CONFLICT,
+            "root_message_protected",
+            &locale,
+            "Cannot delete a thread root message while the thread exists",
+        )
+        .into_response();
+    }
+
+    let thread_id: Option<Uuid> = message_row.try_get("thread_id").unwrap_or(None);
+    let deleted = match service::delete_message(&state.db, conv_id, message_id).await {
+        Ok(value) => value,
+        Err(err) => {
+            tracing::error!(%err, conversation_id = %conv_id, message_id = %message_id, "delete message failed");
+            return error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "delete_failed",
+                &locale,
+                "Could not delete message",
+            )
+            .into_response();
+        }
+    };
+
+    if deleted {
+        if let Some(thread_id) = thread_id {
+            let latest = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
+                "SELECT MAX(created_at)
+                 FROM messages
+                 WHERE conversation_id = $1 AND thread_id = $2",
+            )
+            .bind(conv_id)
+            .bind(thread_id)
+            .fetch_one(state.db.as_ref())
+            .await
+            .ok()
+            .flatten();
+
+            let _ = sqlx::query(
+                "UPDATE threads
+                 SET message_count = GREATEST(message_count - 1, 0),
+                     last_message_at = $3
+                 WHERE id = $1 AND conversation_id = $2",
+            )
+            .bind(thread_id)
+            .bind(conv_id)
+            .bind(latest)
+            .execute(state.db.as_ref())
+            .await;
+        }
+    }
+
+    Json(DeleteMessageResponse { deleted }).into_response()
 }
 
 pub async fn list_conversations(

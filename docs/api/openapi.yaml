@@ -53,6 +53,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         conversation_id: { type: string, format: uuid }
+        thread_id: { type: string, format: uuid, nullable: true, description: "Null for main timeline messages, UUID for thread-scoped messages" }
         sender_id: { type: string, format: uuid }
         content: { type: string }
         format: { type: string, enum: [plain, markdown] }
@@ -67,6 +68,34 @@ components:
         avatar_url: { type: string, format: uri, nullable: true }
         is_public: { type: boolean }
         developer_id: { type: string, format: uuid }
+
+    Thread:
+      type: object
+      required: [id, conversation_id, root_message_id, created_by, message_count, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        conversation_id: { type: string, format: uuid }
+        root_message_id: { type: string, format: uuid }
+        title: { type: string, nullable: true }
+        created_by: { type: string, format: uuid }
+        message_count: { type: integer }
+        last_message_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    ThreadAgent:
+      type: object
+      required: [thread_id, agent_id, bound_at]
+      properties:
+        thread_id: { type: string, format: uuid }
+        agent_id: { type: string, format: uuid }
+        bound_at: { type: string, format: date-time }
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
 
     Channel:
       type: object
@@ -414,6 +443,264 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Message' }
+
+  /conversations/{conv_id}/messages/{message_id}:
+    delete:
+      summary: Delete a message
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: message_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Message deleted }
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Message is a thread root (root_message_protected)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads:
+    get:
+      summary: List threads in a conversation
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: List of threads
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Thread' }
+    post:
+      summary: Create a new thread from a root message
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                root_message_id: { type: string, format: uuid }
+                title: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Thread created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Thread' }
+        '400':
+          description: Invalid request (threads_not_allowed / message_not_found)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Thread limit exceeded or duplicate root
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}:
+    get:
+      summary: Get thread details
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Thread details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Thread' }
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    delete:
+      summary: Delete a thread
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Thread deleted }
+        '404':
+          description: Thread not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Thread still contains messages
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}/messages:
+    get:
+      summary: Get messages in a thread
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Thread messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+    post:
+      summary: Send a message to a thread
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                format: { type: string, enum: [plain, markdown] }
+      responses:
+        '201':
+          description: Thread message sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+
+  /conversations/{conv_id}/threads/{thread_id}/agents:
+    get:
+      summary: List agents bound to a thread
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Thread agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ThreadAgent' }
+    post:
+      summary: Bind an agent to a thread
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_id: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Agent bound
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ThreadAgent' }
+        '400':
+          description: Agent not in conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Agent already bound
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /conversations/{conv_id}/threads/{thread_id}/agents/{agent_id}:
+    delete:
+      summary: Unbind agent from thread
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: conv_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: thread_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: agent_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Agent unbound }
+        '400':
+          description: Agent not bound in conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /api/v1/channels:
     get:

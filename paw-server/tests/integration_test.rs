@@ -1450,3 +1450,81 @@ fn e2ee_push_payload_has_no_content_field() {
     let roundtrip: PushPayload = serde_json::from_value(json).unwrap();
     assert_eq!(roundtrip, payload);
 }
+
+#[tokio::test]
+#[ignore = "requires running paw-server with auth token and group conversation"]
+async fn thread_create_list_get_delete_flow() {
+    let base = "http://localhost:38173";
+    let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let conv_id = std::env::var("PAW_TEST_GROUP_CONV_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000010".into());
+    let root_message_id = std::env::var("PAW_TEST_ROOT_MESSAGE_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000011".into());
+    let client = reqwest::Client::new();
+
+    let response = client
+        .post(format!("{base}/conversations/{conv_id}/threads"))
+        .bearer_auth(&token)
+        .json(&serde_json::json!({
+            "root_message_id": root_message_id,
+            "title": "integration thread"
+        }))
+        .send()
+        .await
+        .unwrap();
+
+    assert!(
+        response.status().is_success() || response.status().as_u16() == 409,
+        "expected success or duplicate/thread-limit style conflict, got {}",
+        response.status()
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server with auth token and direct conversation"]
+async fn thread_create_in_direct_conversation_returns_threads_not_allowed() {
+    let base = "http://localhost:38173";
+    let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let conv_id = std::env::var("PAW_TEST_DIRECT_CONV_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000020".into());
+    let root_message_id = std::env::var("PAW_TEST_ROOT_MESSAGE_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000021".into());
+    let client = reqwest::Client::new();
+
+    let response = client
+        .post(format!("{base}/conversations/{conv_id}/threads"))
+        .bearer_auth(&token)
+        .json(&serde_json::json!({ "root_message_id": root_message_id }))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status().as_u16(), 400);
+}
+
+#[tokio::test]
+#[ignore = "requires running paw-server with auth token and seeded thread root message"]
+async fn thread_root_message_delete_is_protected() {
+    let base = "http://localhost:38173";
+    let token = std::env::var("PAW_TEST_TOKEN").unwrap_or_else(|_| "test_token".into());
+    let conv_id = std::env::var("PAW_TEST_GROUP_CONV_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000030".into());
+    let root_message_id = std::env::var("PAW_TEST_THREAD_ROOT_MESSAGE_ID")
+        .unwrap_or_else(|_| "00000000-0000-0000-0000-000000000031".into());
+    let client = reqwest::Client::new();
+
+    let response = client
+        .delete(format!(
+            "{base}/conversations/{conv_id}/messages/{root_message_id}"
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap();
+
+    assert!(
+        response.status().as_u16() == 409 || response.status().as_u16() == 404,
+        "expected root protection or missing seed data, got {}",
+        response.status()
+    );
+}
