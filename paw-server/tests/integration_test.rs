@@ -4,7 +4,163 @@ use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[allow(dead_code)]
+mod db {
+    pub type DbPool = std::sync::Arc<sqlx::PgPool>;
+}
+
+#[allow(dead_code)]
+mod ws {
+    pub mod hub {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/ws/hub.rs"));
+    }
+
+    #[allow(clippy::items_after_test_module)]
+    pub mod pg_listener {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/ws/pg_listener.rs"));
+
+        pub fn payload_to_message_for_test(
+            payload: &serde_json::Value,
+        ) -> Option<paw_proto::ServerMessage> {
+            payload_to_message(payload)
+        }
+    }
+}
+
+#[allow(dead_code)]
+mod messages {
+    pub mod models {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/messages/models.rs"));
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub mod service {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/messages/service.rs"));
+    }
+}
+
+#[allow(dead_code)]
+mod threads {
+    pub mod models {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/threads/models.rs"));
+    }
+}
+
+#[allow(dead_code)]
+mod link_preview {
+    pub mod models {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/link_preview/models.rs"));
+    }
+
+    pub mod service {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/link_preview/service.rs"));
+    }
+}
+
+#[allow(dead_code)]
+mod agents {
+    pub mod service {
+        pub fn generate_agent_token() -> String {
+            format!("paw_agent_{}", uuid::Uuid::new_v4())
+        }
+    }
+
+    pub mod models {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/agents/models.rs"));
+    }
+
+    pub mod permissions {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/agents/permissions.rs"));
+    }
+}
+
+#[allow(dead_code)]
+mod context_engine {
+    pub mod models {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/context_engine/models.rs"));
+    }
+
+    #[allow(clippy::items_after_test_module)]
+    pub mod hooks {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/context_engine/hooks.rs"));
+
+        pub fn attention_mode_label(raw: &str) -> &'static str {
+            match AttentionMode::from_db(raw) {
+                AttentionMode::All => "all",
+                AttentionMode::Mentions => "mentions",
+                AttentionMode::None => "none",
+            }
+        }
+
+        pub fn allows_context_event_for_test(
+            mode_raw: &str,
+            event_type: super::models::ContextEventType,
+            data: &serde_json::Value,
+            agent_id: uuid::Uuid,
+            agent_name: &str,
+        ) -> bool {
+            allows_context_event(
+                AttentionMode::from_db(mode_raw),
+                event_type,
+                data,
+                agent_id,
+                agent_name,
+            )
+        }
+    }
+}
+
 const TEST_JWT_SECRET: &str = "integration_test_secret_key_do_not_use_in_prod";
+const TEST_SERVER_URL: &str = "http://localhost:38173";
+
+#[derive(Debug, Clone)]
+struct TestHttpClient {
+    client: reqwest::Client,
+    base_url: String,
+    auth_token: Option<String>,
+}
+
+impl TestHttpClient {
+    fn authed(token_env: &str) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: TEST_SERVER_URL.to_string(),
+            auth_token: Some(test_env(token_env, "test_token")),
+        }
+    }
+
+    fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
+        let request = self
+            .client
+            .request(method, format!("{}{}", self.base_url, path));
+        match self.auth_token.as_deref() {
+            Some(token) => request.bearer_auth(token),
+            None => request,
+        }
+    }
+
+    fn get(&self, path: &str) -> reqwest::RequestBuilder {
+        self.request(reqwest::Method::GET, path)
+    }
+
+    fn post(&self, path: &str) -> reqwest::RequestBuilder {
+        self.request(reqwest::Method::POST, path)
+    }
+
+    fn patch(&self, path: &str) -> reqwest::RequestBuilder {
+        self.request(reqwest::Method::PATCH, path)
+    }
+}
+
+fn test_env(key: &str, default: &str) -> String {
+    std::env::var(key).unwrap_or_else(|_| default.to_string())
+}
+
+fn test_uuid(key: &str, default: &str) -> Uuid {
+    test_env(key, default)
+        .parse()
+        .unwrap_or_else(|_| panic!("{key} must be a valid UUID"))
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Claims {
@@ -1902,4 +2058,562 @@ async fn thread_root_message_delete_is_protected() {
         "expected root protection or missing seed data, got {}",
         response.status()
     );
+}
+
+mod thread_crud_tests {
+    use super::*;
+
+    fn group_conversation_id() -> Uuid {
+        test_uuid(
+            "PAW_TEST_GROUP_CONV_ID",
+            "00000000-0000-0000-0000-000000000010",
+        )
+    }
+
+    fn root_message_id() -> Uuid {
+        test_uuid(
+            "PAW_TEST_ROOT_MESSAGE_ID",
+            "00000000-0000-0000-0000-000000000011",
+        )
+    }
+
+    fn active_thread_id() -> Uuid {
+        test_uuid(
+            "PAW_TEST_ACTIVE_THREAD_ID",
+            "00000000-0000-0000-0000-000000000012",
+        )
+    }
+
+    #[tokio::test]
+    #[ignore = "requires running PostgreSQL"]
+    async fn test_create_thread() {
+        let client = TestHttpClient::authed("PAW_TEST_TOKEN");
+        let conversation_id = group_conversation_id();
+        let response = client
+            .post(&format!("/conversations/{conversation_id}/threads"))
+            .json(&serde_json::json!({
+                "root_message_id": root_message_id(),
+                "title": "integration thread"
+            }))
+            .send()
+            .await
+            .unwrap();
+
+        assert!(
+            response.status() == 201 || response.status() == 409,
+            "expected created or duplicate-root conflict, got {}",
+            response.status()
+        );
+
+        if response.status() == 201 {
+            let created: threads::models::Thread = response.json().await.unwrap();
+            assert_eq!(created.conversation_id, conversation_id);
+            assert_eq!(created.root_message_id, root_message_id());
+            assert_eq!(created.title.as_deref(), Some("integration thread"));
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires running PostgreSQL"]
+    async fn test_list_threads() {
+        let client = TestHttpClient::authed("PAW_TEST_TOKEN");
+        let conversation_id = group_conversation_id();
+        let response = client
+            .get(&format!("/conversations/{conversation_id}/threads"))
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), 200);
+        let threads: Vec<threads::models::Thread> = response.json().await.unwrap();
+        assert!(
+            threads
+                .iter()
+                .all(|thread| thread.conversation_id == conversation_id),
+            "listed threads should belong to the requested conversation"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires running PostgreSQL"]
+    async fn test_get_thread_detail() {
+        let client = TestHttpClient::authed("PAW_TEST_TOKEN");
+        let conversation_id = group_conversation_id();
+        let thread_id = active_thread_id();
+        let response = client
+            .get(&format!("/conversations/{conversation_id}/threads/{thread_id}"))
+            .send()
+            .await
+            .unwrap();
+
+        assert!(
+            response.status() == 200 || response.status() == 404,
+            "expected thread detail or seeded-thread miss, got {}",
+            response.status()
+        );
+
+        if response.status() == 200 {
+            let thread: threads::models::Thread = response.json().await.unwrap();
+            assert_eq!(thread.id, thread_id);
+            assert_eq!(thread.conversation_id, conversation_id);
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires running PostgreSQL"]
+    async fn test_update_thread_title() {
+        let client = TestHttpClient::authed("PAW_TEST_TOKEN");
+        let conversation_id = group_conversation_id();
+        let thread_id = active_thread_id();
+        let response = client
+            .patch(&format!("/conversations/{conversation_id}/threads/{thread_id}"))
+            .json(&threads::models::UpdateThreadTitleRequest {
+                title: Some("updated integration thread".to_string()),
+            })
+            .send()
+            .await
+            .unwrap();
+
+        assert!(
+            response.status() == 200 || response.status() == 404,
+            "expected title update or seeded-thread miss, got {}",
+            response.status()
+        );
+
+        if response.status() == 200 {
+            let thread: threads::models::Thread = response.json().await.unwrap();
+            assert_eq!(thread.id, thread_id);
+            assert_eq!(thread.title.as_deref(), Some("updated integration thread"));
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires running PostgreSQL"]
+    async fn test_archive_thread() {
+        let client = TestHttpClient::authed("PAW_TEST_TOKEN");
+        let conversation_id = group_conversation_id();
+        let thread_id = active_thread_id();
+        let response = client
+            .post(&format!(
+                "/conversations/{conversation_id}/threads/{thread_id}/archive"
+            ))
+            .send()
+            .await
+            .unwrap();
+
+        assert!(
+            response.status() == 200 || response.status() == 404,
+            "expected archive success or seeded-thread miss, got {}",
+            response.status()
+        );
+
+        if response.status() == 200 {
+            let archived: serde_json::Value = response.json().await.unwrap();
+            assert_eq!(archived["archived"], true);
+        }
+    }
+}
+
+mod context_engine_tests {
+    use super::*;
+
+    #[test]
+    fn test_context_event_model_serialization() {
+        let thread_id = Uuid::new_v4();
+        let payload = serde_json::to_value(context_engine::models::MessageCreatedData {
+            message_id: Uuid::new_v4(),
+            thread_id: Some(thread_id),
+            sender_id: Uuid::new_v4(),
+            content: "Need @planner context".to_string(),
+            format: "markdown".to_string(),
+            seq: 7,
+        })
+        .unwrap();
+        let event = paw_proto::ContextEvent {
+            event_type: context_engine::models::ContextEventType::MessageCreated
+                .as_str()
+                .to_string(),
+            conversation_id: Uuid::new_v4(),
+            data: payload,
+            timestamp: Utc::now(),
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["event_type"], "message_created");
+        assert_eq!(json["data"]["thread_id"], thread_id.to_string());
+        assert_eq!(json["data"]["seq"], 7);
+    }
+
+    #[test]
+    fn test_hook_event_types_complete() {
+        let event_types = [
+            context_engine::models::ContextEventType::MessageCreated,
+            context_engine::models::ContextEventType::MessageEdited,
+            context_engine::models::ContextEventType::MessageDeleted,
+            context_engine::models::ContextEventType::MemberJoined,
+            context_engine::models::ContextEventType::MemberLeft,
+            context_engine::models::ContextEventType::ThreadCreated,
+            context_engine::models::ContextEventType::ConversationSettingsChanged,
+        ]
+        .map(|event_type| event_type.as_str());
+
+        assert_eq!(
+            event_types,
+            [
+                "message_created",
+                "message_edited",
+                "message_deleted",
+                "member_joined",
+                "member_left",
+                "thread_created",
+                "conversation_settings_changed",
+            ]
+        );
+    }
+}
+
+mod agent_permissions_tests {
+    use super::*;
+
+    #[test]
+    fn test_permission_enum_values() {
+        let serialized = [
+            agents::permissions::AgentPermission::ReadMessages,
+            agents::permissions::AgentPermission::SendMessages,
+            agents::permissions::AgentPermission::ManageThread,
+            agents::permissions::AgentPermission::AccessHistory,
+            agents::permissions::AgentPermission::UseTools,
+        ]
+        .map(|permission| serde_json::to_string(&permission).unwrap());
+
+        assert_eq!(
+            serialized,
+            [
+                "\"read_messages\"",
+                "\"send_messages\"",
+                "\"manage_thread\"",
+                "\"access_history\"",
+                "\"use_tools\"",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_default_permissions_on_invite() {
+        assert_eq!(
+            agents::permissions::DEFAULT_INVITE_PERMISSIONS,
+            [
+                agents::permissions::AgentPermission::ReadMessages,
+                agents::permissions::AgentPermission::SendMessages,
+            ]
+        );
+
+        let normalized = agents::permissions::normalize_permissions(&[
+            agents::permissions::DEFAULT_INVITE_PERMISSIONS[0],
+            agents::permissions::DEFAULT_INVITE_PERMISSIONS[1],
+            agents::permissions::DEFAULT_INVITE_PERMISSIONS[0],
+        ]);
+        assert_eq!(normalized, agents::permissions::DEFAULT_INVITE_PERMISSIONS);
+    }
+}
+
+mod forwarding_tests {
+    use super::*;
+
+    #[test]
+    fn test_forward_message_model() {
+        let forwarded = messages::models::ForwardedFromMetadata {
+            original_message_id: Uuid::new_v4(),
+            source_conversation_id: Uuid::new_v4(),
+        };
+
+        let json = serde_json::to_value(&forwarded).unwrap();
+        assert_eq!(
+            json["original_message_id"],
+            forwarded.original_message_id.to_string()
+        );
+        assert_eq!(
+            json["source_conversation_id"],
+            forwarded.source_conversation_id.to_string()
+        );
+    }
+
+    #[test]
+    fn test_forwarded_from_serialization() {
+        let forwarded_from = paw_proto::ForwardedFrom {
+            original_message_id: Uuid::new_v4(),
+            source_conversation_id: Uuid::new_v4(),
+        };
+        let json = serde_json::to_value(&forwarded_from).unwrap();
+        let roundtrip: paw_proto::ForwardedFrom = serde_json::from_value(json.clone()).unwrap();
+
+        assert_eq!(
+            json["original_message_id"],
+            forwarded_from.original_message_id.to_string()
+        );
+        assert_eq!(roundtrip.original_message_id, forwarded_from.original_message_id);
+        assert_eq!(
+            roundtrip.source_conversation_id,
+            forwarded_from.source_conversation_id
+        );
+    }
+}
+
+mod link_preview_tests {
+    use super::*;
+
+    #[test]
+    fn test_url_extraction_regex() {
+        let urls = link_preview::service::LinkPreviewService::extract_urls(
+            "Visit (https://example.com/a#frag), https://example.com/a and https://example.com/b?x=1 then https://example.com/c.",
+        );
+
+        assert_eq!(
+            urls,
+            vec![
+                "https://example.com/a".to_string(),
+                "https://example.com/b?x=1".to_string(),
+                "https://example.com/c".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_link_preview_model() {
+        let preview = link_preview::models::LinkPreview {
+            url: "https://example.com/post".to_string(),
+            canonical_url: Some("https://example.com/post".to_string()),
+            title: Some("Paw update".to_string()),
+            description: Some("Wave 3 recap".to_string()),
+            image_url: Some("https://cdn.example.com/cover.png".to_string()),
+            site_name: Some("Paw Blog".to_string()),
+            status: link_preview::models::LINK_PREVIEW_READY.to_string(),
+            fetched_at: Some(Utc::now()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        let json = serde_json::to_value(&preview).unwrap();
+        let roundtrip: link_preview::models::LinkPreview =
+            serde_json::from_value(json.clone()).unwrap();
+
+        assert_eq!(json["status"], link_preview::models::LINK_PREVIEW_READY);
+        assert_eq!(roundtrip.url, preview.url);
+        assert_eq!(roundtrip.title, preview.title);
+    }
+}
+
+mod group_roles_tests {
+    use super::*;
+
+    #[test]
+    fn test_role_enum_values() {
+        assert_eq!(
+            messages::service::ConversationRole::from_db("admin")
+                .unwrap()
+                .as_db(),
+            "admin"
+        );
+        assert_eq!(
+            messages::service::ConversationRole::from_db("member")
+                .unwrap()
+                .as_db(),
+            "member"
+        );
+        assert_eq!(
+            messages::service::ConversationRole::from_db("owner"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_admin_role_check() {
+        let admin = messages::service::ConversationRole::from_db("admin").unwrap();
+        let member = messages::service::ConversationRole::from_db("member").unwrap();
+
+        assert_eq!(admin, messages::service::ConversationRole::Admin);
+        assert_ne!(member, messages::service::ConversationRole::Admin);
+    }
+}
+
+mod attachment_tests {
+    use super::*;
+
+    const TEXT_ATTACHMENT_MAX_BYTES: usize = 256 * 1024;
+    const IMAGE_ATTACHMENT_MAX_BYTES: i64 = 512 * 1024;
+
+    #[test]
+    fn test_attachment_size_limits() {
+        assert_eq!(TEXT_ATTACHMENT_MAX_BYTES, 262_144);
+        assert_eq!(IMAGE_ATTACHMENT_MAX_BYTES, 524_288);
+        assert!(IMAGE_ATTACHMENT_MAX_BYTES > TEXT_ATTACHMENT_MAX_BYTES as i64);
+    }
+
+    #[test]
+    fn test_attachment_model() {
+        let attachment = paw_proto::MessageAttachment {
+            id: Uuid::new_v4(),
+            file_type: "image".to_string(),
+            file_url: "media/test.png".to_string(),
+            file_size: 128 * 1024,
+            mime_type: "image/png".to_string(),
+            thumbnail_url: Some("media/thumb-test.png".to_string()),
+        };
+
+        let json = serde_json::to_value(&attachment).unwrap();
+        let roundtrip: paw_proto::MessageAttachment = serde_json::from_value(json.clone()).unwrap();
+
+        assert_eq!(json["file_type"], "image");
+        assert_eq!(json["mime_type"], "image/png");
+        assert_eq!(roundtrip.id, attachment.id);
+        assert_eq!(roundtrip.thumbnail_url, attachment.thumbnail_url);
+    }
+}
+
+mod tool_call_tests {
+    use super::*;
+
+    #[test]
+    fn test_tool_call_msg_variants() {
+        let stream_id = Uuid::new_v4();
+        let variants = [
+            paw_proto::AgentStreamMsg::ToolCallStart(paw_proto::ToolCallStartMsg {
+                v: 1,
+                stream_id,
+                id: "call-1".to_string(),
+                name: "search".to_string(),
+                arguments_json: serde_json::json!({ "q": "paw" }),
+            }),
+            paw_proto::AgentStreamMsg::ToolCallResult(paw_proto::ToolCallResultMsg {
+                v: 1,
+                stream_id,
+                id: "call-1".to_string(),
+                result_json: serde_json::json!({ "results": 1 }),
+                is_error: false,
+            }),
+            paw_proto::AgentStreamMsg::ToolCallEnd(paw_proto::ToolCallEndMsg {
+                v: 1,
+                stream_id,
+                id: "call-1".to_string(),
+            }),
+        ];
+
+        let serialized = variants.map(|variant| serde_json::to_value(&variant).unwrap()["type"].clone());
+        assert_eq!(
+            serialized,
+            [
+                serde_json::json!("tool_call_start"),
+                serde_json::json!("tool_call_result"),
+                serde_json::json!("tool_call_end"),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_tool_call_serialization() {
+        let msg = paw_proto::ServerMessage::ToolCallResult(paw_proto::ToolCallResultMsg {
+            v: 1,
+            stream_id: Uuid::new_v4(),
+            id: "call-42".to_string(),
+            result_json: serde_json::json!({ "ok": true }),
+            is_error: false,
+        });
+
+        let json = serde_json::to_value(&msg).unwrap();
+        let roundtrip: paw_proto::ServerMessage = serde_json::from_value(json.clone()).unwrap();
+
+        assert_eq!(json["type"], "tool_call_result");
+        match roundtrip {
+            paw_proto::ServerMessage::ToolCallResult(result) => {
+                assert_eq!(result.id, "call-42");
+                assert_eq!(result.result_json["ok"], true);
+                assert!(!result.is_error);
+            }
+            other => panic!("expected ToolCallResult, got {other:?}"),
+        }
+    }
+}
+
+mod thread_ws_routing_tests {
+    use super::*;
+
+    #[test]
+    fn test_thread_message_event_serialization() {
+        let thread_id = Uuid::new_v4();
+        let payload = serde_json::json!({
+            "id": Uuid::new_v4().to_string(),
+            "conversation_id": Uuid::new_v4().to_string(),
+            "thread_id": thread_id.to_string(),
+            "thread_seq": 5,
+            "sender_id": Uuid::new_v4().to_string(),
+            "seq": 17,
+            "content": "thread reply",
+            "format": "markdown",
+            "blocks": [],
+            "created_at": Utc::now().to_rfc3339(),
+        });
+
+        let message = ws::pg_listener::payload_to_message_for_test(&payload).unwrap();
+        match message {
+            paw_proto::ServerMessage::ThreadMessageReceived(frame) => {
+                let json = serde_json::to_value(&frame).unwrap();
+                assert_eq!(json["thread_id"], thread_id.to_string());
+                assert_eq!(frame.seq, 5);
+                assert_eq!(frame.conversation_seq, 17);
+            }
+            other => panic!("expected ThreadMessageReceived, got {other:?}"),
+        }
+    }
+}
+
+mod attention_mode_tests {
+    use super::*;
+
+    #[test]
+    fn test_attention_mode_enum() {
+        assert_eq!(context_engine::hooks::attention_mode_label("all"), "all");
+        assert_eq!(
+            context_engine::hooks::attention_mode_label("mentions"),
+            "mentions"
+        );
+        assert_eq!(context_engine::hooks::attention_mode_label("none"), "none");
+        assert_eq!(context_engine::hooks::attention_mode_label("unexpected"), "all");
+
+        let agent_id = Uuid::new_v4();
+        let mention_payload = serde_json::json!({
+            "content": format!("please review this @{agent_id}"),
+        });
+        assert!(context_engine::hooks::allows_context_event_for_test(
+            "mentions",
+            context_engine::models::ContextEventType::MessageCreated,
+            &mention_payload,
+            agent_id,
+            "planner",
+        ));
+    }
+
+    #[test]
+    fn test_delegation_model() {
+        let request = agents::models::DelegateAgentRequest {
+            target_agent_id: Uuid::new_v4(),
+            task_description: "Summarize the thread and escalate blockers".to_string(),
+        };
+        let response = agents::models::DelegateAgentResponse {
+            delegated: true,
+            delegation_id: Uuid::new_v4(),
+            conversation_id: Uuid::new_v4(),
+            from_agent_id: Uuid::new_v4(),
+            target_agent_id: request.target_agent_id,
+            delegated_at: Utc::now(),
+        };
+
+        let request_json = serde_json::to_value(&request).unwrap();
+        let response_json = serde_json::to_value(&response).unwrap();
+        let roundtrip: agents::models::DelegateAgentResponse =
+            serde_json::from_value(response_json.clone()).unwrap();
+
+        assert_eq!(request_json["target_agent_id"], request.target_agent_id.to_string());
+        assert_eq!(response_json["delegated"], true);
+        assert_eq!(roundtrip.target_agent_id, request.target_agent_id);
+    }
 }

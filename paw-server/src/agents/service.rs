@@ -202,6 +202,7 @@ pub async fn invite_agent_to_conversation(
     }
 }
 
+#[allow(dead_code)]
 pub async fn can_manage_conversation_agents(
     pool: &DbPool,
     conversation_id: Uuid,
